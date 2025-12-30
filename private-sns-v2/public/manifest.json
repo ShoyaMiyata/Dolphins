@@ -1,0 +1,24 @@
+{
+  "name": "東葛 Dolphins B.B.C.",
+  "short_name": "東葛 Dolphins",
+  "description": "東葛飾高校ドルフィンズバスケットボールクラブ - プライベートSNS",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#eff6ff",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/images/logo-circle.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/logo-circle.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
