@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { useGroup } from '@/hooks/use-groups'
 import { useGroupPosts } from '@/hooks/use-group-posts'
 import { useGroupMembers, useApproveJoinRequest, useRejectJoinRequest, useUpdateMemberRole, useRemoveGroupMember, useJoinGroup, useLeaveGroup, useInviteUserToGroup, useSearchUsersForInvite } from '@/hooks/use-group-members'
@@ -30,6 +30,7 @@ import { motion } from 'framer-motion'
 
 export default function GroupDetailPage() {
   const params = useParams()
+  const router = useRouter()
   const groupId = params.groupId as string
 
   const { data: group, isLoading: isGroupLoading } = useGroup(groupId)
@@ -90,7 +91,12 @@ export default function GroupDetailPage() {
         <div className="container max-w-md mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             {/* Back Button */}
-            <Button variant="ghost" size="icon" className="text-blue-600">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-blue-600"
+              onClick={() => router.push('/home')}
+            >
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
@@ -102,30 +108,37 @@ export default function GroupDetailPage() {
               <h1 className="text-lg font-bold text-gray-900">{group.name}</h1>
             </div>
 
-            {/* Join/Leave Button */}
-            {currentUser && (
+            {/* Settings Menu */}
+            {isMember && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <Settings className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => leaveGroup.mutate(groupId)}
+                    disabled={leaveGroup.isPending}
+                    className="text-red-600"
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    {leaveGroup.isPending ? '退会中...' : 'グループから退会'}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
+            {/* Join Button (Non-member) */}
+            {!isMember && currentUser && (
               <Button
-                variant={isMember ? "outline" : "default"}
+                variant="default"
                 size="sm"
-                onClick={() => {
-                  if (isMember) {
-                    leaveGroup.mutate(groupId)
-                  } else {
-                    joinGroup.mutate({ groupId, joinType: group.join_type })
-                  }
-                }}
-                disabled={joinGroup.isPending || leaveGroup.isPending}
-                className={isMember ? "border-red-200 text-red-600 hover:bg-red-50" : ""}
+                onClick={() => joinGroup.mutate({ groupId, joinType: group.join_type })}
+                disabled={joinGroup.isPending}
               >
                 {joinGroup.isPending ? (
                   "参加中..."
-                ) : leaveGroup.isPending ? (
-                  "退会中..."
-                ) : isMember ? (
-                  <>
-                    <LogOut className="h-4 w-4 mr-1" />
-                    退会
-                  </>
                 ) : (
                   <>
                     <LogIn className="h-4 w-4 mr-1" />

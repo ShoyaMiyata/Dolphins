@@ -289,9 +289,9 @@ export function useLeaveGroup() {
 
       if (error) throw error
     },
-    onSuccess: (_, groupId) => {
-      queryClient.invalidateQueries({ queryKey: ['group-members', groupId] })
-      queryClient.invalidateQueries({ queryKey: ['group', groupId] })
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['group-members', variables] })
+      queryClient.invalidateQueries({ queryKey: ['group', variables] })
       queryClient.invalidateQueries({ queryKey: ['groups'] })
       toast.success('グループから退会しました')
     },
