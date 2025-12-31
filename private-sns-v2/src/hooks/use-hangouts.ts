@@ -29,35 +29,49 @@ export function useRespondedHangouts() {
 
       const userId = session.session.user.id
 
-      // 1つのクエリで全て取得 (JOINを使用)
-      const { data: responses, error } = await supabase
+      // まず自分のレスポンスを取得
+      const { data: responses, error: responsesError } = await supabase
         .from('hangout_responses')
-        .select(`
-          hangout_id,
-          response,
-          created_at,
-          hangouts (
-            *,
-            profiles:user_id (
-              display_name,
-              username,
-              avatar_url
-            )
-          )
-        `)
+        .select('hangout_id, response, created_at')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
 
-      if (error) throw error
+      if (responsesError) throw responsesError
       if (!responses || responses.length === 0) return []
 
+      // hangout_idのリストを取得
+      const hangoutIds = (responses as any[]).map((r: any) => r.hangout_id)
+
+      // 対応するhangoutsを取得
+      const { data: hangouts, error: hangoutsError } = await supabase
+        .from('hangouts')
+        .select('*')
+        .in('id', hangoutIds)
+
+      if (hangoutsError) throw hangoutsError
+
+      // 作成者のプロフィールを取得
+      const userIds = [...new Set((hangouts as any[]).map((h: any) => h.user_id))]
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, display_name, username, avatar_url')
+        .in('id', userIds)
+
+      if (profilesError) throw profilesError
+
       // データを整形
-      return responses.map((response: any) => ({
-        ...response.hangouts,
-        profiles: response.hangouts.profiles,
-        my_response: response.response,
-        responded_at: response.created_at
-      }))
+      const profilesMap = new Map((profiles || []).map((p: any) => [p.id, p]))
+      const hangoutsMap = new Map((hangouts as any[]).map((h: any) => [h.id, h]))
+
+      return (responses as any[]).map((response: any) => {
+        const hangout = hangoutsMap.get(response.hangout_id)
+        return hangout ? {
+          ...hangout,
+          profiles: profilesMap.get(hangout.user_id) || null,
+          my_response: response.response,
+          responded_at: response.created_at
+        } : null
+      }).filter(Boolean)
     },
   })
 }
@@ -76,30 +90,46 @@ export function usePendingHangouts() {
 
       const userId = session.session.user.id
 
-      // 1つのクエリで全て取得 (JOINを使用)
-      const { data: hangouts, error } = await supabase
+      // hangoutsを取得
+      const { data: hangouts, error: hangoutsError } = await supabase
         .from('hangouts')
-        .select(`
-          *,
-          profiles:user_id (
-            display_name,
-            username,
-            avatar_url
-          ),
-          hangout_responses (
-            id,
-            user_id,
-            response
-          )
-        `)
+        .select('*')
         .neq('user_id', userId)
         .order('created_at', { ascending: false })
 
-      if (error) throw error
+      if (hangoutsError) throw hangoutsError
+      if (!hangouts || hangouts.length === 0) return []
 
-      // 自分の回答がまだないものだけフィルタリング
-      const pendingHangouts = (hangouts || []).filter(
-        (hangout: any) => !hangout.hangout_responses.some((r: any) => r.user_id === userId)
+      // 作成者のプロフィールを取得
+      const userIds = [...new Set((hangouts as any[]).map((h: any) => h.user_id))]
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, display_name, username, avatar_url')
+        .in('id', userIds)
+
+      if (profilesError) throw profilesError
+
+      // データを結合
+      const profilesMap = new Map((profiles || []).map((p: any) => [p.id, p]))
+      const hangoutsWithProfiles = (hangouts as any[]).map((hangout: any) => ({
+        ...hangout,
+        profiles: profilesMap.get(hangout.user_id) || null
+      }))
+
+      // 自分の回答を取得
+      const hangoutIds = (hangouts as any[]).map((h: any) => h.id)
+      const { data: responses, error: responsesError } = await supabase
+        .from('hangout_responses')
+        .select('hangout_id, user_id, response')
+        .in('hangout_id', hangoutIds)
+        .eq('user_id', userId)
+
+      if (responsesError) throw responsesError
+
+      // 自分の回答があるhangoutを除外
+      const respondedHangoutIds = new Set((responses || []).map((r: any) => r.hangout_id))
+      const pendingHangouts = hangoutsWithProfiles.filter(
+        (hangout: any) => !respondedHangoutIds.has(hangout.id)
       )
 
       return pendingHangouts
@@ -119,33 +149,73 @@ export function useMyHangouts() {
         throw new Error('Not authenticated')
       }
 
-      // 1つのクエリで全て取得 (JOINを使用)
-      const { data: hangouts, error } = await supabase
+      // 自分のhangoutsを取得
+      const { data: hangouts, error: hangoutsError } = await supabase
         .from('hangouts')
-        .select(`
-          *,
-          profiles:user_id (
-            display_name,
-            username,
-            avatar_url
-          ),
-          hangout_responses (
-            id,
-            response,
-            user_id,
-            profiles:user_id (
-              display_name,
-              username,
-              avatar_url
-            )
-          )
-        `)
+        .select('*')
         .eq('user_id', session.session.user.id)
         .order('created_at', { ascending: false })
 
-      if (error) throw error
+      if (hangoutsError) throw hangoutsError
+      if (!hangouts || hangouts.length === 0) return []
 
-      return hangouts || []
+      // 自分のプロフィールを取得
+      const { data: myProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, display_name, username, avatar_url')
+        .eq('id', session.session.user.id)
+        .single()
+
+      if (profileError) throw profileError
+
+      // hangoutsにプロフィールを追加
+      const hangoutsWithProfiles = (hangouts as any[]).map((hangout: any) => ({
+        ...hangout,
+        profiles: myProfile
+      }))
+
+      // hangout_idのリストを取得
+      const hangoutIds = (hangouts as any[]).map((h: any) => h.id)
+
+      // 対応するレスポンスを取得
+      const { data: responses, error: responsesError } = await supabase
+        .from('hangout_responses')
+        .select('id, response, user_id, hangout_id')
+        .in('hangout_id', hangoutIds)
+
+      if (responsesError) throw responsesError
+
+      // レスポンスのユーザー情報を取得
+      const responseUserIds = [...new Set((responses || []).map((r: any) => r.user_id))]
+      const { data: responseProfiles, error: responseProfilesError } = await supabase
+        .from('profiles')
+        .select('id, display_name, username, avatar_url')
+        .in('id', responseUserIds)
+
+      if (responseProfilesError) throw responseProfilesError
+
+      // レスポンスにプロフィールを結合
+      const responseProfilesMap = new Map((responseProfiles || []).map((p: any) => [p.id, p]))
+      const responsesWithProfiles = (responses || []).map((response: any) => ({
+        ...response,
+        profiles: responseProfilesMap.get(response.user_id) || null
+      }))
+
+      // レスポンスをhangoutごとにグループ化
+      const responsesByHangout = new Map()
+      responsesWithProfiles.forEach((response: any) => {
+        const hangoutId = response.hangout_id
+        if (!responsesByHangout.has(hangoutId)) {
+          responsesByHangout.set(hangoutId, [])
+        }
+        responsesByHangout.get(hangoutId).push(response)
+      })
+
+      // hangoutsにレスポンスを追加
+      return (hangouts as any[]).map((hangout: any) => ({
+        ...hangout,
+        hangout_responses: responsesByHangout.get(hangout.id) || []
+      }))
     },
   })
 }

@@ -105,7 +105,7 @@ export function useUser() {
         // Upload file to storage
         const fileExt = file.name.split('.').pop()
         const fileName = `${user.id}-${Date.now()}.${fileExt}`
-        const filePath = `avatars/${fileName}`
+        const filePath = `${user.id}/${fileName}`
 
         const { error: uploadError } = await supabase.storage
           .from('avatars')

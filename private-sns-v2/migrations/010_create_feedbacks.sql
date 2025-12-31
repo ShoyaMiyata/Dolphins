@@ -1,11 +1,21 @@
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can insert their own feedbacks" ON public.feedbacks;
+DROP POLICY IF EXISTS "Anyone can read feedbacks" ON public.feedbacks;
+DROP POLICY IF EXISTS "Users can update their own feedbacks" ON public.feedbacks;
+DROP POLICY IF EXISTS "Users can delete their own feedbacks" ON public.feedbacks;
+
+-- Drop existing table if it exists
+DROP TABLE IF EXISTS public.feedbacks CASCADE;
+
 -- Create feedbacks table
-CREATE TABLE IF NOT EXISTS public.feedbacks (
+CREATE TABLE public.feedbacks (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL,
     content TEXT NOT NULL,
     status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'completed', 'declined')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    CONSTRAINT fk_feedbacks_user_id FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
 );
 
 -- Create index on user_id for faster queries

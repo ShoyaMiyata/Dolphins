@@ -672,30 +672,30 @@ export default function PostDetailPage() {
           )}
 
           {/* コメント入力フォーム */}
-          <Card className="bg-white rounded-xl shadow-sm border border-blue-100 sticky bottom-16">
-            <CardContent className="p-4">
+          <Card className="bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-dolphin-blue/20 transition-all duration-300 transform hover:-translate-y-1 sticky bottom-16">
+            <CardContent className="p-6">
               <Textarea
                 value={commentContent}
                 onChange={(e) => setCommentContent(e.target.value)}
                 placeholder="コメントを入力..."
-                className="min-h-[80px] rounded-lg border-blue-100 resize-none mb-3"
+                className="min-h-[100px] rounded-xl border-dolphin-blue/20 focus:border-dolphin-blue focus:ring-dolphin-blue/20 resize-none mb-4 text-base"
               />
 
               {/* 画像プレビュー */}
               {commentImagePreviews.length > 0 && (
-                <div className="grid grid-cols-2 gap-2 mb-3">
+                <div className="grid grid-cols-2 gap-3 mb-4">
                   {commentImagePreviews.map((preview, index) => (
-                    <div key={index} className="relative">
+                    <div key={index} className="relative group">
                       <img
                         src={preview}
                         alt={`プレビュー ${index + 1}`}
-                        className="w-full h-32 object-cover rounded-lg"
+                        className="w-full h-32 object-cover rounded-xl border border-dolphin-blue/10"
                       />
                       <Button
                         variant="destructive"
                         size="icon"
                         onClick={() => handleImageRemove(index)}
-                        className="absolute top-1 right-1 h-6 w-6"
+                        className="absolute top-2 right-2 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg"
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -704,7 +704,7 @@ export default function PostDetailPage() {
                 </div>
               )}
 
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 <input
                   type="file"
                   id="comment-image-input"
@@ -717,7 +717,7 @@ export default function PostDetailPage() {
                   variant="outline"
                   onClick={() => document.getElementById('comment-image-input')?.click()}
                   disabled={commentImages.length >= 4}
-                  className="flex-shrink-0"
+                  className="flex-shrink-0 rounded-full border-dolphin-blue text-dolphin-blue hover:bg-dolphin-blue/10 hover:border-dolphin-light transition-all duration-200 px-4 py-2"
                 >
                   <ImageIcon className="h-4 w-4 mr-2" />
                   画像 ({commentImages.length}/4)
@@ -725,7 +725,7 @@ export default function PostDetailPage() {
                 <Button
                   onClick={handleCreateComment}
                   disabled={createComment.isPending || (!commentContent.trim() && commentImages.length === 0)}
-                  className="flex-1 rounded-lg"
+                  className="flex-1 bg-dolphin-orange hover:bg-orange-600 text-white rounded-full px-6 py-3 font-bold text-base transition-all duration-300 transform hover:-translate-y-0.5 shadow-lg hover:shadow-orange-500/50"
                 >
                   {createComment.isPending ? '投稿中...' : 'コメントする'}
                 </Button>

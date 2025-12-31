@@ -6,12 +6,19 @@ DROP POLICY IF EXISTS "Users can view all hangouts" ON public.hangouts;
 DROP POLICY IF EXISTS "Users can create their own hangouts" ON public.hangouts;
 DROP POLICY IF EXISTS "Users can update their own hangouts" ON public.hangouts;
 DROP POLICY IF EXISTS "Users can delete their own hangouts" ON public.hangouts;
+DROP POLICY IF EXISTS "hangouts_select_policy" ON public.hangouts;
+DROP POLICY IF EXISTS "hangouts_insert_policy" ON public.hangouts;
+DROP POLICY IF EXISTS "hangouts_update_policy" ON public.hangouts;
+DROP POLICY IF EXISTS "hangouts_delete_policy" ON public.hangouts;
 
 -- Drop ALL existing policies on hangout_visibility
 DROP POLICY IF EXISTS "Users can view visibility settings of hangouts they can see" ON public.hangout_visibility;
 DROP POLICY IF EXISTS "Users can view visibility settings" ON public.hangout_visibility;
 DROP POLICY IF EXISTS "Hangout creators can manage visibility settings" ON public.hangout_visibility;
 DROP POLICY IF EXISTS "Hangout creators can delete visibility settings" ON public.hangout_visibility;
+DROP POLICY IF EXISTS "hangout_visibility_select_policy" ON public.hangout_visibility;
+DROP POLICY IF EXISTS "hangout_visibility_insert_policy" ON public.hangout_visibility;
+DROP POLICY IF EXISTS "hangout_visibility_delete_policy" ON public.hangout_visibility;
 
 -- Create helper function to check visibility (avoids circular reference)
 -- MUST be created BEFORE the policies that use it
@@ -26,20 +33,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
 
--- Recreate hangouts policies (SIMPLE version without circular reference)
+-- Recreate hangouts policies (SIMPLE version for debugging)
 CREATE POLICY "hangouts_select_policy"
     ON public.hangouts FOR SELECT
-    USING (
-        -- Owner can always see
-        auth.uid() = user_id OR
-        -- Public hangouts (no visibility_type or 'all')
-        COALESCE(visibility_type, 'all') = 'all' OR
-        -- Private hangouts - check if user is in visibility list
-        (
-            visibility_type = 'selected' AND
-            public.hangout_visibility_check(id, auth.uid())
-        )
-    );
+    USING (auth.role() = 'authenticated');
 
 CREATE POLICY "hangouts_insert_policy"
     ON public.hangouts FOR INSERT
@@ -86,3 +83,30 @@ CREATE POLICY "hangout_visibility_delete_policy"
             AND h.user_id = auth.uid()
         )
     );
+
+-- Drop existing hangout_responses policies first
+DROP POLICY IF EXISTS "Users can view all responses" ON public.hangout_responses;
+DROP POLICY IF EXISTS "Users can create their own responses" ON public.hangout_responses;
+DROP POLICY IF EXISTS "Users can update their own responses" ON public.hangout_responses;
+DROP POLICY IF EXISTS "Users can delete their own responses" ON public.hangout_responses;
+DROP POLICY IF EXISTS "hangout_responses_select_policy" ON public.hangout_responses;
+DROP POLICY IF EXISTS "hangout_responses_insert_policy" ON public.hangout_responses;
+DROP POLICY IF EXISTS "hangout_responses_update_policy" ON public.hangout_responses;
+DROP POLICY IF EXISTS "hangout_responses_delete_policy" ON public.hangout_responses;
+
+-- Recreate hangout_responses policies
+CREATE POLICY "hangout_responses_select_policy"
+    ON public.hangout_responses FOR SELECT
+    USING (auth.role() = 'authenticated');
+
+CREATE POLICY "hangout_responses_insert_policy"
+    ON public.hangout_responses FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "hangout_responses_update_policy"
+    ON public.hangout_responses FOR UPDATE
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "hangout_responses_delete_policy"
+    ON public.hangout_responses FOR DELETE
+    USING (auth.uid() = user_id);

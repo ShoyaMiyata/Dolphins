@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (session?.user) {
           console.log('認証済みユーザー検知、プロフィール取得開始')
 
-          // プロフィール情報を取得（タイムアウト付き）
+          // プロフィール情報を取得（タイムアウト付き - 10秒に延長）
           const profilePromise = supabase
             .from('profiles')
             .select('*')
@@ -88,7 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .single()
 
           const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Profile fetch timeout')), 3000)
+            setTimeout(() => reject(new Error('Profile fetch timeout')), 10000) // 10秒に延長
           )
 
           try {
@@ -114,6 +114,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.log('認証状態変更処理完了')
           } catch (profileError: any) {
             console.error('プロフィール取得タイムアウトまたはエラー:', profileError?.message)
+
+            // タイムアウトの場合でもプロフィール作成を試行
+            if (profileError?.message === 'Profile fetch timeout') {
+              console.log('プロフィール取得タイムアウト - プロフィール自動作成トリガーを確認してください')
+            }
 
             // プロフィールが取得できなくても基本情報だけ設定して先に進める
             const userData = {

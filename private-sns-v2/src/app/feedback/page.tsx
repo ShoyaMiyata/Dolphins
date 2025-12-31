@@ -45,23 +45,41 @@ export default function FeedbackPage() {
 
     try {
       console.log('フィードバック取得開始')
-      const { data, error } = await supabase
+
+      // フィードバックを取得
+      const { data: feedbacksData, error: feedbacksError } = await supabase
         .from('feedbacks')
-        .select(`
-          *,
-          profiles:user_id (
-            full_name,
-            avatar_url
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
 
-      console.log('フィードバック取得結果:', { data, error })
+      if (feedbacksError) throw feedbacksError
 
-      if (error) throw error
+      if (!feedbacksData || feedbacksData.length === 0) {
+        setFeedbacks([])
+        console.log('フィードバック件数: 0')
+        return
+      }
 
-      setFeedbacks(data || [])
-      console.log('フィードバック件数:', data?.length)
+      // ユーザー情報を取得
+      const userIds = [...new Set((feedbacksData as any[]).map((f: any) => f.user_id))]
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, display_name, username, avatar_url')
+        .in('id', userIds)
+
+      if (profilesError) throw profilesError
+
+      // データを結合
+      const profilesMap = new Map((profilesData || []).map((p: any) => [p.id, p]))
+      const feedbacksWithProfiles = (feedbacksData as any[]).map((feedback: any) => ({
+        ...feedback,
+        profiles: profilesMap.get(feedback.user_id) || null
+      }))
+
+      console.log('フィードバック取得結果:', { feedbacksWithProfiles })
+
+      setFeedbacks(feedbacksWithProfiles)
+      console.log('フィードバック件数:', feedbacksWithProfiles.length)
     } catch (error) {
       console.error('フィードバック取得エラー:', error)
     } finally {

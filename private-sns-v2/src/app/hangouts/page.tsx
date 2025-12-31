@@ -266,13 +266,24 @@ export default function HangoutsPage() {
                           </Avatar>
                           <div className="flex-1">
                             <div className="flex items-start justify-between">
-                              <div>
+                              <div className="flex-1">
                                 <p className="font-semibold text-blue-900">{hangout.profiles?.display_name || hangout.profiles?.username}</p>
                                 <p className="text-sm text-gray-500">@{hangout.profiles?.username}</p>
                               </div>
-                              <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${responseColors[hangout.my_response as keyof typeof responseColors]}`}>
-                                {responseLabels[hangout.my_response as keyof typeof responseLabels]}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${responseColors[hangout.my_response as keyof typeof responseColors]}`}>
+                                  {responseLabels[hangout.my_response as keyof typeof responseLabels]}
+                                </span>
+                                {/* Edit button for hangout creator */}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                                  onClick={() => handleEditClick(hangout)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </div>
                             <h3 className="font-bold text-lg mt-2 text-blue-900">{hangout.title}</h3>
                             {hangout.description && (

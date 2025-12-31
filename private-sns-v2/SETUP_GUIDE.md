@@ -62,7 +62,7 @@ cat .env.local
 
 1. Supabase Dashboardの左サイドバーから **Storage** を選択
 2. **New bucket** ボタンをクリック
-3. 以下の2つのバケットを作成：
+3. 以下の3つのバケットを作成：
 
 **バケット1: avatars**
 - Name: `avatars`
@@ -76,11 +76,40 @@ cat .env.local
 - File size limit: 5MB
 - Allowed MIME types: `image/*`
 
+**バケット3: comment-images**
+- Name: `comment-images`
+- Public bucket: ✅ チェック
+- File size limit: 5MB
+- Allowed MIME types: `image/*`
+
+**バケット4: hangouts**
+- Name: `hangouts`
+- Public bucket: ✅ チェック
+- File size limit: 10MB
+- Allowed MIME types: `image/*`
+
+**バケット5: group-images**
+- Name: `group-images`
+- Public bucket: ✅ チェック
+- File size limit: 5MB
+- Allowed MIME types: `image/*`
+
+**バケット6: group-post-images**
+- Name: `group-post-images`
+- Public bucket: ✅ チェック
+- File size limit: 5MB
+- Allowed MIME types: `image/*`
+
 ### ステップ3: Storageポリシーの設定
 
 1. SQL Editorに戻る
 2. `storage-policies.sql` の内容をコピー＆ペースト
 3. **Run** ボタンをクリックして実行
+
+### ステップ4: Hangoutsポリシーの設定
+
+1. SQL Editorで `008_simple_hangout_policies.sql` の内容をコピー＆ペースト
+2. **Run** ボタンをクリックして実行
 
 ---
 

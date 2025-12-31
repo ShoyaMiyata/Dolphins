@@ -128,14 +128,14 @@ export function CreateHangoutDialog({ open, onOpenChange }: CreateHangoutDialogP
           const filePath = `hangouts/${session.session.user.id}/${fileName}`
 
           const { error: uploadError } = await supabase.storage
-            .from('images')
+            .from('hangouts')
             .upload(filePath, selectedImage)
 
           if (uploadError) {
             console.error('Upload error:', uploadError)
           } else {
             const { data: urlData } = supabase.storage
-              .from('images')
+              .from('hangouts')
               .getPublicUrl(filePath)
             imageUrl = urlData.publicUrl
           }

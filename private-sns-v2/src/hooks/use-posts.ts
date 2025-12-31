@@ -304,18 +304,47 @@ export function useLikePost() {
 
       const userId = user.id
 
-      const { error } = await supabase
+      // 既にいいねされているか確認
+      const { data: existingLike } = await supabase
+        .from('likes')
+        .select('id')
+        .eq('post_id', postId)
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      if (existingLike) {
+        // 既にいいねされている場合は何もしない（正常終了）
+        return { alreadyLiked: true }
+      }
+
+      const { data, error } = await supabase
         .from('likes')
         .insert({ post_id: postId, user_id: userId } as any)
+        .select()
+        .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('いいね挿入エラー:', error)
+        throw error
+      }
+
+      return data
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['posts'] })
     },
-    onError: (error) => {
-      console.error('いいねエラー:', error)
-      toast.error('いいねに失敗しました')
+    onError: (error: any) => {
+      console.error('いいねエラー詳細:', {
+        message: error?.message,
+        details: error?.details,
+        hint: error?.hint,
+        code: error?.code,
+        fullError: error
+      })
+
+      // エラーメッセージをユーザーに表示
+      const errorMessage = error?.message || 'いいねに失敗しました'
+      toast.error(errorMessage)
     },
   })
 }
