@@ -112,14 +112,14 @@ export function useGroups() {
             .select('role')
             .eq('group_id', group.id)
             .eq('user_id', user.id)
-            .maybeSingle()
+            .maybeSingle() as any
 
           return {
             ...group,
             profiles: ownerProfile,
             member_count: count || 0,
             is_member: !!membership,
-            is_owner: membership?.role === 'owner',
+            is_owner: (membership as any)?.role === 'owner',
           }
         })
       )
@@ -145,7 +145,7 @@ export function useGroup(groupId: string | null) {
         .from('groups')
         .select('*')
         .eq('id', groupId)
-        .single()
+        .single() as any
 
       if (error) {
         console.error('グループ取得エラー:', error)
@@ -171,14 +171,14 @@ export function useGroup(groupId: string | null) {
         .select('role')
         .eq('group_id', groupId)
         .eq('user_id', user.id)
-        .maybeSingle()
+        .maybeSingle() as any
 
       return {
         ...group,
         profiles: ownerProfile,
         member_count: count || 0,
         is_member: !!membership,
-        is_owner: membership?.role === 'owner',
+        is_owner: (membership as any)?.role === 'owner',
       } as GroupWithDetails
     },
     enabled: !!groupId,
@@ -276,7 +276,7 @@ export function useUpdateGroup() {
       if (joinType !== undefined) updateData.join_type = joinType
       if (visibilityType !== undefined) updateData.visibility_type = visibilityType
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('groups')
         .update(updateData)
         .eq('id', groupId)
@@ -312,11 +312,11 @@ export function useDeleteGroup() {
         .from('groups')
         .select('image_url')
         .eq('id', groupId)
-        .single()
+        .single() as any
 
-      if (group?.image_url) {
+      if ((group as any)?.image_url) {
         // Storage から画像を削除
-        const url = new URL(group.image_url)
+        const url = new URL((group as any).image_url)
         const imagePath = url.pathname.split('/group-images/')[1]
 
         await supabase.storage
@@ -361,12 +361,12 @@ export function useJoinGroup() {
         .from('groups')
         .select('join_type')
         .eq('id', groupId)
-        .single()
+        .single() as any
 
       if (!group) throw new Error('グループが見つかりません')
 
       // 自由参加の場合は直接メンバーに追加
-      if (group.join_type === 'free') {
+      if ((group as any).join_type === 'free') {
         const { error } = await supabase
           .from('group_members')
           .insert({

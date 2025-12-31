@@ -169,7 +169,7 @@ export function useCreateHangout() {
         throw new Error('Not authenticated')
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('hangouts')
         .insert({
           ...hangout,
@@ -187,7 +187,7 @@ export function useCreateHangout() {
           user_id: userId,
         }))
 
-        const { error: visibilityError } = await supabase
+        const { error: visibilityError } = await (supabase as any)
           .from('hangout_visibility')
           .insert(visibilityData)
 
@@ -223,7 +223,7 @@ export function useRespondToHangout() {
         throw new Error('Not authenticated')
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('hangout_responses')
         .upsert({
           hangout_id: hangoutId,
@@ -256,7 +256,7 @@ export function useUpdateHangout() {
     }) => {
       const supabase = createClient()
 
-      const { data: result, error } = await supabase
+      const { data: result, error } = await (supabase as any)
         .from('hangouts')
         .update(data)
         .eq('id', hangoutId)

@@ -176,12 +176,12 @@ export function useUpdateComment() {
 
   return useMutation({
     mutationFn: async ({ commentId, postId, content }: UpdateCommentData) => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('comments')
         .update({
           content,
           updated_at: new Date().toISOString(),
-        } as any)
+        })
         .eq('id', commentId)
         .select()
         .single()

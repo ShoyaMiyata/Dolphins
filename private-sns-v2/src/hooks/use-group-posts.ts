@@ -15,7 +15,7 @@ export type GroupPostWithProfile = GroupPost & {
 
 export interface CreateGroupPostData {
   groupId: string
-  content: string
+  content: string | null
   images?: File[]
 }
 
@@ -128,13 +128,13 @@ export function useCreateGroupPost() {
       const userId = user.id
 
       // 投稿作成
-      const { data: post, error: postError } = await supabase
+      const { data: post, error: postError } = await (supabase as any)
         .from('group_posts')
         .insert({
           group_id: groupId,
           user_id: userId,
           content,
-        } as any)
+        })
         .select()
         .single()
 
@@ -181,12 +181,12 @@ export function useUpdateGroupPost() {
 
   return useMutation({
     mutationFn: async ({ postId, groupId, content }: UpdateGroupPostData) => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('group_posts')
         .update({
           content,
           updated_at: new Date().toISOString(),
-        } as any)
+        })
         .eq('id', postId)
         .select()
         .single()

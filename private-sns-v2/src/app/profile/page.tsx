@@ -33,7 +33,7 @@ export default function ProfileRedirectPage() {
       }
 
       // ユーザーのプロフィールページへリダイレクト
-      router.push(`/profile/${profile.username}`)
+      router.push(`/profile/${(profile as any).username}`)
     }
 
     redirectToUserProfile()

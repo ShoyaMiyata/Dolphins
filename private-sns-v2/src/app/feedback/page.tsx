@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuthStore } from '@/stores/auth-store'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
+import type { Database } from '@/types/database.types'
 
 type Feedback = {
   id: string
@@ -95,7 +96,7 @@ export default function FeedbackPage() {
     setIsSubmitting(true)
 
     try {
-      const { error } = await supabase.from('feedbacks').insert({
+      const { error } = await (supabase as any).from('feedbacks').insert({
         user_id: user.id,
         content: content.trim(),
       })

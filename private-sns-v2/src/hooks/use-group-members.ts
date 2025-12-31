@@ -71,7 +71,7 @@ export function useRemoveGroupMember() {
       if (!currentUser) throw new Error('認証が必要です')
 
       // データベース関数を使用してソフト削除
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .rpc('soft_remove_member', {
           p_group_id: groupId,
           p_user_id: userId,
@@ -139,9 +139,9 @@ export function useUpdateMemberRole() {
         .select('role')
         .eq('group_id', groupId)
         .eq('user_id', currentUser.id)
-        .single()
+        .single() as any
 
-      console.log('現在のユーザー権限:', currentUserMember?.role)
+      console.log('現在のユーザー権限:', (currentUserMember as any)?.role)
 
       if (!['owner', 'admin'].includes(currentUserMember?.role)) {
         throw new Error('メンバーの役割を変更する権限がありません')
@@ -153,7 +153,7 @@ export function useUpdateMemberRole() {
         .select('*')
         .eq('group_id', groupId)
         .eq('user_id', userId)
-        .single()
+        .single() as any
 
       console.log('変更対象メンバー:', targetMember)
 
@@ -161,13 +161,13 @@ export function useUpdateMemberRole() {
         throw new Error('メンバーが見つかりません')
       }
 
-      if (targetMember.role === 'owner' && role !== 'owner') {
+      if ((targetMember as any).role === 'owner' && role !== 'owner') {
         throw new Error('オーナーの役割を変更できません')
       }
 
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('group_members')
-        .update({ role } as any)
+        .update({ role })
         .eq('group_id', groupId)
         .eq('user_id', userId)
 
@@ -256,9 +256,9 @@ export function useApproveJoinRequest() {
   return useMutation({
     mutationFn: async ({ requestId, groupId, userId }: { requestId: string; groupId: string; userId: string }) => {
       // リクエストを承認済みに更新
-      const { error: updateError } = await supabase
+      const { error: updateError } = await (supabase as any)
         .from('group_join_requests')
-        .update({ status: 'approved' } as any)
+        .update({ status: 'approved' })
         .eq('id', requestId)
 
       if (updateError) throw updateError
@@ -294,9 +294,9 @@ export function useRejectJoinRequest() {
 
   return useMutation({
     mutationFn: async ({ requestId, groupId }: { requestId: string; groupId: string }) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('group_join_requests')
-        .update({ status: 'rejected' } as any)
+        .update({ status: 'rejected' })
         .eq('id', requestId)
 
       if (error) throw error
@@ -374,7 +374,7 @@ export function useLeaveGroup() {
       const userId = user.id
 
       // ソフト削除関数を使用
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .rpc('soft_leave_group', {
           p_group_id: groupId,
           p_user_id: userId
@@ -462,7 +462,7 @@ export function useInviteUserToGroup() {
       console.log('reactivate_member関数実行:', { group_id: groupId, user_id: userId })
 
       // reactivate_member関数を使用して招待（新規または再招待）
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .rpc('reactivate_member', {
           p_group_id: groupId,
           p_user_id: userId
@@ -595,9 +595,9 @@ export function useUpdateGroup() {
       if (updates.visibility_type !== undefined) updateData.visibility_type = updates.visibility_type
       if (updates.join_type !== undefined) updateData.join_type = updates.join_type
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('groups')
-        .update(updateData as any)
+        .update(updateData)
         .eq('id', groupId)
         .select()
         .single()

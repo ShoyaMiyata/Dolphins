@@ -390,21 +390,27 @@ export interface Database {
           group_id: string
           user_id: string
           role: 'owner' | 'admin' | 'member'
+          is_active: boolean
           joined_at: string
+          left_at: string | null
         }
         Insert: {
           id?: string
           group_id: string
           user_id: string
           role?: 'owner' | 'admin' | 'member'
+          is_active?: boolean
           joined_at?: string
+          left_at?: string | null
         }
         Update: {
           id?: string
           group_id?: string
           user_id?: string
           role?: 'owner' | 'admin' | 'member'
+          is_active?: boolean
           joined_at?: string
+          left_at?: string | null
         }
       }
       group_join_requests: {
@@ -483,6 +489,32 @@ export interface Database {
           image_url?: string
           order_index?: number
           created_at?: string
+        }
+      }
+      feedbacks: {
+        Row: {
+          id: string
+          user_id: string
+          content: string
+          status: 'pending' | 'in_progress' | 'completed' | 'declined'
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          content: string
+          status?: 'pending' | 'in_progress' | 'completed' | 'declined'
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          content?: string
+          status?: 'pending' | 'in_progress' | 'completed' | 'declined'
+          created_at?: string
+          updated_at?: string
         }
       }
     }

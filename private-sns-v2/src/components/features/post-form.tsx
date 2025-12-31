@@ -175,13 +175,13 @@ export function PostForm({ onSuccess, groupId }: PostFormProps) {
       // グループ投稿
       await createGroupPost.mutateAsync({
         groupId,
-        content: data.content,
+        content: data.content || null,
         images: selectedImages.length > 0 ? selectedImages : undefined,
       })
     } else {
       // 通常投稿
       await createPost.mutateAsync({
-        content: data.content,
+        content: data.content || null,
         images: selectedImages.length > 0 ? selectedImages : undefined,
       })
     }
@@ -223,151 +223,151 @@ export function PostForm({ onSuccess, groupId }: PostFormProps) {
                     className="border-none p-2 text-base focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none resize-none bg-transparent"
                   />
 
-                <AnimatePresence>
-                  {errors.content && (
-                    <motion.p
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="text-sm text-red-500"
-                    >
-                      {errors.content.message}
-                    </motion.p>
-                  )}
-                </AnimatePresence>
+                  <AnimatePresence>
+                    {errors.content && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="text-sm text-red-500"
+                      >
+                        {errors.content.message}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
 
-                {/* 画像プレビュー */}
-                <AnimatePresence mode="popLayout">
-                  {imagePreviews.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="grid grid-cols-2 gap-2 md:grid-cols-3"
-                    >
-                      {imagePreviews.map((preview, index) => (
-                        <motion.div
-                          key={index}
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.8 }}
-                          transition={{ duration: 0.2, delay: index * 0.05 }}
-                          className="group relative aspect-square overflow-hidden rounded-lg"
-                        >
-                          <img
-                            src={preview}
-                            alt={`プレビュー ${index + 1}`}
-                            className="h-full w-full object-cover"
-                          />
+                  {/* 画像プレビュー */}
+                  <AnimatePresence mode="popLayout">
+                    {imagePreviews.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="grid grid-cols-2 gap-2 md:grid-cols-3"
+                      >
+                        {imagePreviews.map((preview, index) => (
                           <motion.div
-                            initial={{ opacity: 0 }}
-                            whileHover={{ opacity: 1 }}
-                            className="absolute inset-0 flex items-center justify-center gap-2 bg-black/50"
+                            key={index}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.8 }}
+                            transition={{ duration: 0.2, delay: index * 0.05 }}
+                            className="group relative aspect-square overflow-hidden rounded-lg"
                           >
-                            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                              <Button
-                                type="button"
-                                size="icon"
-                                variant="secondary"
-                                className="h-8 w-8"
-                                onClick={() => setCropImageIndex(index)}
-                              >
-                                <Crop className="h-4 w-4" />
-                              </Button>
-                            </motion.div>
-                            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                              <Button
-                                type="button"
-                                size="icon"
-                                variant="destructive"
-                                className="h-8 w-8"
-                                onClick={() => handleRemoveImage(index)}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
+                            <img
+                              src={preview}
+                              alt={`プレビュー ${index + 1}`}
+                              className="h-full w-full object-cover"
+                            />
+                            <motion.div
+                              initial={{ opacity: 0 }}
+                              whileHover={{ opacity: 1 }}
+                              className="absolute inset-0 flex items-center justify-center gap-2 bg-black/50"
+                            >
+                              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="secondary"
+                                  className="h-8 w-8"
+                                  onClick={() => setCropImageIndex(index)}
+                                >
+                                  <Crop className="h-4 w-4" />
+                                </Button>
+                              </motion.div>
+                              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="destructive"
+                                  className="h-8 w-8"
+                                  onClick={() => handleRemoveImage(index)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </motion.div>
                             </motion.div>
                           </motion.div>
-                        </motion.div>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
-                <div className="flex items-center justify-between border-t border-gray-100 pt-3 mt-3">
-                  <div className="flex items-center gap-2">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="hidden"
-                      onChange={handleImageSelect}
-                      disabled={selectedImages.length >= 5}
-                    />
-                    <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => fileInputRef.current?.click()}
+                  <div className="flex items-center justify-between border-t border-gray-100 pt-3 mt-3">
+                    <div className="flex items-center gap-2">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={handleImageSelect}
                         disabled={selectedImages.length >= 5}
-                        className="h-9 px-3 text-blue-500 hover:bg-blue-50 hover:text-blue-600 rounded-full"
+                      />
+                      <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={selectedImages.length >= 5}
+                          className="h-9 px-3 text-blue-500 hover:bg-blue-50 hover:text-blue-600 rounded-full"
+                        >
+                          <ImageIcon className="h-5 w-5" />
+                        </Button>
+                      </motion.div>
+
+                      {/* 文字数カウント - Circular Progress */}
+                      <AnimatePresence>
+                        {contentLength > 0 && (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0 }}
+                            className="ml-2"
+                          >
+                            <CircularProgress
+                              value={contentLength}
+                              max={500}
+                              size={32}
+                              strokeWidth={3}
+                              showValue={contentLength > 450}
+                            />
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+
+                    <motion.div
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Button
+                        type="submit"
+                        disabled={
+                          (groupId ? createGroupPost.isPending : createPost.isPending) ||
+                          (!content?.trim() && selectedImages.length === 0) ||
+                          contentLength > 500
+                        }
+                        className="rounded-full px-6 bg-gradient-to-r from-blue-500 to-sky-500 hover:from-blue-600 hover:to-sky-600 text-white shadow-md disabled:opacity-50"
                       >
-                        <ImageIcon className="h-5 w-5" />
+                        {(groupId ? createGroupPost.isPending : createPost.isPending) ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            投稿中...
+                          </>
+                        ) : (
+                          '投稿'
+                        )}
                       </Button>
                     </motion.div>
-
-                    {/* 文字数カウント - Circular Progress */}
-                    <AnimatePresence>
-                      {contentLength > 0 && (
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0 }}
-                          className="ml-2"
-                        >
-                          <CircularProgress
-                            value={contentLength}
-                            max={500}
-                            size={32}
-                            strokeWidth={3}
-                            showValue={contentLength > 450}
-                          />
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
                   </div>
-
-                  <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <Button
-                      type="submit"
-                      disabled={
-                        (groupId ? createGroupPost.isPending : createPost.isPending) ||
-                        (!content?.trim() && selectedImages.length === 0) ||
-                        contentLength > 500
-                      }
-                      className="rounded-full px-6 bg-gradient-to-r from-blue-500 to-sky-500 hover:from-blue-600 hover:to-sky-600 text-white shadow-md disabled:opacity-50"
-                    >
-                      {(groupId ? createGroupPost.isPending : createPost.isPending) ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          投稿中...
-                        </>
-                      ) : (
-                        '投稿'
-                      )}
-                    </Button>
-                  </motion.div>
                 </div>
               </div>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+            </form>
+          </CardContent>
+        </Card>
       </motion.div>
 
       {/* 画像トリミングダイアログ */}
