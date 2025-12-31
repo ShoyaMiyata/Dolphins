@@ -301,3 +301,83 @@ export function useLeaveGroup() {
     },
   })
 }
+
+// ユーザーをグループに招待（直接追加）
+export function useInviteUserToGroup() {
+  const queryClient = useQueryClient()
+  const supabase = createClient()
+
+  return useMutation({
+    mutationFn: async ({ groupId, userId }: { groupId: string; userId: string }) => {
+      // 招待するユーザーが既にメンバーかチェック
+      const { data: existingMember } = await supabase
+        .from('group_members')
+        .select('id')
+        .eq('group_id', groupId)
+        .eq('user_id', userId)
+        .single()
+
+      if (existingMember) {
+        throw new Error('このユーザーは既にメンバーです')
+      }
+
+      // メンバーに追加
+      const { error } = await supabase
+        .from('group_members')
+        .insert({
+          group_id: groupId,
+          user_id: userId,
+          role: 'member',
+        } as any)
+
+      if (error) throw error
+
+      return userId
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['group-members', variables.groupId] })
+      queryClient.invalidateQueries({ queryKey: ['group', variables.groupId] })
+      queryClient.invalidateQueries({ queryKey: ['groups'] })
+      toast.success('ユーザーをグループに招待しました')
+    },
+    onError: (error) => {
+      console.error('ユーザー招待エラー:', error)
+      toast.error(error.message || 'ユーザーの招待に失敗しました')
+    },
+  })
+}
+
+// ユーザー検索（招待用）
+export function useSearchUsersForInvite() {
+  const supabase = createClient()
+
+  return useMutation({
+    mutationFn: async ({ query, groupId }: { query: string; groupId: string }) => {
+      if (!query.trim()) return []
+
+      // 既にグループメンバーであるユーザーを除外
+      const { data: members } = await supabase
+        .from('group_members')
+        .select('user_id')
+        .eq('group_id', groupId)
+
+      const memberIds = (members || []).map((m: any) => m.user_id)
+
+      let queryBuilder = supabase
+        .from('profiles')
+        .select('id, username, display_name, avatar_url')
+        .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
+        .limit(10)
+
+      if (memberIds.length > 0) {
+        queryBuilder = queryBuilder.not('id', 'in', `(${memberIds.join(',')})`)
+      }
+
+      const { data, error } = await queryBuilder
+
+      if (error) throw error
+
+      return data || []
+    },
+  })
+}

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useParams } from 'next/navigation'
 import { useGroup } from '@/hooks/use-groups'
 import { useGroupPosts } from '@/hooks/use-group-posts'
-import { useGroupMembers, useApproveJoinRequest, useRejectJoinRequest, useUpdateMemberRole, useRemoveGroupMember, useJoinGroup, useLeaveGroup } from '@/hooks/use-group-members'
+import { useGroupMembers, useApproveJoinRequest, useRejectJoinRequest, useUpdateMemberRole, useRemoveGroupMember, useJoinGroup, useLeaveGroup, useInviteUserToGroup, useSearchUsersForInvite } from '@/hooks/use-group-members'
 import { useGroupJoinRequests } from '@/hooks/use-group-members'
 import { useUser } from '@/hooks/use-user'
 import { AppHeader } from '@/components/layout/app-header'
@@ -14,6 +14,7 @@ import { PostSkeleton } from '@/components/features/post-skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -35,7 +36,7 @@ export default function GroupDetailPage() {
   const { data: posts, isLoading: isPostsLoading } = useGroupPosts(groupId)
   const { data: members } = useGroupMembers(groupId)
   const { data: joinRequests } = useGroupJoinRequests(groupId)
-  const { data: currentUser } = useUser()
+  const { user: currentUser } = useUser()
 
   const joinGroup = useJoinGroup()
   const leaveGroup = useLeaveGroup()
@@ -43,12 +44,17 @@ export default function GroupDetailPage() {
   const rejectJoinRequest = useRejectJoinRequest()
   const updateMemberRole = useUpdateMemberRole()
   const removeMember = useRemoveGroupMember()
+  const inviteUser = useInviteUserToGroup()
+  const searchUsers = useSearchUsersForInvite()
 
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('posts')
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<any[]>([])
 
   // 現在のユーザーの役割を取得
-  const currentUserRole = members?.find(member => member.user_id === currentUser?.user?.id)?.role || null
+  const currentUserRole = members?.find(member => member.user_id === currentUser?.id)?.role || null
   const isOwner = currentUserRole === 'owner'
   const isAdmin = currentUserRole === 'admin'
   const canManageMembers = isOwner || isAdmin
@@ -97,7 +103,7 @@ export default function GroupDetailPage() {
             </div>
 
             {/* Join/Leave Button */}
-            {currentUser?.user && (
+            {currentUser && (
               <Button
                 variant={isMember ? "outline" : "default"}
                 size="sm"
@@ -275,16 +281,27 @@ export default function GroupDetailPage() {
 
               {/* Members List */}
               <Card>
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     <Users className="h-5 w-5" />
                     メンバー ({members?.length || 0})
                   </CardTitle>
+                  {canManageMembers && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setInviteDialogOpen(true)}
+                      className="flex items-center gap-2"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                      招待
+                    </Button>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
                     {members?.map((member) => {
-                      const isCurrentUser = member.user_id === currentUser?.user?.id
+                      const isCurrentUser = member.user_id === currentUser?.id
                       const canManageThisMember = canManageMembers && !isCurrentUser && member.role !== 'owner'
 
                       return (
@@ -391,6 +408,89 @@ export default function GroupDetailPage() {
               className="w-full h-auto max-h-[90vh] object-contain"
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Invite User Dialog */}
+      <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+        <DialogContent className="max-w-[calc(100vw-2rem)] w-full sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>ユーザーを招待</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Search Input */}
+            <div className="space-y-2">
+              <Input
+                placeholder="ユーザー名または表示名で検索..."
+                value={searchQuery}
+                onChange={async (e) => {
+                  const query = e.target.value
+                  setSearchQuery(query)
+
+                  if (query.trim()) {
+                    try {
+                      const result = await searchUsers.mutateAsync({ query, groupId })
+                      setSearchResults(result)
+                    } catch (error) {
+                      console.error('Search error:', error)
+                      setSearchResults([])
+                    }
+                  } else {
+                    setSearchResults([])
+                  }
+                }}
+              />
+            </div>
+
+            {/* Search Results */}
+            <div className="max-h-60 overflow-y-auto space-y-2">
+              {searchResults.length === 0 && searchQuery.trim() && (
+                <p className="text-sm text-gray-500 text-center py-4">
+                  ユーザーが見つかりません
+                </p>
+              )}
+
+              {searchResults.map((user) => (
+                <div
+                  key={user.id}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.avatar_url || undefined} />
+                      <AvatarFallback>
+                        {user.username.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium">{user.display_name || user.username}</p>
+                      <p className="text-sm text-gray-500">@{user.username}</p>
+                    </div>
+                  </div>
+
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      inviteUser.mutate(
+                        { groupId, userId: user.id },
+                        {
+                          onSuccess: () => {
+                            setSearchQuery('')
+                            setSearchResults([])
+                            setInviteDialogOpen(false)
+                          }
+                        }
+                      )
+                    }}
+                    disabled={inviteUser.isPending}
+                  >
+                    {inviteUser.isPending ? '招待中...' : '招待'}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
