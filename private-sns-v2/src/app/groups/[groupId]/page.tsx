@@ -11,7 +11,7 @@ import { AppHeader } from '@/components/layout/app-header'
 import { PostForm } from '@/components/features/post-form'
 import { PostCard } from '@/components/features/post-card'
 import { PostSkeleton } from '@/components/features/post-skeleton'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -34,9 +34,9 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Users, UserPlus, Settings, Crown, Shield, User, Check, X, MoreVertical, LogIn, LogOut } from 'lucide-react'
+import { Users, UserPlus, Settings, Crown, Shield, User, Check, X, MoreVertical, LogIn, LogOut, MessageSquare, Loader2, Trash2, AlertTriangle } from 'lucide-react'
 import { InviteUserDialog } from '@/components/features/invite-user-dialog'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 
 export default function GroupDetailPage() {
   const params = useParams()
@@ -63,6 +63,8 @@ export default function GroupDetailPage() {
   const [activeTab, setActiveTab] = useState('posts')
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false)
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false)
+  const [removeMemberDialogOpen, setRemoveMemberDialogOpen] = useState(false)
+  const [memberToRemove, setMemberToRemove] = useState<{ id: string; name: string; userId: string; groupId: string } | null>(null)
   const [settingsForm, setSettingsForm] = useState({
     name: '',
     description: '',
@@ -101,16 +103,16 @@ export default function GroupDetailPage() {
   }
 
   return (
-    <div className="bg-background">
+    <div className="bg-gradient-to-br from-blue-50 via-white to-sky-50 min-h-screen">
       {/* Custom Header for Group */}
-      <header className="sticky top-0 z-10 border-b border-blue-100 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
+      <header className="sticky top-0 z-10 border-b border-blue-200/50 bg-white/90 backdrop-blur-md supports-[backdrop-filter]:bg-white/80 shadow-sm">
         <div className="container max-w-md mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             {/* Back Button */}
             <Button
               variant="ghost"
               size="icon"
-              className="text-blue-600"
+              className="text-blue-600 hover:bg-blue-100 transition-colors rounded-full"
               onClick={() => router.push('/home')}
             >
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -119,20 +121,33 @@ export default function GroupDetailPage() {
             </Button>
 
             {/* Group Name */}
-            <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-blue-600" />
-              <h1 className="text-lg font-bold text-gray-900">{group.name}</h1>
+            <div className="flex items-center gap-2 flex-1 justify-center">
+              <div className="p-2 bg-gradient-to-r from-blue-100 to-sky-100 rounded-full">
+                <Users className="h-5 w-5 text-blue-600" />
+              </div>
+              <div className="text-center">
+                <h1 className="text-lg font-bold text-gray-900 truncate max-w-[200px]">{group.name}</h1>
+                {group.description && (
+                  <p className="text-xs text-gray-500 truncate max-w-[200px]">{group.description}</p>
+                )}
+              </div>
             </div>
 
             {/* Settings Menu */}
             {isMember && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <Settings className="h-5 w-5" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="relative group overflow-hidden rounded-full p-2 hover:bg-gradient-to-r hover:from-blue-100 hover:to-sky-100 transition-all duration-300 shadow-sm hover:shadow-md"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-sky-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full" />
+                    <Settings className="h-5 w-5 relative z-10 text-blue-600 group-hover:text-blue-700 transition-colors duration-300 group-hover:rotate-90" />
+                    <div className="absolute inset-0 rounded-full ring-2 ring-blue-200/50 group-hover:ring-blue-300/70 transition-colors duration-300" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" className="bg-white/95 backdrop-blur-lg border-blue-200/50 shadow-xl rounded-xl overflow-hidden">
                   <DropdownMenuItem
                     onClick={() => {
                       setSettingsForm({
@@ -143,18 +158,23 @@ export default function GroupDetailPage() {
                       })
                       setSettingsDialogOpen(true)
                     }}
+                    className="hover:bg-gradient-to-r hover:from-[#4DA6FF]/10 hover:to-[#0055AA]/10 focus:from-[#4DA6FF]/10 focus:to-[#0055AA]/10 transition-all duration-200 rounded-lg mx-1 my-1"
                   >
-                    <Settings className="h-4 w-4 mr-2" />
-                    グループ設定
+                    <div className="p-1 bg-gradient-to-r from-[#4DA6FF] to-[#0055AA] rounded-md mr-3">
+                      <Settings className="h-4 w-4 text-white" />
+                    </div>
+                    <span className="font-medium text-gray-700">グループ設定</span>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
+                  <DropdownMenuSeparator className="bg-[#0055AA]/20" />
                   <DropdownMenuItem
                     onClick={() => leaveGroup.mutate(groupId)}
                     disabled={leaveGroup.isPending}
-                    className="text-red-600"
+                    className="hover:bg-gradient-to-r hover:from-[#FF8800]/10 hover:to-red-50 focus:from-[#FF8800]/10 focus:to-red-50 transition-all duration-200 rounded-lg mx-1 my-1 text-red-600 hover:text-red-700"
                   >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    {leaveGroup.isPending ? '退会中...' : 'グループから退会'}
+                    <div className="p-1 bg-gradient-to-r from-[#FF8800] to-red-500 rounded-md mr-3">
+                      <LogOut className="h-4 w-4 text-white" />
+                    </div>
+                    <span className="font-medium">{leaveGroup.isPending ? '退会中...' : 'グループから退会'}</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -167,6 +187,7 @@ export default function GroupDetailPage() {
                 size="sm"
                 onClick={() => joinGroup.mutate({ groupId, joinType: group.join_type })}
                 disabled={joinGroup.isPending}
+                className="bg-gradient-to-r from-blue-500 to-sky-500 hover:from-blue-600 hover:to-sky-600 text-white shadow-md rounded-full px-4"
               >
                 {joinGroup.isPending ? (
                   "参加中..."
@@ -200,12 +221,12 @@ export default function GroupDetailPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="posts" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
+          <TabsList className="grid w-full grid-cols-2 bg-gradient-to-r from-blue-50 to-sky-50 p-1 rounded-xl">
+            <TabsTrigger value="posts" className="flex items-center gap-2 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
+              <MessageSquare className="h-4 w-4" />
               投稿
             </TabsTrigger>
-            <TabsTrigger value="members" className="flex items-center gap-2">
+            <TabsTrigger value="members" className="flex items-center gap-2 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
               <Users className="h-4 w-4" />
               メンバー ({members?.length || 0})
             </TabsTrigger>
@@ -292,198 +313,238 @@ export default function GroupDetailPage() {
 
               {/* Join Requests Section */}
               {canManageMembers && joinRequests && joinRequests.length > 0 && (
-                <Card className="border-orange-200 bg-orange-50/50">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-orange-800">
-                      <UserPlus className="h-5 w-5" />
-                      参加リクエスト
-                      <Badge variant="outline" className="border-orange-300 text-orange-700">
-                        {joinRequests.length}
-                      </Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {joinRequests.map((request) => (
-                      <div key={request.id} className="flex items-center justify-between p-4 bg-white rounded-lg border border-orange-100">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={request.profiles.avatar_url || undefined} />
-                            <AvatarFallback className="bg-orange-100 text-orange-700">
-                              {request.profiles.username.slice(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium text-gray-900">
-                              {request.profiles.display_name || request.profiles.username}
-                            </p>
-                            <p className="text-sm text-gray-500">@{request.profiles.username}</p>
-                            <p className="text-xs text-gray-400">
-                              {new Date(request.created_at).toLocaleDateString('ja-JP')} に申請
-                            </p>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl p-4 border border-orange-200"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-orange-100 rounded-full">
+                        <UserPlus className="h-5 w-5 text-orange-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-orange-900">参加リクエスト</h3>
+                        <p className="text-sm text-orange-700">{joinRequests.length}件の申請があります</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid gap-3">
+                    {joinRequests.map((request, index) => (
+                      <motion.div
+                        key={request.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        className="bg-white rounded-lg p-3 border border-orange-100 shadow-sm"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10 ring-2 ring-orange-100">
+                              <AvatarImage src={request.profiles.avatar_url || undefined} />
+                              <AvatarFallback className="bg-orange-100 text-orange-700 font-medium">
+                                {request.profiles.username.slice(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium text-gray-900">
+                                {request.profiles.display_name || request.profiles.username}
+                              </p>
+                              <p className="text-sm text-gray-500">@{request.profiles.username}</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => approveJoinRequest.mutate({
+                                requestId: request.id,
+                                groupId: request.group_id,
+                                userId: request.user_id
+                              })}
+                              disabled={approveJoinRequest.isPending}
+                              className="bg-green-500 hover:bg-green-600 text-white shadow-sm"
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => rejectJoinRequest.mutate({
+                                requestId: request.id,
+                                groupId: request.group_id
+                              })}
+                              disabled={rejectJoinRequest.isPending}
+                              className="border-red-200 text-red-600 hover:bg-red-50"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => approveJoinRequest.mutate({
-                              requestId: request.id,
-                              groupId: request.group_id,
-                              userId: request.user_id
-                            })}
-                            disabled={approveJoinRequest.isPending}
-                            className="bg-green-600 hover:bg-green-700"
-                          >
-                            <Check className="h-4 w-4 mr-1" />
-                            承認
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => rejectJoinRequest.mutate({
-                              requestId: request.id,
-                              groupId: request.group_id
-                            })}
-                            disabled={rejectJoinRequest.isPending}
-                            className="border-red-300 text-red-600 hover:bg-red-50"
-                          >
-                            <X className="h-4 w-4 mr-1" />
-                            拒否
-                          </Button>
-                        </div>
-                      </div>
+                      </motion.div>
                     ))}
-                  </CardContent>
-                </Card>
+                  </div>
+                </motion.div>
               )}
 
               {/* Members List */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-blue-600" />
-                    メンバー一覧
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {members?.map((member) => {
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="p-4 border-b border-gray-100">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-blue-100 rounded-full">
+                      <Users className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">メンバー一覧</h3>
+                      <p className="text-sm text-gray-500">{members?.length || 0}人のメンバー</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {members?.map((member, index) => {
                       const isCurrentUser = member.user_id === currentUser?.id
                       const canManageThisMember = canManageMembers && !isCurrentUser && member.role !== 'owner'
                       const joinedDate = new Date(member.joined_at).toLocaleDateString('ja-JP')
 
                       return (
-                        <div key={member.id} className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-100 hover:shadow-sm transition-shadow">
-                          <div className="flex items-center gap-4">
+                        <motion.div
+                          key={member.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          className="group bg-gradient-to-br from-white to-gray-50 rounded-xl p-4 border border-gray-100 hover:shadow-md hover:border-blue-200 transition-all duration-200"
+                        >
+                          <div className="flex items-start gap-3">
                             {/* Avatar */}
-                            <div className="relative">
-                              <Avatar className="h-12 w-12">
+                            <div className="relative flex-shrink-0">
+                              <Avatar className="h-12 w-12 ring-2 ring-blue-50 group-hover:ring-blue-100 transition-colors">
                                 <AvatarImage src={member.profiles.avatar_url || undefined} />
-                                <AvatarFallback className="bg-blue-100 text-blue-700 text-sm font-medium">
+                                <AvatarFallback className="bg-gradient-to-br from-blue-400 to-blue-600 text-white font-semibold">
                                   {member.profiles.username.slice(0, 2).toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
                               {isCurrentUser && (
-                                <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                                <div className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-sm">
                                   <div className="w-2 h-2 bg-white rounded-full"></div>
+                                </div>
+                              )}
+                              {/* Role indicator */}
+                              {member.role === 'owner' && (
+                                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center shadow-sm">
+                                  <Crown className="h-3 w-3 text-white" />
+                                </div>
+                              )}
+                              {member.role === 'admin' && (
+                                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-gradient-to-r from-purple-400 to-purple-500 rounded-full flex items-center justify-center shadow-sm">
+                                  <Shield className="h-3 w-3 text-white" />
                                 </div>
                               )}
                             </div>
 
                             {/* User Info */}
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <p className="font-semibold text-gray-900 truncate">
+                              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                <p className="font-semibold text-gray-900 truncate max-w-[120px] text-sm">
                                   {member.profiles.display_name || member.profiles.username}
                                 </p>
-                                {member.role === 'owner' && (
-                                  <Badge variant="default" className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white border-0">
-                                    <Crown className="h-3 w-3 mr-1" />
-                                    オーナー
-                                  </Badge>
-                                )}
-                                {member.role === 'admin' && (
-                                  <Badge variant="secondary" className="bg-gradient-to-r from-blue-400 to-blue-600 text-white border-0">
-                                    <Shield className="h-3 w-3 mr-1" />
-                                    管理者
-                                  </Badge>
-                                )}
-                                {member.role === 'member' && (
-                                  <Badge variant="outline" className="border-gray-300 text-gray-600">
-                                    <User className="h-3 w-3 mr-1" />
-                                    メンバー
-                                  </Badge>
-                                )}
                                 {isCurrentUser && (
-                                  <Badge variant="outline" className="border-blue-300 text-blue-600">
+                                  <Badge variant="outline" className="border-blue-300 text-blue-600 text-xs px-2 py-0">
                                     あなた
                                   </Badge>
                                 )}
                               </div>
-                              <p className="text-sm text-gray-500 mb-1">@{member.profiles.username}</p>
-                              <p className="text-xs text-gray-400">
-                                {joinedDate} に参加
+                              <p className="text-xs text-gray-500 mb-2 truncate">@{member.profiles.username}</p>
+                              <p className="text-xs text-gray-400 mb-3">
+                                {joinedDate}参加
                               </p>
-                              {member.profiles.bio && (
-                                <p className="text-xs text-gray-600 mt-1 line-clamp-1 max-w-md">
-                                  {member.profiles.bio}
-                                </p>
+
+                              {/* Management Actions */}
+                              {canManageThisMember && (
+                                <div className="space-y-3">
+                                  {/* Admin Toggle Switch */}
+                                  <div className="flex items-center justify-between bg-gray-50 rounded-lg p-2">
+                                    <div className="flex items-center gap-2">
+                                      <Shield className="h-4 w-4 text-purple-600" />
+                                      <span className="text-xs text-gray-700 font-medium">管理者権限</span>
+                                    </div>
+                                    <motion.button
+                                      onClick={() => {
+                                        console.log('Admin toggle clicked for member:', member.user_id, 'current role:', member.role)
+                                        updateMemberRole.mutate({
+                                          groupId: member.group_id,
+                                          userId: member.user_id,
+                                          role: member.role === 'admin' ? 'member' : 'admin'
+                                        })
+                                      }}
+                                      disabled={updateMemberRole.isPending}
+                                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${member.role === 'admin'
+                                        ? 'bg-gradient-to-r from-purple-500 to-purple-600 shadow-lg'
+                                        : 'bg-gray-300 hover:bg-gray-400'
+                                        } ${updateMemberRole.isPending ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                                      whileTap={{ scale: 0.95 }}
+                                    >
+                                      <motion.span
+                                        className="inline-block h-4 w-4 rounded-full bg-white shadow-sm"
+                                        animate={{
+                                          x: member.role === 'admin' ? 20 : 2,
+                                          scale: updateMemberRole.isPending ? 0.8 : 1
+                                        }}
+                                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                      />
+                                      <AnimatePresence>
+                                        {updateMemberRole.isPending && (
+                                          <motion.div
+                                            initial={{ opacity: 0, scale: 0 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0 }}
+                                            className="absolute inset-0 flex items-center justify-center"
+                                          >
+                                            <Loader2 className="h-3 w-3 text-white animate-spin" />
+                                          </motion.div>
+                                        )}
+                                      </AnimatePresence>
+                                    </motion.button>
+                                  </div>
+
+                                  {/* Remove Member Button */}
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      console.log('Remove member clicked for:', member.user_id, member.profiles.display_name || member.profiles.username)
+                                      setMemberToRemove({
+                                        id: member.id,
+                                        name: member.profiles.display_name || member.profiles.username,
+                                        userId: member.user_id,
+                                        groupId: member.group_id
+                                      })
+                                      setRemoveMemberDialogOpen(true)
+                                    }}
+                                    disabled={removeMember.isPending}
+                                    className="w-full text-xs h-8 text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400 transition-all duration-200 hover:shadow-sm"
+                                  >
+                                    {removeMember.isPending ? (
+                                      <div className="flex items-center justify-center gap-2">
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                        <span>除外中...</span>
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center justify-center gap-2">
+                                        <Trash2 className="h-3 w-3" />
+                                        <span>メンバーを除外</span>
+                                      </div>
+                                    )}
+                                  </Button>
+                                </div>
                               )}
                             </div>
                           </div>
-
-                          {/* Management Actions */}
-                          {canManageThisMember && (
-                            <div className="flex gap-2">
-                              {member.role !== 'admin' && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => updateMemberRole.mutate({
-                                    groupId: member.group_id,
-                                    userId: member.user_id,
-                                    role: 'admin'
-                                  })}
-                                  className="text-blue-600 border-blue-300 hover:bg-blue-50"
-                                >
-                                  <Shield className="h-3 w-3 mr-1" />
-                                  管理者
-                                </Button>
-                              )}
-                              {member.role === 'admin' && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => updateMemberRole.mutate({
-                                    groupId: member.group_id,
-                                    userId: member.user_id,
-                                    role: 'member'
-                                  })}
-                                  className="text-gray-600 border-gray-300 hover:bg-gray-50"
-                                >
-                                  <User className="h-3 w-3 mr-1" />
-                                  メンバー
-                                </Button>
-                              )}
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => removeMember.mutate({
-                                  groupId: member.group_id,
-                                  userId: member.user_id
-                                })}
-                                className="text-red-600 border-red-300 hover:bg-red-50"
-                              >
-                                <X className="h-3 w-3 mr-1" />
-                                除外
-                              </Button>
-                            </div>
-                          )}
-                        </div>
+                        </motion.div>
                       )
                     })}
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
           </TabsContent>
         </Tabs>
@@ -627,6 +688,69 @@ export default function GroupDetailPage() {
               {updateGroup.isPending ? '保存中...' : '保存'}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove Member Confirmation Dialog */}
+      <Dialog open={removeMemberDialogOpen} onOpenChange={setRemoveMemberDialogOpen}>
+        <DialogContent className="max-w-[calc(100vw-2rem)] w-full sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              メンバーを除外
+            </DialogTitle>
+            <DialogDescription className="text-left">
+              <span className="font-medium text-gray-900">{memberToRemove?.name}</span> をこのグループから除外しますか？
+              <br />
+              この操作は取り消すことができません。
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="flex gap-2 sm:justify-end">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRemoveMemberDialogOpen(false)
+                setMemberToRemove(null)
+              }}
+              className="flex-1 sm:flex-none"
+            >
+              キャンセル
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (memberToRemove) {
+                  removeMember.mutate(
+                    {
+                      groupId: memberToRemove.groupId,
+                      userId: memberToRemove.userId
+                    },
+                    {
+                      onSuccess: () => {
+                        setRemoveMemberDialogOpen(false)
+                        setMemberToRemove(null)
+                      }
+                    }
+                  )
+                }
+              }}
+              disabled={removeMember.isPending}
+              className="flex-1 sm:flex-none bg-red-600 hover:bg-red-700"
+            >
+              {removeMember.isPending ? (
+                <div className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>除外中...</span>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center gap-2">
+                  <Trash2 className="h-4 w-4" />
+                  <span>除外する</span>
+                </div>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

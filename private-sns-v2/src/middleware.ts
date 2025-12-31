@@ -48,12 +48,13 @@ export async function middleware(request: NextRequest) {
   }
 
   // Redirect to home if already authenticated and trying to access auth pages
+  // Only do this for direct navigation, not for programmatic redirects
   const authPaths = ['/login', '/signup']
   const isAuthPath = authPaths.some((path) =>
     request.nextUrl.pathname.startsWith(path)
   )
 
-  if (isAuthPath && user) {
+  if (isAuthPath && user && !request.nextUrl.searchParams.has('redirect')) {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/home'
     return NextResponse.redirect(redirectUrl)

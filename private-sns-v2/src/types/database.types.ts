@@ -188,6 +188,32 @@ export interface Database {
           created_at?: string
         }
       }
+      custom_stamps: {
+        Row: {
+          id: string
+          user_id: string
+          image_url: string
+          name: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          image_url: string
+          name?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          image_url?: string
+          name?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
       follows: {
         Row: {
           id: string

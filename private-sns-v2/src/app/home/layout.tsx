@@ -6,12 +6,16 @@ export default function HomeLayout({
   children: React.ReactNode
 }) {
   return (
-    <>
+    <div className="flex flex-col min-h-screen">
       {/* Main Content */}
-      {children}
+      <div className="flex-1">
+        {children}
+      </div>
 
       {/* Bottom Navigation */}
-      <BottomNav />
-    </>
+      <div className="flex-shrink-0">
+        <BottomNav />
+      </div>
+    </div>
   )
 }

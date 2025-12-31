@@ -30,65 +30,15 @@ export function useAuth() {
 
   const isAuthenticated = !!user
 
-  // Initialize auth state
-  useEffect(() => {
-    if (isInitialized) return
-
-    const initAuth = async () => {
-      setLoading(true)
-      try {
-        const { data, error } = await getCurrentUser()
-
-        if (error) {
-          console.error('Auth initialization error:', error)
-          setUser(null)
-        } else {
-          setUser(data)
-        }
-      } catch (err) {
-        console.error('Auth initialization error:', err)
-        setUser(null)
-      } finally {
-        setLoading(false)
-        setInitialized(true)
-      }
-    }
-
-    initAuth()
-  }, [isInitialized, setUser, setLoading, setInitialized])
-
-  // Listen to auth state changes
-  useEffect(() => {
-    const supabase = createClient()
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        const { data } = await getCurrentUser()
-        setUser(data)
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null)
-      } else if (event === 'TOKEN_REFRESHED' && session) {
-        const { data } = await getCurrentUser()
-        setUser(data)
-      } else if (event === 'USER_UPDATED' && session) {
-        const { data } = await getCurrentUser()
-        setUser(data)
-      }
-    })
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [setUser])
+  // Note: Auth state is now managed by AuthProvider to avoid conflicts
+  // This hook now only provides auth actions and reads from the global state
 
   // Sign in with email/password
   const signIn = useCallback(
     async (credentials: SignInCredentials) => {
       setLoading(true)
       try {
-        const { data, error } = await signInWithEmail(credentials)
+        const { error } = await signInWithEmail(credentials)
 
         if (error) {
           toast.error('ログインに失敗しました', {
@@ -97,9 +47,9 @@ export function useAuth() {
           return { success: false, error }
         }
 
-        setUser(data)
+        // ログイン成功後、すぐにホーム画面へリダイレクト
         toast.success('ログインしました')
-        router.push('/')
+        router.push('/home')
         return { success: true, error: null }
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'ログインに失敗しました'
@@ -114,7 +64,7 @@ export function useAuth() {
         setLoading(false)
       }
     },
-    [setLoading, setUser, router]
+    [setLoading, router]
   )
 
   // Sign in with Google
@@ -180,7 +130,7 @@ export function useAuth() {
     async (credentials: SignUpCredentials) => {
       setLoading(true)
       try {
-        const { data, error } = await signUpWithEmail(credentials)
+        const { error } = await signUpWithEmail(credentials)
 
         if (error) {
           toast.error('ユーザー登録に失敗しました', {
@@ -189,11 +139,11 @@ export function useAuth() {
           return { success: false, error }
         }
 
-        setUser(data)
+        // AuthProviderのonAuthStateChangeリスナーがユーザー状態を設定する
         toast.success('ユーザー登録が完了しました', {
           description: 'メールアドレスの確認をお願いします',
         })
-        router.push('/')
+        // リダイレクトはAuthProviderが行う
         return { success: true, error: null }
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'ユーザー登録に失敗しました'
@@ -208,7 +158,7 @@ export function useAuth() {
         setLoading(false)
       }
     },
-    [setLoading, setUser, router]
+    [setLoading, router]
   )
 
   // Sign out

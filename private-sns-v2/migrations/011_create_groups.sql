@@ -112,6 +112,16 @@ CREATE POLICY "Group members are viewable by group members" ON group_members
     )
   );
 
+CREATE POLICY "Group admins can view members for invitation purposes" ON group_members
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM group_members gm
+      WHERE gm.group_id = group_members.group_id
+      AND gm.user_id = auth.uid()
+      AND gm.role IN ('owner', 'admin')
+    )
+  );
+
 CREATE POLICY "Users can join groups (free)" ON group_members
   FOR INSERT WITH CHECK (
     auth.uid() = user_id AND
@@ -122,8 +132,9 @@ CREATE POLICY "Users can join groups (free)" ON group_members
     )
   );
 
-CREATE POLICY "Group owners and admins can add members" ON group_members
+CREATE POLICY "Group owners and admins can invite members" ON group_members
   FOR INSERT WITH CHECK (
+    auth.uid() != user_id AND
     EXISTS (
       SELECT 1 FROM group_members gm
       WHERE gm.group_id = group_members.group_id
@@ -131,6 +142,10 @@ CREATE POLICY "Group owners and admins can add members" ON group_members
       AND gm.role IN ('owner', 'admin')
     )
   );
+
+-- 一時的なデバッグ用ポリシー（権限チェックを緩和）
+-- CREATE POLICY "Allow all inserts for debugging" ON group_members
+--   FOR INSERT WITH CHECK (true);
 
 CREATE POLICY "Group owners and admins can update member roles" ON group_members
   FOR UPDATE USING (

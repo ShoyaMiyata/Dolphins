@@ -10,25 +10,29 @@ export type GroupMemberWithProfile = GroupMember & {
   profiles: Profile
 }
 
-// グループメンバー一覧を取得
+// グループメンバー一覧を取得（アクティブメンバーのみ）
 export function useGroupMembers(groupId: string | null) {
   const supabase = createClient()
 
   return useQuery({
     queryKey: ['group-members', groupId],
     queryFn: async () => {
+      console.log('グループメンバー取得開始:', groupId)
       if (!groupId) return []
 
       const { data: members, error } = await supabase
         .from('group_members')
         .select('*')
         .eq('group_id', groupId)
+        .eq('is_active', true)  // アクティブメンバーのみ取得
         .order('joined_at', { ascending: true })
 
       if (error) {
         console.error('メンバー取得エラー:', error)
         throw error
       }
+
+      console.log('メンバー取得成功、プロフィール取得開始:', members?.length, '件')
 
       // 各メンバーのプロフィールを取得
       const membersWithProfile: GroupMemberWithProfile[] = await Promise.all(
@@ -46,35 +50,65 @@ export function useGroupMembers(groupId: string | null) {
         })
       )
 
+      console.log('メンバー取得完了:', membersWithProfile?.length, '件')
       return membersWithProfile
     },
     enabled: !!groupId,
   })
 }
 
-// メンバーを削除
+// メンバーを削除（ソフト削除）
 export function useRemoveGroupMember() {
   const queryClient = useQueryClient()
   const supabase = createClient()
 
   return useMutation({
     mutationFn: async ({ groupId, userId }: { groupId: string; userId: string }) => {
-      const { error } = await supabase
-        .from('group_members')
-        .delete()
-        .eq('group_id', groupId)
-        .eq('user_id', userId)
+      console.log('メンバー削除開始:', { groupId, userId })
+
+      // 現在のユーザーの権限を確認
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      if (!currentUser) throw new Error('認証が必要です')
+
+      // データベース関数を使用してソフト削除
+      const { data, error } = await supabase
+        .rpc('soft_remove_member', {
+          p_group_id: groupId,
+          p_user_id: userId,
+          p_remover_id: currentUser.id
+        })
+
+      console.log('ソフト削除結果:', { data, error })
 
       if (error) throw error
+      if (!data) throw new Error('メンバーの削除に失敗しました')
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['group-members', variables.groupId] })
+      console.log('メンバー削除成功、キャッシュ更新開始')
+
+      // 現在のキャッシュデータを取得して更新
+      const currentData = queryClient.getQueryData<GroupMemberWithProfile[]>(['group-members', variables.groupId])
+      if (currentData) {
+        console.log('現在のキャッシュデータ:', currentData.length, '件')
+        // 削除されたメンバーをフィルタリングして新しいデータを設定
+        const newData = currentData.filter(member => member.user_id !== variables.userId)
+        console.log('更新後のキャッシュデータ:', newData.length, '件')
+        queryClient.setQueryData(['group-members', variables.groupId], newData)
+      }
+
+      // 招待関連のクエリも無効化（削除されたユーザーが再び招待可能になるように）
+      queryClient.invalidateQueries({ queryKey: ['all-users-for-invite', variables.groupId] })
+
+      // 他の関連クエリも無効化
       queryClient.invalidateQueries({ queryKey: ['group', variables.groupId] })
+      queryClient.invalidateQueries({ queryKey: ['groups'] })
+
       toast.success('メンバーを削除しました')
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('メンバー削除エラー:', error)
-      toast.error('メンバーの削除に失敗しました')
+      const errorMessage = error?.message || 'メンバーの削除に失敗しました'
+      toast.error(errorMessage)
     },
   })
 }
@@ -94,21 +128,79 @@ export function useUpdateMemberRole() {
       userId: string
       role: 'owner' | 'admin' | 'member'
     }) => {
+      console.log('役割変更開始:', { groupId, userId, role })
+
+      // 現在のユーザーの権限を確認
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      if (!currentUser) throw new Error('認証が必要です')
+
+      const { data: currentUserMember } = await supabase
+        .from('group_members')
+        .select('role')
+        .eq('group_id', groupId)
+        .eq('user_id', currentUser.id)
+        .single()
+
+      console.log('現在のユーザー権限:', currentUserMember?.role)
+
+      if (!['owner', 'admin'].includes(currentUserMember?.role)) {
+        throw new Error('メンバーの役割を変更する権限がありません')
+      }
+
+      // 変更対象のメンバーを確認
+      const { data: targetMember } = await supabase
+        .from('group_members')
+        .select('*')
+        .eq('group_id', groupId)
+        .eq('user_id', userId)
+        .single()
+
+      console.log('変更対象メンバー:', targetMember)
+
+      if (!targetMember) {
+        throw new Error('メンバーが見つかりません')
+      }
+
+      if (targetMember.role === 'owner' && role !== 'owner') {
+        throw new Error('オーナーの役割を変更できません')
+      }
+
       const { error } = await supabase
         .from('group_members')
         .update({ role } as any)
         .eq('group_id', groupId)
         .eq('user_id', userId)
 
+      console.log('役割変更結果:', { error })
+
       if (error) throw error
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['group-members', variables.groupId] })
+      console.log('役割変更成功、キャッシュ更新開始')
+
+      // 現在のキャッシュデータを取得して更新
+      const currentData = queryClient.getQueryData<GroupMemberWithProfile[]>(['group-members', variables.groupId])
+      if (currentData) {
+        console.log('現在のキャッシュデータ:', currentData.length, '件')
+        // 変更されたメンバーの役割を更新
+        const newData = currentData.map(member =>
+          member.user_id === variables.userId
+            ? { ...member, role: variables.role }
+            : member
+        )
+        console.log('更新後のキャッシュデータ:', newData.length, '件')
+        queryClient.setQueryData(['group-members', variables.groupId], newData)
+      }
+
+      // 他の関連クエリも無効化
+      queryClient.invalidateQueries({ queryKey: ['group', variables.groupId] })
+
       toast.success('役割を変更しました')
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('役割変更エラー:', error)
-      toast.error('役割の変更に失敗しました')
+      const errorMessage = error?.message || '役割の変更に失敗しました'
+      toast.error(errorMessage)
     },
   })
 }
@@ -269,7 +361,7 @@ export function useJoinGroup() {
   })
 }
 
-// グループから退会
+// グループから退会（ソフト削除）
 export function useLeaveGroup() {
   const queryClient = useQueryClient()
   const supabase = createClient()
@@ -281,15 +373,19 @@ export function useLeaveGroup() {
 
       const userId = user.id
 
-      const { error } = await supabase
-        .from('group_members')
-        .delete()
-        .eq('group_id', groupId)
-        .eq('user_id', userId)
+      // ソフト削除関数を使用
+      const { data, error } = await supabase
+        .rpc('soft_leave_group', {
+          p_group_id: groupId,
+          p_user_id: userId
+        })
 
       if (error) throw error
+      if (!data) throw new Error('グループ退会に失敗しました')
     },
     onSuccess: (_, variables) => {
+      // 退会したグループのメンバーリストをクリア
+      queryClient.removeQueries({ queryKey: ['group-members', variables] })
       queryClient.invalidateQueries({ queryKey: ['group-members', variables] })
       queryClient.invalidateQueries({ queryKey: ['group', variables] })
       queryClient.invalidateQueries({ queryKey: ['groups'] })
@@ -302,35 +398,80 @@ export function useLeaveGroup() {
   })
 }
 
-// ユーザーをグループに招待（直接追加）
+// ユーザーをグループに招待（直接追加または再招待）
 export function useInviteUserToGroup() {
   const queryClient = useQueryClient()
   const supabase = createClient()
 
   return useMutation({
     mutationFn: async ({ groupId, userId }: { groupId: string; userId: string }) => {
-      // 招待するユーザーが既にメンバーかチェック
-      const { data: existingMember } = await supabase
+      console.log('招待開始:', { groupId, userId })
+
+      console.log('supabase.auth.getUser() を呼び出し中...')
+      // 現在のユーザーが管理者権限を持っているかチェック
+      const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser()
+      console.log('supabase.auth.getUser() 完了:', { currentUser, userError })
+      if (userError) {
+        console.error('ユーザー取得エラー:', userError)
+        throw new Error('ログインが必要です')
+      }
+      if (!currentUser) {
+        throw new Error('ログインが必要です')
+      }
+
+      console.log('現在のユーザーID:', currentUser.id)
+
+      // 現在のユーザーがグループのメンバーかチェック
+      const { data: currentUserMember, error: memberError } = await supabase
+        .from('group_members')
+        .select('role')
+        .eq('group_id', groupId)
+        .eq('user_id', currentUser.id)
+        .single() as any
+
+      console.log('メンバー情報:', currentUserMember, 'エラー:', memberError)
+
+      if (memberError) {
+        console.error('メンバー取得エラー:', memberError)
+        throw new Error('グループメンバー情報の取得に失敗しました')
+      }
+
+      if (!currentUserMember) {
+        throw new Error('このグループのメンバーではありません')
+      }
+
+      console.log('ユーザーのロール:', currentUserMember.role)
+
+      if (!['owner', 'admin'].includes(currentUserMember.role)) {
+        throw new Error(`このグループの管理者権限が必要です。現在のロール: ${currentUserMember.role}`)
+      }
+
+      // 招待するユーザーが既にアクティブメンバーかチェック
+      const { data: existingActiveMember } = await supabase
         .from('group_members')
         .select('id')
         .eq('group_id', groupId)
         .eq('user_id', userId)
+        .eq('is_active', true)
         .single()
 
-      if (existingMember) {
+      if (existingActiveMember) {
         throw new Error('このユーザーは既にメンバーです')
       }
 
-      // メンバーに追加
-      const { error } = await supabase
-        .from('group_members')
-        .insert({
-          group_id: groupId,
-          user_id: userId,
-          role: 'member',
-        } as any)
+      console.log('reactivate_member関数実行:', { group_id: groupId, user_id: userId })
+
+      // reactivate_member関数を使用して招待（新規または再招待）
+      const { data, error } = await supabase
+        .rpc('reactivate_member', {
+          p_group_id: groupId,
+          p_user_id: userId
+        })
+
+      console.log('招待結果:', { data, error })
 
       if (error) throw error
+      if (!data) throw new Error('ユーザーの招待に失敗しました')
 
       return userId
     },
@@ -340,9 +481,17 @@ export function useInviteUserToGroup() {
       queryClient.invalidateQueries({ queryKey: ['groups'] })
       toast.success('ユーザーをグループに招待しました')
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('ユーザー招待エラー:', error)
-      toast.error(error.message || 'ユーザーの招待に失敗しました')
+      console.error('エラー詳細:', JSON.stringify(error, null, 2))
+
+      // Supabaseエラーの詳細を取得
+      const errorMessage = error?.message ||
+        (error?.code === 'PGRST301' ? '権限がありません。グループの管理者であることを確認してください。' :
+          error?.code === '23505' ? 'このユーザーは既にメンバーです。' :
+            'ユーザーの招待に失敗しました。')
+
+      toast.error(errorMessage)
     },
   })
 }
@@ -446,10 +595,9 @@ export function useUpdateGroup() {
       if (updates.visibility_type !== undefined) updateData.visibility_type = updates.visibility_type
       if (updates.join_type !== undefined) updateData.join_type = updates.join_type
 
-      // @ts-expect-error - Supabase type inference issue
       const { data, error } = await supabase
         .from('groups')
-        .update(updateData)
+        .update(updateData as any)
         .eq('id', groupId)
         .select()
         .single()

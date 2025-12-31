@@ -6,6 +6,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useInView } from 'react-intersection-observer'
+import EmojiPicker, { Theme } from 'emoji-picker-react'
 import {
   Heart,
   MessageCircle,
@@ -52,6 +53,10 @@ import {
   useAddReaction,
   useRemoveReaction,
 } from '@/hooks/use-reactions'
+import {
+  useCustomStamps,
+  useCreateCustomStamp,
+} from '@/hooks/use-custom-stamps'
 import { createClient } from '@/lib/supabase/client'
 
 interface PostCardProps {
@@ -82,6 +87,8 @@ export function PostCard({ post }: PostCardProps) {
   const { data: reactions = [] } = useReactions(post.id)
   const addReaction = useAddReaction()
   const removeReaction = useRemoveReaction()
+  const { data: customStamps = [] } = useCustomStamps()
+  const createCustomStamp = useCreateCustomStamp()
 
   // ユーザーIDを取得
   useEffect(() => {
@@ -156,21 +163,26 @@ export function PostCard({ post }: PostCardProps) {
   const handleReaction = async (emoji: string) => {
     const existingReaction = reactions.find((r) => r.emoji === emoji)
 
-    if (existingReaction?.hasReacted) {
-      // 既にリアクションしている場合は削除
-      await removeReaction.mutateAsync({
-        postId: post.id,
-        emoji,
-      })
-    } else {
-      // リアクションを追加
-      await addReaction.mutateAsync({
-        postId: post.id,
-        emoji,
-      })
+    try {
+      if (existingReaction?.hasReacted) {
+        // 既にリアクションしている場合は削除
+        await removeReaction.mutateAsync({
+          postId: post.id,
+          emoji,
+        })
+      } else {
+        // リアクションを追加
+        await addReaction.mutateAsync({
+          postId: post.id,
+          emoji,
+        })
+      }
+    } catch (error) {
+      console.error('リアクション処理エラー:', error)
+    } finally {
+      // 即座に閉じる
+      setIsReactionPickerOpen(false)
     }
-
-    setIsReactionPickerOpen(false)
   }
 
   // よく使う絵文字
@@ -190,289 +202,345 @@ export function PostCard({ post }: PostCardProps) {
         <Card className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-200 mb-3 border border-blue-100 hover:border-blue-200">
           <CardContent className="p-4 cursor-pointer" onClick={handlePostClick}>
             <div className="flex gap-3">
-            {/* アバター */}
-            <Avatar className="h-10 w-10 flex-shrink-0">
-              <AvatarImage src={post.profiles.avatar_url || undefined} />
-              <AvatarFallback>
-                {post.profiles.display_name?.[0] || post.profiles.username[0]}
-              </AvatarFallback>
-            </Avatar>
+              {/* アバター */}
+              <Avatar className="h-10 w-10 flex-shrink-0">
+                <AvatarImage src={post.profiles.avatar_url || undefined} />
+                <AvatarFallback>
+                  {post.profiles.display_name?.[0] || post.profiles.username[0]}
+                </AvatarFallback>
+              </Avatar>
 
-            <div className="flex-1 space-y-2">
-              {/* ヘッダー */}
-              <div className="flex items-start justify-between">
-                <div className="flex flex-col">
-                  <span className="font-semibold text-sm">
-                    {post.profiles.display_name || post.profiles.username}
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    @{post.profiles.username} · {relativeTime}
-                  </span>
+              <div className="flex-1 space-y-2">
+                {/* ヘッダー */}
+                <div className="flex items-start justify-between">
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-sm">
+                      {post.profiles.display_name || post.profiles.username}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      @{post.profiles.username} · {relativeTime}
+                    </span>
+                  </div>
+
+                  {/* オプションメニュー（投稿者のみ） */}
+                  {isOwner && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-8 w-8 -mt-1 -mr-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" sideOffset={8} className="border-blue-100 shadow-lg" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setIsEditDialogOpen(true)
+                          }}
+                          className="text-blue-900 focus:bg-blue-50 focus:text-blue-900 cursor-pointer"
+                        >
+                          <Edit className="mr-2 h-4 w-4 text-blue-500" />
+                          編集
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setIsDeleteDialogOpen(true)
+                          }}
+                          className="text-red-600 focus:bg-red-50 focus:text-red-600 cursor-pointer"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          削除
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </div>
 
-                {/* オプションメニュー（投稿者のみ） */}
-                {isOwner && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => e.stopPropagation()}
-                        className="h-8 w-8 -mt-1 -mr-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50"
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" sideOffset={8} className="border-blue-100 shadow-lg" onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setIsEditDialogOpen(true)
-                        }}
-                        className="text-blue-900 focus:bg-blue-50 focus:text-blue-900 cursor-pointer"
-                      >
-                        <Edit className="mr-2 h-4 w-4 text-blue-500" />
-                        編集
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setIsDeleteDialogOpen(true)
-                        }}
-                        className="text-red-600 focus:bg-red-50 focus:text-red-600 cursor-pointer"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        削除
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                {/* 投稿内容 */}
+                {post.content && (
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+                    {post.content}
+                  </p>
                 )}
-              </div>
 
-              {/* 投稿内容 */}
-              {post.content && (
-                <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-                  {post.content}
-                </p>
-              )}
-
-              {/* 画像ギャラリー */}
-              {post.post_images.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3, delay: 0.1 }}
-                  className={`grid gap-2 mt-3 ${
-                    post.post_images.length === 1
+                {/* 画像ギャラリー */}
+                {post.post_images.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3, delay: 0.1 }}
+                    className={`grid gap-2 mt-3 ${post.post_images.length === 1
                       ? 'grid-cols-1'
                       : post.post_images.length === 2
                         ? 'grid-cols-2'
                         : post.post_images.length === 3
                           ? 'grid-cols-3'
                           : 'grid-cols-2'
-                  }`}
-                >
-                  {post.post_images.slice(0, 4).map((image, index) => (
-                    <motion.div
-                      key={image.id}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.3, delay: index * 0.05 }}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className={`relative overflow-hidden rounded-lg border cursor-pointer ${
-                        post.post_images.length === 3 && index === 0
+                      }`}
+                  >
+                    {post.post_images.slice(0, 4).map((image, index) => (
+                      <motion.div
+                        key={image.id}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.3, delay: index * 0.05 }}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className={`relative overflow-hidden rounded-lg border cursor-pointer ${post.post_images.length === 3 && index === 0
                           ? 'col-span-3'
                           : post.post_images.length > 3 && index === 3
                             ? 'relative'
                             : ''
-                      }`}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setSelectedImage(image.image_url)
-                      }}
-                    >
-                      {/* Image Loading Blur */}
-                      {!imageLoaded[image.id] && (
-                        <div className="absolute inset-0 bg-gray-200 animate-pulse" />
-                      )}
-                      <img
-                        src={image.image_url}
-                        alt={`投稿画像 ${index + 1}`}
-                        className={`w-full object-cover transition-opacity duration-300 ${
-                          post.post_images.length === 1
+                          }`}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setSelectedImage(image.image_url)
+                        }}
+                      >
+                        {/* Image Loading Blur */}
+                        {!imageLoaded[image.id] && (
+                          <div className="absolute inset-0 bg-gray-200 animate-pulse" />
+                        )}
+                        <img
+                          src={image.image_url}
+                          alt={`投稿画像 ${index + 1}`}
+                          className={`w-full object-cover transition-opacity duration-300 ${post.post_images.length === 1
                             ? 'max-h-[400px]'
                             : 'aspect-square'
-                        } ${imageLoaded[image.id] ? 'opacity-100' : 'opacity-0'}`}
-                        onLoad={() =>
-                          setImageLoaded((prev) => ({ ...prev, [image.id]: true }))
-                        }
-                        loading="lazy"
-                      />
-                      {post.post_images.length > 4 && index === 3 && (
-                        <motion.div
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          className="absolute inset-0 flex items-center justify-center bg-black/50 text-white text-2xl font-bold"
-                        >
-                          +{post.post_images.length - 4}
-                        </motion.div>
-                      )}
-                    </motion.div>
-                  ))}
-                </motion.div>
-              )}
-
-              {/* アクションボタン */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.3, delay: 0.2 }}
-                className="flex items-center justify-between pt-2 max-w-md"
-              >
-                {/* コメント */}
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      router.push(`/home/${post.id}`)
-                    }}
-                    className="h-8 gap-1.5 text-gray-500 hover:text-blue-500 hover:bg-blue-50 px-2 py-1 rounded-full transition-colors"
-                  >
-                    <MessageCircle className="h-4 w-4" />
-                    {post.comments_count > 0 && (
-                      <span className="text-xs font-medium">{post.comments_count}</span>
-                    )}
-                  </Button>
-                </motion.div>
-
-                {/* リポスト */}
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  animate={post.is_reposted ? { rotate: [0, 15, -15, 0] } : {}}
-                  transition={{ duration: 0.4 }}
-                >
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleRepost()
-                    }}
-                    disabled={repost.isPending || unrepost.isPending}
-                    className={`h-8 gap-1.5 px-2 py-1 rounded-full transition-colors ${
-                      post.is_reposted
-                        ? 'text-green-500 hover:text-green-600 hover:bg-green-50'
-                        : 'text-gray-500 hover:text-green-500 hover:bg-green-50'
-                    }`}
-                  >
-                    <Repeat2 className="h-4 w-4" />
-                    {post.reposts_count > 0 && (
-                      <span className="text-xs font-medium">{post.reposts_count}</span>
-                    )}
-                  </Button>
-                </motion.div>
-
-                {/* いいね */}
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleLike()
-                    }}
-                    disabled={likePost.isPending || unlikePost.isPending}
-                    className={`h-8 gap-1.5 px-2 py-1 rounded-full transition-colors ${
-                      post.is_liked
-                        ? 'text-red-500 hover:text-red-600 hover:bg-red-50'
-                        : 'text-gray-500 hover:text-red-500 hover:bg-red-50'
-                    }`}
-                  >
-                    <motion.div
-                      animate={post.is_liked ? { scale: [1, 1.3, 1] } : {}}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <Heart
-                        className={`h-4 w-4 ${post.is_liked ? 'fill-current' : ''}`}
-                      />
-                    </motion.div>
-                    {post.likes_count > 0 && (
-                      <span className="text-xs font-medium">{post.likes_count}</span>
-                    )}
-                  </Button>
-                </motion.div>
-
-                {/* リアクション */}
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Popover open={isReactionPickerOpen} onOpenChange={setIsReactionPickerOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => e.stopPropagation()}
-                        className="h-8 gap-1.5 text-gray-500 hover:text-yellow-500 hover:bg-yellow-50 px-2 py-1 rounded-full transition-colors"
-                      >
-                        <Smile className="h-4 w-4" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-64 p-2" align="start" onClick={(e) => e.stopPropagation()}>
-                      <div className="grid grid-cols-4 gap-2">
-                        {commonEmojis.map((emoji) => (
-                          <Button
-                            key={emoji}
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleReaction(emoji)
-                            }}
-                            className="h-12 text-2xl hover:bg-gray-100 rounded-lg"
+                            } ${imageLoaded[image.id] ? 'opacity-100' : 'opacity-0'}`}
+                          onLoad={() =>
+                            setImageLoaded((prev) => ({ ...prev, [image.id]: true }))
+                          }
+                          loading="lazy"
+                        />
+                        {post.post_images.length > 4 && index === 3 && (
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="absolute inset-0 flex items-center justify-center bg-black/50 text-white text-2xl font-bold"
                           >
-                            {emoji}
-                          </Button>
-                        ))}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </motion.div>
-              </motion.div>
+                            +{post.post_images.length - 4}
+                          </motion.div>
+                        )}
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                )}
 
-              {/* リアクション表示 */}
-              {reactions.length > 0 && (
+                {/* アクションボタン */}
                 <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex flex-wrap gap-2 mt-2"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3, delay: 0.2 }}
+                  className="flex items-center justify-between pt-2 max-w-md"
                 >
-                  {reactions.map((reaction) => (
+                  {/* コメント */}
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                     <Button
-                      key={reaction.emoji}
                       variant="ghost"
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation()
-                        handleReaction(reaction.emoji)
+                        router.push(`/home/${post.id}`)
                       }}
-                      className={`h-7 px-2 py-1 rounded-full text-sm gap-1 transition-colors ${
-                        reaction.hasReacted
-                          ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
+                      className="h-8 gap-1.5 text-gray-500 hover:text-blue-500 hover:bg-blue-50 px-2 py-1 rounded-full transition-colors"
                     >
-                      <span className="text-base">{reaction.emoji}</span>
-                      <span className="text-xs font-medium">{reaction.count}</span>
+                      <MessageCircle className="h-4 w-4" />
+                      {post.comments_count > 0 && (
+                        <span className="text-xs font-medium">{post.comments_count}</span>
+                      )}
                     </Button>
-                  ))}
+                  </motion.div>
+
+                  {/* リポスト */}
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    animate={post.is_reposted ? { rotate: [0, 15, -15, 0] } : {}}
+                    transition={{ duration: 0.4 }}
+                  >
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleRepost()
+                      }}
+                      disabled={repost.isPending || unrepost.isPending}
+                      className={`h-8 gap-1.5 px-2 py-1 rounded-full transition-colors ${post.is_reposted
+                        ? 'text-green-500 hover:text-green-600 hover:bg-green-50'
+                        : 'text-gray-500 hover:text-green-500 hover:bg-green-50'
+                        }`}
+                    >
+                      <Repeat2 className="h-4 w-4" />
+                      {post.reposts_count > 0 && (
+                        <span className="text-xs font-medium">{post.reposts_count}</span>
+                      )}
+                    </Button>
+                  </motion.div>
+
+                  {/* いいね */}
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleLike()
+                      }}
+                      disabled={likePost.isPending || unlikePost.isPending}
+                      className={`h-8 gap-1.5 px-2 py-1 rounded-full transition-colors ${post.is_liked
+                        ? 'text-red-500 hover:text-red-600 hover:bg-red-50'
+                        : 'text-gray-500 hover:text-red-500 hover:bg-red-50'
+                        }`}
+                    >
+                      <motion.div
+                        animate={post.is_liked ? { scale: [1, 1.3, 1] } : {}}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <Heart
+                          className={`h-4 w-4 ${post.is_liked ? 'fill-current' : ''}`}
+                        />
+                      </motion.div>
+                      {post.likes_count > 0 && (
+                        <span className="text-xs font-medium">{post.likes_count}</span>
+                      )}
+                    </Button>
+                  </motion.div>
+
+                  {/* リアクション */}
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Popover open={isReactionPickerOpen} onOpenChange={setIsReactionPickerOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-8 gap-1.5 text-gray-500 hover:text-yellow-500 hover:bg-yellow-50 px-2 py-1 rounded-full transition-colors"
+                        >
+                          <Smile className="h-4 w-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80 p-3 max-h-96 overflow-y-auto bg-white border border-gray-200 shadow-lg rounded-lg" align="start">
+                        {/* 絵文字ピッカー */}
+                        <div className="mb-4">
+                          <EmojiPicker
+                            onEmojiClick={(emojiData) => {
+                              handleReaction(emojiData.emoji)
+                            }}
+                            width="100%"
+                            height={300}
+                            searchDisabled={true}
+                            previewConfig={{
+                              showPreview: false,
+                            }}
+                          />
+                        </div>
+
+                        {/* カスタムスタンプセクション */}
+                        {customStamps.length > 0 && (
+                          <div className="border-t pt-3">
+                            <h4 className="text-sm font-medium text-gray-700 mb-2">カスタムスタンプ</h4>
+                            <div className="grid grid-cols-4 gap-2">
+                              {customStamps.slice(0, 8).map((stamp) => (
+                                <Button
+                                  key={stamp.id}
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleReaction(stamp.image_url)}
+                                  className="h-12 p-1 hover:bg-gray-100 rounded-lg"
+                                >
+                                  <img
+                                    src={stamp.image_url}
+                                    alt={stamp.name || 'カスタムスタンプ'}
+                                    className="w-full h-full object-cover rounded"
+                                  />
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* カスタムスタンプ作成ボタン */}
+                        <div className="border-t pt-3 mt-3">
+                          <input
+                            type="file"
+                            id="custom-stamp-input"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0]
+                              if (file) {
+                                createCustomStamp.mutate({ image: file })
+                                e.target.value = ''
+                              }
+                            }}
+                            className="hidden"
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => document.getElementById('custom-stamp-input')?.click()}
+                            disabled={createCustomStamp.isPending}
+                            className="w-full text-sm"
+                          >
+                            {createCustomStamp.isPending ? '作成中...' : '+ カスタムスタンプ追加'}
+                          </Button>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </motion.div>
                 </motion.div>
-              )}
+
+                {/* リアクション表示 */}
+                {reactions.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex flex-wrap gap-2 mt-2"
+                  >
+                    {reactions.map((reaction) => {
+                      // カスタムスタンプかどうか判定（URLかどうか）
+                      const isCustomStamp = reaction.emoji.startsWith('http')
+
+                      return (
+                        <Button
+                          key={reaction.emoji}
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleReaction(reaction.emoji)
+                            setIsReactionPickerOpen(false) // ワンタッチで閉じる
+                          }}
+                          className={`h-7 px-2 py-1 rounded-full text-sm gap-1 transition-colors ${reaction.hasReacted
+                            ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                        >
+                          {isCustomStamp ? (
+                            <img
+                              src={reaction.emoji}
+                              alt="カスタムスタンプ"
+                              className="w-4 h-4 object-cover rounded"
+                            />
+                          ) : (
+                            <span className="text-base">{reaction.emoji}</span>
+                          )}
+                          <span className="text-xs font-medium">{reaction.count}</span>
+                        </Button>
+                      )
+                    })}
+                  </motion.div>
+                )}
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
       </motion.div>
 
       {/* 削除確認ダイアログ */}

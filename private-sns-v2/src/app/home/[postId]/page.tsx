@@ -5,6 +5,11 @@ import { useState, useEffect } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { motion } from 'framer-motion'
+import EmojiPicker from 'emoji-picker-react'
+import {
+  useCustomStamps,
+  useCreateCustomStamp,
+} from '@/hooks/use-custom-stamps'
 import {
   Heart,
   Repeat2,
@@ -84,6 +89,8 @@ export default function PostDetailPage() {
   const { data: post, isLoading: isPostLoading, error: postError } = usePost(postId)
   const { data: comments = [], isLoading: isCommentsLoading } = useComments(postId)
   const { data: reactions = [] } = useReactions(postId)
+  const { data: customStamps = [] } = useCustomStamps()
+  const createCustomStamp = useCreateCustomStamp()
 
   const deletePost = useDeletePost()
   const updatePost = useUpdatePost()
@@ -225,19 +232,24 @@ export default function PostDetailPage() {
     if (!post) return
     const existingReaction = reactions.find((r) => r.emoji === emoji)
 
-    if (existingReaction?.hasReacted) {
-      await removeReaction.mutateAsync({
-        postId: post.id,
-        emoji,
-      })
-    } else {
-      await addReaction.mutateAsync({
-        postId: post.id,
-        emoji,
-      })
+    try {
+      if (existingReaction?.hasReacted) {
+        await removeReaction.mutateAsync({
+          postId: post.id,
+          emoji,
+        })
+      } else {
+        await addReaction.mutateAsync({
+          postId: post.id,
+          emoji,
+        })
+      }
+    } catch (error) {
+      console.error('リアクション処理エラー:', error)
+    } finally {
+      // 即座に閉じる
+      setIsReactionPickerOpen(false)
     }
-
-    setIsReactionPickerOpen(false)
   }
 
   // よく使う絵文字
@@ -347,24 +359,22 @@ export default function PostDetailPage() {
                 {/* 画像ギャラリー */}
                 {post.post_images.length > 0 && (
                   <div
-                    className={`grid gap-2 ${
-                      post.post_images.length === 1
-                        ? 'grid-cols-1'
-                        : post.post_images.length === 2
-                          ? 'grid-cols-2'
-                          : post.post_images.length === 3
-                            ? 'grid-cols-3'
-                            : 'grid-cols-2'
-                    }`}
+                    className={`grid gap-2 ${post.post_images.length === 1
+                      ? 'grid-cols-1'
+                      : post.post_images.length === 2
+                        ? 'grid-cols-2'
+                        : post.post_images.length === 3
+                          ? 'grid-cols-3'
+                          : 'grid-cols-2'
+                      }`}
                   >
                     {post.post_images.slice(0, 4).map((image, index) => (
                       <div
                         key={image.id}
-                        className={`relative overflow-hidden rounded-lg border cursor-pointer ${
-                          post.post_images.length === 3 && index === 0
-                            ? 'col-span-3'
-                            : ''
-                        }`}
+                        className={`relative overflow-hidden rounded-lg border cursor-pointer ${post.post_images.length === 3 && index === 0
+                          ? 'col-span-3'
+                          : ''
+                          }`}
                         onClick={() => setSelectedImage(image.image_url)}
                       >
                         {!imageLoaded[image.id] && (
@@ -373,11 +383,10 @@ export default function PostDetailPage() {
                         <img
                           src={image.image_url}
                           alt={`投稿画像 ${index + 1}`}
-                          className={`w-full object-cover transition-opacity duration-300 ${
-                            post.post_images.length === 1
-                              ? 'max-h-[500px]'
-                              : 'aspect-square'
-                          } ${imageLoaded[image.id] ? 'opacity-100' : 'opacity-0'}`}
+                          className={`w-full object-cover transition-opacity duration-300 ${post.post_images.length === 1
+                            ? 'max-h-[500px]'
+                            : 'aspect-square'
+                            } ${imageLoaded[image.id] ? 'opacity-100' : 'opacity-0'}`}
                           onLoad={() =>
                             setImageLoaded((prev) => ({ ...prev, [image.id]: true }))
                           }
@@ -395,11 +404,10 @@ export default function PostDetailPage() {
                     size="sm"
                     onClick={handleRepost}
                     disabled={repost.isPending || unrepost.isPending}
-                    className={`h-9 gap-2 ${
-                      post.is_reposted
-                        ? 'text-green-500 hover:text-green-600'
-                        : 'text-gray-500 hover:text-green-500'
-                    }`}
+                    className={`h-9 gap-2 ${post.is_reposted
+                      ? 'text-green-500 hover:text-green-600'
+                      : 'text-gray-500 hover:text-green-500'
+                      }`}
                   >
                     <Repeat2 className="h-5 w-5" />
                     {post.reposts_count > 0 && (
@@ -413,11 +421,10 @@ export default function PostDetailPage() {
                     size="sm"
                     onClick={handleLike}
                     disabled={likePost.isPending || unlikePost.isPending}
-                    className={`h-9 gap-2 ${
-                      post.is_liked
-                        ? 'text-red-500 hover:text-red-600'
-                        : 'text-gray-500 hover:text-red-500'
-                    }`}
+                    className={`h-9 gap-2 ${post.is_liked
+                      ? 'text-red-500 hover:text-red-600'
+                      : 'text-gray-500 hover:text-red-500'
+                      }`}
                   >
                     <Heart
                       className={`h-5 w-5 ${post.is_liked ? 'fill-current' : ''}`}
@@ -438,19 +445,70 @@ export default function PostDetailPage() {
                         <Smile className="h-5 w-5" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-64 p-2">
-                      <div className="grid grid-cols-4 gap-2">
-                        {commonEmojis.map((emoji) => (
-                          <Button
-                            key={emoji}
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleReaction(emoji)}
-                            className="h-12 text-2xl hover:bg-gray-100"
-                          >
-                            {emoji}
-                          </Button>
-                        ))}
+                    <PopoverContent className="w-80 p-3 max-h-96 overflow-y-auto bg-white border border-gray-200 shadow-lg rounded-lg" align="start">
+                      {/* 絵文字ピッカー */}
+                      <div className="mb-4">
+                        <EmojiPicker
+                          onEmojiClick={(emojiData) => {
+                            handleReaction(emojiData.emoji)
+                          }}
+                          width="100%"
+                          height={300}
+                          searchDisabled={true}
+                          previewConfig={{
+                            showPreview: false,
+                          }}
+                        />
+                      </div>
+
+                      {/* カスタムスタンプセクション */}
+                      {customStamps.length > 0 && (
+                        <div className="border-t pt-3">
+                          <h4 className="text-sm font-medium text-gray-700 mb-2">カスタムスタンプ</h4>
+                          <div className="grid grid-cols-4 gap-2">
+                            {customStamps.slice(0, 8).map((stamp) => (
+                              <Button
+                                key={stamp.id}
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleReaction(stamp.image_url)}
+                                className="h-12 p-1 hover:bg-gray-100 rounded-lg"
+                              >
+                                <img
+                                  src={stamp.image_url}
+                                  alt={stamp.name || 'カスタムスタンプ'}
+                                  className="w-full h-full object-cover rounded"
+                                />
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* カスタムスタンプ作成ボタン */}
+                      <div className="border-t pt-3 mt-3">
+                        <input
+                          type="file"
+                          id="custom-stamp-input-detail"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (file) {
+                              createCustomStamp.mutate({ image: file })
+                              e.target.value = ''
+                            }
+                          }}
+                          className="hidden"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => document.getElementById('custom-stamp-input-detail')?.click()}
+                          disabled={createCustomStamp.isPending}
+                          className="w-full text-sm"
+                        >
+                          {createCustomStamp.isPending ? '作成中...' : '+ カスタムスタンプ追加'}
+                        </Button>
                       </div>
                     </PopoverContent>
                   </Popover>
@@ -459,22 +517,37 @@ export default function PostDetailPage() {
                 {/* リアクション表示 */}
                 {reactions.length > 0 && (
                   <div className="flex flex-wrap gap-2">
-                    {reactions.map((reaction) => (
-                      <Button
-                        key={reaction.emoji}
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleReaction(reaction.emoji)}
-                        className={`h-7 px-2 py-1 rounded-full text-sm gap-1 ${
-                          reaction.hasReacted
+                    {reactions.map((reaction) => {
+                      // カスタムスタンプかどうか判定（URLかどうか）
+                      const isCustomStamp = reaction.emoji.startsWith('http')
+
+                      return (
+                        <Button
+                          key={reaction.emoji}
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            handleReaction(reaction.emoji)
+                            setIsReactionPickerOpen(false) // ワンタッチで閉じる
+                          }}
+                          className={`h-7 px-2 py-1 rounded-full text-sm gap-1 ${reaction.hasReacted
                             ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
-                        <span className="text-base">{reaction.emoji}</span>
-                        <span className="text-xs font-medium">{reaction.count}</span>
-                      </Button>
-                    ))}
+                            }`}
+                        >
+                          {isCustomStamp ? (
+                            <img
+                              src={reaction.emoji}
+                              alt="カスタムスタンプ"
+                              className="w-4 h-4 object-cover rounded"
+                            />
+                          ) : (
+                            <span className="text-base">{reaction.emoji}</span>
+                          )}
+                          <span className="text-xs font-medium">{reaction.count}</span>
+                        </Button>
+                      )
+                    })}
                   </div>
                 )}
               </div>
@@ -485,7 +558,7 @@ export default function PostDetailPage() {
         <Separator className="my-4" />
 
         {/* コメントセクション */}
-        <div className="space-y-4">
+        <div className="space-y-4 pb-20">
           <h2 className="text-lg font-semibold text-gray-900">
             コメント {comments.length > 0 && `(${comments.length})`}
           </h2>
@@ -616,24 +689,22 @@ export default function PostDetailPage() {
                         {/* コメント画像ギャラリー */}
                         {comment.comment_images.length > 0 && (
                           <div
-                            className={`grid gap-2 mt-3 ${
-                              comment.comment_images.length === 1
-                                ? 'grid-cols-1'
-                                : comment.comment_images.length === 2
-                                  ? 'grid-cols-2'
-                                  : comment.comment_images.length === 3
-                                    ? 'grid-cols-3'
-                                    : 'grid-cols-2'
-                            }`}
+                            className={`grid gap-2 mt-3 ${comment.comment_images.length === 1
+                              ? 'grid-cols-1'
+                              : comment.comment_images.length === 2
+                                ? 'grid-cols-2'
+                                : comment.comment_images.length === 3
+                                  ? 'grid-cols-3'
+                                  : 'grid-cols-2'
+                              }`}
                           >
                             {comment.comment_images.slice(0, 4).map((image, index) => (
                               <div
                                 key={image.id}
-                                className={`relative overflow-hidden rounded-lg border cursor-pointer ${
-                                  comment.comment_images.length === 3 && index === 0
-                                    ? 'col-span-3'
-                                    : ''
-                                }`}
+                                className={`relative overflow-hidden rounded-lg border cursor-pointer ${comment.comment_images.length === 3 && index === 0
+                                  ? 'col-span-3'
+                                  : ''
+                                  }`}
                                 onClick={() => setSelectedImage(image.image_url)}
                               >
                                 {!imageLoaded[image.id] && (
@@ -642,11 +713,10 @@ export default function PostDetailPage() {
                                 <img
                                   src={image.image_url}
                                   alt={`コメント画像 ${index + 1}`}
-                                  className={`w-full object-cover transition-opacity duration-300 ${
-                                    comment.comment_images.length === 1
-                                      ? 'max-h-[400px]'
-                                      : 'aspect-square'
-                                  } ${imageLoaded[image.id] ? 'opacity-100' : 'opacity-0'}`}
+                                  className={`w-full object-cover transition-opacity duration-300 ${comment.comment_images.length === 1
+                                    ? 'max-h-[400px]'
+                                    : 'aspect-square'
+                                    } ${imageLoaded[image.id] ? 'opacity-100' : 'opacity-0'}`}
                                   onLoad={() =>
                                     setImageLoaded((prev) => ({ ...prev, [image.id]: true }))
                                   }

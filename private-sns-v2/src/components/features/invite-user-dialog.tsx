@@ -127,11 +127,12 @@ export function InviteUserDialog({
 
           {/* Select All */}
           {filteredUsers.length > 0 && (
-            <div className="flex items-center space-x-2 p-3 bg-blue-50 rounded-lg">
+            <div className="flex items-center space-x-2 p-3 bg-gradient-to-r from-blue-50 to-sky-50 rounded-xl border border-blue-200/50">
               <Checkbox
                 id="select-all"
                 checked={filteredUsers.length > 0 && selectedUsers.size === filteredUsers.length}
                 onCheckedChange={handleSelectAll}
+                className="border-blue-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
               />
               <label
                 htmlFor="select-all"
