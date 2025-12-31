@@ -262,6 +262,11 @@ export default function HangoutsPage() {
                     no: 'NO',
                     maybe: '別の日なら',
                   }
+                  const responseIcons = {
+                    yes: '●', // 丸
+                    no: '✕', // バツ
+                    maybe: '△', // 三角
+                  }
                   return (
                     <Card key={hangout.id} className="bg-white border-blue-100 shadow-sm hover:shadow-md transition-shadow">
                       <CardContent className="p-4">
@@ -279,7 +284,8 @@ export default function HangoutsPage() {
                                 <p className="text-sm text-gray-500">@{hangout.profiles?.username}</p>
                               </div>
                               <div className="flex items-center gap-2">
-                                <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${responseColors[hangout.my_response as keyof typeof responseColors]}`}>
+                                <span className={`px-3 py-1 rounded-full text-xs font-semibold border flex items-center gap-1 ${responseColors[hangout.my_response as keyof typeof responseColors]}`}>
+                                  <span className="text-base">{responseIcons[hangout.my_response as keyof typeof responseIcons]}</span>
                                   {responseLabels[hangout.my_response as keyof typeof responseLabels]}
                                 </span>
                                 {/* Response change button for participants */}
