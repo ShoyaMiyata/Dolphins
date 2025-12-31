@@ -456,13 +456,13 @@ export function usePost(postId: string | null) {
           supabase
             .from('likes')
             .select('id')
-            .eq('post_id', data.id)
+            .eq('post_id', (data as any).id)
             .eq('user_id', currentUserId)
             .maybeSingle(),
           supabase
             .from('reposts')
             .select('id')
-            .eq('post_id', data.id)
+            .eq('post_id', (data as any).id)
             .eq('user_id', currentUserId)
             .maybeSingle()
         ])
@@ -472,14 +472,14 @@ export function usePost(postId: string | null) {
       }
 
       const postWithDetails: PostWithDetails = {
-        ...data,
-        profiles: Array.isArray(data.profiles) ? data.profiles[0] : data.profiles,
-        post_images: Array.isArray(data.post_images)
-          ? data.post_images.sort((a: any, b: any) => a.order_index - b.order_index)
+        ...(data as any),
+        profiles: Array.isArray((data as any).profiles) ? (data as any).profiles[0] : (data as any).profiles,
+        post_images: Array.isArray((data as any).post_images)
+          ? (data as any).post_images.sort((a: any, b: any) => a.order_index - b.order_index)
           : [],
-        likes_count: Array.isArray(data.likes) ? data.likes[0]?.count || 0 : 0,
-        comments_count: Array.isArray(data.comments) ? data.comments[0]?.count || 0 : 0,
-        reposts_count: Array.isArray(data.reposts) ? data.reposts[0]?.count || 0 : 0,
+        likes_count: Array.isArray((data as any).likes) ? (data as any).likes[0]?.count || 0 : 0,
+        comments_count: Array.isArray((data as any).comments) ? (data as any).comments[0]?.count || 0 : 0,
+        reposts_count: Array.isArray((data as any).reposts) ? (data as any).reposts[0]?.count || 0 : 0,
         is_liked: isLiked,
         is_reposted: isReposted,
       }
