@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { motion, AnimatePresence } from 'framer-motion'
 import { postSchema, type PostFormData } from '@/validations/post'
 import { useCreatePost } from '@/hooks/use-posts'
+import { useCreateGroupPost } from '@/hooks/use-group-posts'
 import { Button } from '@/components/ui/button'
 import { AutoExpandTextarea } from '@/components/ui/auto-expand-textarea'
 import { CircularProgress } from '@/components/ui/circular-progress'
@@ -18,9 +19,10 @@ import { createClient } from '@/lib/supabase/client'
 
 interface PostFormProps {
   onSuccess?: () => void
+  groupId?: string
 }
 
-export function PostForm({ onSuccess }: PostFormProps) {
+export function PostForm({ onSuccess, groupId }: PostFormProps) {
   const [selectedImages, setSelectedImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [currentUser, setCurrentUser] = useState<{
@@ -35,6 +37,7 @@ export function PostForm({ onSuccess }: PostFormProps) {
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const createPost = useCreatePost()
+  const createGroupPost = useCreateGroupPost()
 
   const {
     register,
@@ -168,10 +171,20 @@ export function PostForm({ onSuccess }: PostFormProps) {
       return
     }
 
-    await createPost.mutateAsync({
-      content: data.content,
-      images: selectedImages.length > 0 ? selectedImages : undefined,
-    })
+    if (groupId) {
+      // グループ投稿
+      await createGroupPost.mutateAsync({
+        groupId,
+        content: data.content,
+        images: selectedImages.length > 0 ? selectedImages : undefined,
+      })
+    } else {
+      // 通常投稿
+      await createPost.mutateAsync({
+        content: data.content,
+        images: selectedImages.length > 0 ? selectedImages : undefined,
+      })
+    }
 
     // フォームリセット
     reset()
@@ -333,13 +346,13 @@ export function PostForm({ onSuccess }: PostFormProps) {
                     <Button
                       type="submit"
                       disabled={
-                        createPost.isPending ||
+                        (groupId ? createGroupPost.isPending : createPost.isPending) ||
                         (!content?.trim() && selectedImages.length === 0) ||
                         contentLength > 500
                       }
                       className="rounded-full px-6 bg-gradient-to-r from-blue-500 to-sky-500 hover:from-blue-600 hover:to-sky-600 text-white shadow-md disabled:opacity-50"
                     >
-                      {createPost.isPending ? (
+                      {(groupId ? createGroupPost.isPending : createPost.isPending) ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           投稿中...

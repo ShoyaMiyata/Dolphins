@@ -37,11 +37,15 @@ import {
 import { useGroups, useCreateGroup } from '@/hooks/use-groups'
 import { Image as ImageIcon } from 'lucide-react'
 
-export function AppHeader() {
+interface AppHeaderProps {
+  groupName?: string
+}
+
+export function AppHeader({ groupName }: AppHeaderProps = {}) {
   const [open, setOpen] = useState(false)
   const [groupsExpanded, setGroupsExpanded] = useState(false)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-  const [groupName, setGroupName] = useState('')
+  const [newGroupName, setNewGroupName] = useState('')
   const [groupDescription, setGroupDescription] = useState('')
   const [groupImage, setGroupImage] = useState<File | null>(null)
   const [groupImagePreview, setGroupImagePreview] = useState<string | null>(null)
@@ -77,10 +81,10 @@ export function AppHeader() {
 
   // グループ作成処理
   const handleCreateGroup = async () => {
-    if (!groupName.trim()) return
+    if (!newGroupName.trim()) return
 
     await createGroup.mutateAsync({
-      name: groupName,
+      name: newGroupName,
       description: groupDescription || undefined,
       image: groupImage || undefined,
       joinType,
@@ -89,7 +93,7 @@ export function AppHeader() {
 
     // フォームをリセット
     setIsCreateDialogOpen(false)
-    setGroupName('')
+    setNewGroupName('')
     setGroupDescription('')
     handleImageRemove()
     setJoinType('free')
@@ -252,16 +256,23 @@ export function AppHeader() {
             </SheetContent>
           </Sheet>
 
-          {/* Logo */}
+          {/* Logo or Group Name */}
           <div className="flex-1 flex items-center justify-center">
-            <Image
-              src="/images/logo-text.png"
-              alt="Dolphins B.B.C."
-              width={160}
-              height={50}
-              className="h-12 w-auto object-contain logo-blue-filter"
-              priority
-            />
+            {groupName ? (
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-blue-600" />
+                <h1 className="text-lg font-bold text-gray-900">{groupName}</h1>
+              </div>
+            ) : (
+              <Image
+                src="/images/logo-text.png"
+                alt="Dolphins B.B.C."
+                width={160}
+                height={50}
+                className="h-12 w-auto object-contain logo-blue-filter"
+                priority
+              />
+            )}
           </div>
 
           {/* Spacer for balance */}
@@ -322,8 +333,8 @@ export function AppHeader() {
               <Label htmlFor="group-name">グループ名</Label>
               <Input
                 id="group-name"
-                value={groupName}
-                onChange={(e) => setGroupName(e.target.value)}
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
                 placeholder="グループの名前を入力"
                 maxLength={100}
               />
@@ -389,7 +400,7 @@ export function AppHeader() {
             </Button>
             <Button
               onClick={handleCreateGroup}
-              disabled={!groupName.trim() || createGroup.isPending}
+              disabled={!newGroupName.trim() || createGroup.isPending}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               {createGroup.isPending ? '作成中...' : '作成'}
