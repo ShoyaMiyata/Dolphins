@@ -80,6 +80,9 @@ export default function GroupDetailPage() {
   // 全メンバーがメンバー管理可能（オーナーのみ除外）
   const canManageMembers = isMember && currentUserRole !== 'owner'
 
+  // 現在のユーザーがこのグループに申請中かどうかチェック
+  const hasPendingRequest = joinRequests?.some(request => request.user_id === currentUser?.id) || false
+
   if (isGroupLoading) {
     return (
       <div className="bg-background">
@@ -186,11 +189,16 @@ export default function GroupDetailPage() {
                 variant="default"
                 size="sm"
                 onClick={() => joinGroup.mutate({ groupId, joinType: group.join_type })}
-                disabled={joinGroup.isPending}
-                className="bg-gradient-to-r from-blue-500 to-sky-500 hover:from-blue-600 hover:to-sky-600 text-white shadow-md rounded-full px-4"
+                disabled={joinGroup.isPending || hasPendingRequest}
+                className={`shadow-md rounded-full px-4 ${hasPendingRequest
+                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-blue-500 to-sky-500 hover:from-blue-600 hover:to-sky-600 text-white'
+                  }`}
               >
                 {joinGroup.isPending ? (
                   "参加中..."
+                ) : hasPendingRequest ? (
+                  "承認待ち"
                 ) : (
                   <>
                     <LogIn className="h-4 w-4 mr-1" />
