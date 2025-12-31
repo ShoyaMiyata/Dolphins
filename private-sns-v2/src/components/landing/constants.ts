@@ -11,7 +11,4 @@ export const IMAGES = {
 
 export const NAV_LINKS = [
   { name: 'ホーム', href: '#hero' },
-  { name: 'Dolphinsについて', href: '#about' },
-  { name: '活動内容', href: '#features' },
-  { name: '寄付・支援', href: '#support' },
 ];

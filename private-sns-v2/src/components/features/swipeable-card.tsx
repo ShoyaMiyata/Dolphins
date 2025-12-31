@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { motion, useMotionValue, useTransform, PanInfo, useAnimation } from 'framer-motion'
-import { Check, X, Calendar, MapPin } from 'lucide-react'
-import { Card } from '@/components/ui/card'
+import { useMemo } from 'react'
+import { motion, useMotionValue, useTransform, PanInfo } from 'framer-motion'
+import { Calendar, MapPin } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
@@ -24,12 +23,9 @@ interface SwipeableCardProps {
       avatar_url: string | null
     }
   }
-  onSwipe: (hangoutId: string, response: 'yes' | 'no' | 'maybe') => void
-  onSkip: (hangoutId: string) => void
+  onSwipe: (direction: 'left' | 'right' | 'up' | 'down') => void
+  isActive?: boolean
 }
-
-const SWIPE_THRESHOLD = 100
-const SWIPE_VELOCITY = 500
 
 const GRADIENTS = [
   'from-blue-400 via-blue-500 to-blue-600',
@@ -41,27 +37,10 @@ const GRADIENTS = [
   'from-cyan-400 via-cyan-500 to-cyan-600',
 ]
 
-export function SwipeableCard({ hangout, onSwipe, onSkip }: SwipeableCardProps) {
-  const [exitX, setExitX] = useState(0)
-  const [exitY, setExitY] = useState(0)
-  const [isDragging, setIsDragging] = useState(false)
-  const [showFullDescription, setShowFullDescription] = useState(false)
-  const [hasSwiped, setHasSwiped] = useState(false)
-
-  const controls = useAnimation()
+export function SwipeableCard({ hangout, onSwipe, isActive = false }: SwipeableCardProps) {
   const x = useMotionValue(0)
-  const y = useMotionValue(0)
-
-  const rotate = useTransform(x, [-300, 0, 300], [-30, 0, 30])
-  const opacity = useTransform(
-    x,
-    [-300, -150, 0, 150, 300],
-    [0.5, 1, 1, 1, 0.5]
-  )
-
-  const yesOpacity = useTransform(x, [0, 150], [0, 0.3])
-  const noOpacity = useTransform(x, [-150, 0], [0.3, 0])
-  const maybeOpacity = useTransform(y, [-150, 0], [0.3, 0])
+  // X移動量に応じて回転させる (-200pxで-20度, 200pxで20度)
+  const rotate = useTransform(x, [-200, 200], [-20, 20])
 
   const randomGradient = useMemo(() => {
     const hash = hangout.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
@@ -69,43 +48,21 @@ export function SwipeableCard({ hangout, onSwipe, onSkip }: SwipeableCardProps) 
   }, [hangout.id])
 
   const handleDragEnd = (_: any, info: PanInfo) => {
-    setIsDragging(false)
+    // アクティブじゃないカードからのイベントは無視
+    if (!isActive) return;
 
-    // 既にスワイプ処理済みの場合は何もしない
-    if (hasSwiped) return
+    const offsetThreshold = 100; // 距離判定
+    const velocityThreshold = 500; // 速度判定
 
-    const swipeVelocity = Math.abs(info.velocity.x) > SWIPE_VELOCITY || Math.abs(info.velocity.y) > SWIPE_VELOCITY
-    const swipeDistance = Math.abs(info.offset.x) > SWIPE_THRESHOLD || Math.abs(info.offset.y) > SWIPE_THRESHOLD
+    const isRight = info.offset.x > offsetThreshold || (info.offset.x > 20 && info.velocity.x > velocityThreshold);
+    const isLeft = info.offset.x < -offsetThreshold || (info.offset.x < -20 && info.velocity.x < -velocityThreshold);
 
-    if (swipeVelocity || swipeDistance) {
-      setHasSwiped(true) // スワイプ処理済みフラグをセット
-
-      // 上スワイプ: maybe
-      if (Math.abs(info.offset.y) > Math.abs(info.offset.x) && info.offset.y < -50) {
-        setExitY(-1000)
-        onSwipe(hangout.id, 'maybe') // 即座に実行
-      }
-      // 下スワイプ: skip (保留)
-      else if (Math.abs(info.offset.y) > Math.abs(info.offset.x) && info.offset.y > 50) {
-        setExitY(1000)
-        onSkip(hangout.id) // 即座に実行
-      }
-      // 右スワイプ: yes
-      else if (info.offset.x > 50) {
-        setExitX(1000)
-        onSwipe(hangout.id, 'yes') // 即座に実行
-      }
-      // 左スワイプ: no
-      else if (info.offset.x < -50) {
-        setExitX(-1000)
-        onSwipe(hangout.id, 'no') // 即座に実行
-      } else {
-        controls.start({ x: 0, y: 0, rotate: 0 })
-      }
-    } else {
-      controls.start({ x: 0, y: 0, rotate: 0 })
+    if (isRight) {
+      onSwipe('right');
+    } else if (isLeft) {
+      onSwipe('left');
     }
-  }
+  };
 
   const dateObj = new Date(hangout.date)
   const formattedDate = format(dateObj, 'M月d日(E)', { locale: ja })
@@ -114,155 +71,85 @@ export function SwipeableCard({ hangout, onSwipe, onSkip }: SwipeableCardProps) 
     <motion.div
       style={{
         x,
-        y,
         rotate,
-        opacity,
-        cursor: 'grab',
+        width: '100%',
+        height: '100%',
+        cursor: isActive ? 'grab' : 'default',
+        background: '#fff',
+        borderRadius: '24px',        // 角丸を大きく
+        overflow: 'hidden',          // 【重要】中身のはみ出しを防止
+        boxShadow: '0 20px 40px -10px rgba(0,0,0,0.15)', // 影をリッチに
+        position: 'absolute',        // 位置固定
+        touchAction: 'none',
       }}
-      drag
-      dragElastic={1}
-      dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-      onDragStart={() => setIsDragging(true)}
+      className="rounded-[24px] overflow-hidden" // Tailwindでも角丸を適用
+      // 【重要】アクティブな場合のみドラッグ有効
+      drag={isActive ? "x" : false}
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={0.7}
+      dragSnapToOrigin
       onDragEnd={handleDragEnd}
-      animate={
-        exitX !== 0 || exitY !== 0
-          ? {
-            x: exitX,
-            y: exitY,
-            opacity: 0,
-            scale: 0.8,
-            transition: { duration: 0.3, ease: 'easeOut' }
-          }
-          : controls
-      }
-      transition={{
-        type: 'spring',
-        stiffness: 300,
-        damping: 30
-      }}
-      whileTap={{ cursor: 'grabbing', scale: 0.95 }}
-      className="absolute w-full touch-none h-full"
     >
-      <Card className="relative overflow-hidden border-none shadow-2xl h-full rounded-3xl">
-        {/* Background Image or Gradient */}
-        <div className="absolute inset-0">
-          {hangout.image_url ? (
-            <img
-              src={hangout.image_url}
-              alt={hangout.title}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className={`w-full h-full bg-gradient-to-br ${randomGradient}`} />
-          )}
+      {/* Background Image or Gradient */}
+      <div className="absolute inset-0">
+        {hangout.image_url ? (
+          <img
+            src={hangout.image_url}
+            alt={hangout.title}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className={`w-full h-full bg-gradient-to-br ${randomGradient}`} />
+        )}
+      </div>
+
+      {/* Information Box at Bottom */}
+      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white/98 to-transparent rounded-t-3xl p-6 shadow-2xl">
+        {/* User Info */}
+        <div className="flex items-center gap-3 mb-4">
+          <Avatar className="h-14 w-14 border-2 border-white shadow-lg">
+            <AvatarImage src={hangout.profiles.avatar_url || undefined} />
+            <AvatarFallback className="text-lg bg-blue-100 text-blue-600">
+              {hangout.profiles.display_name?.[0] || hangout.profiles.username[0]}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <p className="font-bold text-gray-900 text-lg">
+              {hangout.profiles.display_name || hangout.profiles.username}
+            </p>
+            <p className="text-sm text-gray-500">@{hangout.profiles.username}</p>
+          </div>
         </div>
 
-        {/* Swipe Color Overlays */}
-        <motion.div
-          style={{ opacity: yesOpacity }}
-          className="absolute inset-0 bg-green-500 pointer-events-none"
-        />
-        <motion.div
-          style={{ opacity: noOpacity }}
-          className="absolute inset-0 bg-red-500 pointer-events-none"
-        />
-        <motion.div
-          style={{ opacity: maybeOpacity }}
-          className="absolute inset-0 bg-yellow-500 pointer-events-none"
-        />
+        {/* Title */}
+        <h2 className="text-3xl font-bold text-gray-900 mb-3">{hangout.title}</h2>
 
-        {/* Swipe Indicators */}
-        <>
-          {/* YES Indicator - Right */}
-          <motion.div
-            style={{ opacity: yesOpacity }}
-            className="absolute top-8 right-8 z-10 bg-white text-green-600 px-6 py-3 rounded-full font-bold text-xl shadow-lg rotate-12"
-          >
-            <div className="flex items-center gap-2">
-              <Check className="h-6 w-6" />
-              <span>行ける！</span>
-            </div>
-          </motion.div>
-
-          {/* NO Indicator - Left */}
-          <motion.div
-            style={{ opacity: noOpacity }}
-            className="absolute top-8 left-8 z-10 bg-white text-red-600 px-6 py-3 rounded-full font-bold text-xl shadow-lg -rotate-12"
-          >
-            <div className="flex items-center gap-2">
-              <X className="h-6 w-6" />
-              <span>行けない</span>
-            </div>
-          </motion.div>
-
-          {/* MAYBE Indicator - Top Center */}
-          <motion.div
-            style={{ opacity: maybeOpacity }}
-            className="absolute top-8 left-1/2 -translate-x-1/2 z-10 bg-white text-yellow-600 px-6 py-3 rounded-full font-bold text-xl shadow-lg"
-          >
-            <div className="flex items-center gap-2">
-              <Calendar className="h-6 w-6" />
-              <span>別の日なら</span>
-            </div>
-          </motion.div>
-        </>
-
-        {/* Information Box at Bottom */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white/98 to-transparent rounded-t-3xl p-6 shadow-2xl">
-          {/* User Info */}
-          <div className="flex items-center gap-3 mb-4">
-            <Avatar className="h-14 w-14 border-2 border-white shadow-lg">
-              <AvatarImage src={hangout.profiles.avatar_url || undefined} />
-              <AvatarFallback className="text-lg bg-blue-100 text-blue-600">
-                {hangout.profiles.display_name?.[0] || hangout.profiles.username[0]}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="font-bold text-gray-900 text-lg">
-                {hangout.profiles.display_name || hangout.profiles.username}
-              </p>
-              <p className="text-sm text-gray-500">@{hangout.profiles.username}</p>
-            </div>
-          </div>
-
-          {/* Title */}
-          <h2 className="text-3xl font-bold text-gray-900 mb-3">{hangout.title}</h2>
-
-          {/* Date & Time */}
-          <div className="flex items-center gap-2 text-blue-600 mb-2">
-            <Calendar className="h-5 w-5" />
-            <span className="font-semibold text-lg">
-              {formattedDate}
-              {hangout.time && ` ${hangout.time}`}
-            </span>
-          </div>
-
-          {/* Location */}
-          {hangout.location && (
-            <div className="flex items-center gap-2 text-gray-700 mb-3">
-              <MapPin className="h-5 w-5" />
-              <span className="font-medium">{hangout.location}</span>
-            </div>
-          )}
-
-          {/* Description */}
-          {hangout.description && (
-            <div className="text-gray-600">
-              <p className={`whitespace-pre-wrap ${!showFullDescription && 'line-clamp-2'}`}>
-                {hangout.description}
-              </p>
-              {hangout.description.length > 100 && (
-                <button
-                  onClick={() => setShowFullDescription(!showFullDescription)}
-                  className="text-blue-500 hover:text-blue-600 font-medium text-sm mt-1"
-                >
-                  {showFullDescription ? '閉じる' : '...もっと見る'}
-                </button>
-              )}
-            </div>
-          )}
+        {/* Date & Time */}
+        <div className="flex items-center gap-2 text-blue-600 mb-2">
+          <Calendar className="h-5 w-5" />
+          <span className="font-semibold text-lg">
+            {formattedDate}
+            {hangout.time && ` ${hangout.time}`}
+          </span>
         </div>
-      </Card>
+
+        {/* Location */}
+        {hangout.location && (
+          <div className="flex items-center gap-2 text-gray-700 mb-3">
+            <MapPin className="h-5 w-5" />
+            <span className="font-medium">{hangout.location}</span>
+          </div>
+        )}
+
+        {/* Description */}
+        {hangout.description && (
+          <div className="text-gray-600">
+            <p className="whitespace-pre-wrap line-clamp-2">
+              {hangout.description}
+            </p>
+          </div>
+        )}
+      </div>
     </motion.div>
   )
 }

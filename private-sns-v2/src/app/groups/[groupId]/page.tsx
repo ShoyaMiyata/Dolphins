@@ -77,8 +77,8 @@ export default function GroupDetailPage() {
   const isOwner = currentUserRole === 'owner'
   const isAdmin = currentUserRole === 'admin'
   const isMember = group?.is_member || false
-  // 全メンバーがメンバー管理可能（オーナーのみ除外）
-  const canManageMembers = isMember && currentUserRole !== 'owner'
+  // メンバーは誰でも参加リクエストを管理可能
+  const canManageMembers = isMember
 
   // 現在のユーザーがこのグループに申請中かどうかチェック
   const hasPendingRequest = joinRequests?.some(request => request.user_id === currentUser?.id) || false
@@ -191,8 +191,8 @@ export default function GroupDetailPage() {
                 onClick={() => joinGroup.mutate({ groupId, joinType: group.join_type })}
                 disabled={joinGroup.isPending || hasPendingRequest}
                 className={`shadow-md rounded-full px-4 ${hasPendingRequest
-                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-blue-500 to-sky-500 hover:from-blue-600 hover:to-sky-600 text-white'
+                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-blue-500 to-sky-500 hover:from-blue-600 hover:to-sky-600 text-white'
                   }`}
               >
                 {joinGroup.isPending ? (
@@ -213,20 +213,6 @@ export default function GroupDetailPage() {
 
       {/* Main Content */}
       <main className="container max-w-md mx-auto pb-32 px-4">
-        {/* Post Form (Members Only) */}
-        {isMember && activeTab === 'posts' && (
-          <div className="mb-4 bg-white rounded-xl shadow-md border border-blue-100 mt-4 hover:shadow-lg transition-shadow">
-            <PostForm groupId={groupId} />
-          </div>
-        )}
-
-        {/* Non-member message */}
-        {!isMember && activeTab === 'posts' && (
-          <Card className="mb-4 bg-white rounded-xl shadow-md border border-blue-100 mt-4 p-6 text-center">
-            <p className="text-gray-600">このグループのメンバーになると投稿できます</p>
-          </Card>
-        )}
-
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
           <TabsList className="grid w-full grid-cols-2 bg-gradient-to-r from-blue-50 to-sky-50 p-1 rounded-xl">
@@ -242,6 +228,20 @@ export default function GroupDetailPage() {
 
           {/* Posts Tab */}
           <TabsContent value="posts" className="mt-4">
+            {/* Post Form (Members Only) */}
+            {isMember && (
+              <div className="mb-4 bg-white rounded-xl shadow-md border border-blue-100 hover:shadow-lg transition-shadow">
+                <PostForm groupId={groupId} />
+              </div>
+            )}
+
+            {/* Non-member message */}
+            {!isMember && (
+              <Card className="mb-4 bg-white rounded-xl shadow-md border border-blue-100 p-6 text-center">
+                <p className="text-gray-600">このグループのメンバーになると投稿できます</p>
+              </Card>
+            )}
+
             {/* Timeline */}
             {isPostsLoading ? (
               <div className="space-y-4">
@@ -346,22 +346,22 @@ export default function GroupDetailPage() {
                         transition={{ delay: index * 0.1 }}
                         className="bg-white rounded-lg p-3 border border-orange-100 shadow-sm"
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10 ring-2 ring-orange-100">
+                        <div className="flex items-center gap-1 overflow-hidden">
+                          <div className="flex items-center gap-1 flex-1 min-w-0">
+                            <Avatar className="h-8 w-8 ring-1 ring-orange-100 flex-shrink-0">
                               <AvatarImage src={request.profiles.avatar_url || undefined} />
-                              <AvatarFallback className="bg-orange-100 text-orange-700 font-medium">
+                              <AvatarFallback className="bg-orange-100 text-orange-700 font-medium text-xs">
                                 {request.profiles.username.slice(0, 2).toUpperCase()}
                               </AvatarFallback>
                             </Avatar>
-                            <div>
-                              <p className="font-medium text-gray-900">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-gray-900 truncate text-sm">
                                 {request.profiles.display_name || request.profiles.username}
                               </p>
-                              <p className="text-sm text-gray-500">@{request.profiles.username}</p>
+                              <p className="text-xs text-gray-500 truncate">@{request.profiles.username}</p>
                             </div>
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex gap-0.5 flex-shrink-0">
                             <Button
                               size="sm"
                               onClick={() => approveJoinRequest.mutate({
@@ -370,9 +370,9 @@ export default function GroupDetailPage() {
                                 userId: request.user_id
                               })}
                               disabled={approveJoinRequest.isPending}
-                              className="bg-green-500 hover:bg-green-600 text-white shadow-sm"
+                              className="w-6 h-6 p-0 bg-green-500 hover:bg-green-600 text-white flex-shrink-0"
                             >
-                              <Check className="h-4 w-4" />
+                              <Check className="h-3 w-3" />
                             </Button>
                             <Button
                               size="sm"
@@ -382,9 +382,9 @@ export default function GroupDetailPage() {
                                 groupId: request.group_id
                               })}
                               disabled={rejectJoinRequest.isPending}
-                              className="border-red-200 text-red-600 hover:bg-red-50"
+                              className="w-6 h-6 p-0 border-red-200 text-red-600 hover:bg-red-50 flex-shrink-0"
                             >
-                              <X className="h-4 w-4" />
+                              <X className="h-3 w-3" />
                             </Button>
                           </div>
                         </div>
@@ -469,51 +469,6 @@ export default function GroupDetailPage() {
                               {/* Management Actions */}
                               {canManageThisMember && (
                                 <div className="space-y-3">
-                                  {/* Admin Toggle Switch */}
-                                  <div className="flex items-center justify-between bg-gray-50 rounded-lg p-2">
-                                    <div className="flex items-center gap-2">
-                                      <Shield className="h-4 w-4 text-purple-600" />
-                                      <span className="text-xs text-gray-700 font-medium">管理者権限</span>
-                                    </div>
-                                    <motion.button
-                                      onClick={() => {
-                                        console.log('Admin toggle clicked for member:', member.user_id, 'current role:', member.role)
-                                        updateMemberRole.mutate({
-                                          groupId: member.group_id,
-                                          userId: member.user_id,
-                                          role: member.role === 'admin' ? 'member' : 'admin'
-                                        })
-                                      }}
-                                      disabled={updateMemberRole.isPending}
-                                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${member.role === 'admin'
-                                        ? 'bg-gradient-to-r from-purple-500 to-purple-600 shadow-lg'
-                                        : 'bg-gray-300 hover:bg-gray-400'
-                                        } ${updateMemberRole.isPending ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                                      whileTap={{ scale: 0.95 }}
-                                    >
-                                      <motion.span
-                                        className="inline-block h-4 w-4 rounded-full bg-white shadow-sm"
-                                        animate={{
-                                          x: member.role === 'admin' ? 20 : 2,
-                                          scale: updateMemberRole.isPending ? 0.8 : 1
-                                        }}
-                                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                      />
-                                      <AnimatePresence>
-                                        {updateMemberRole.isPending && (
-                                          <motion.div
-                                            initial={{ opacity: 0, scale: 0 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            exit={{ opacity: 0, scale: 0 }}
-                                            className="absolute inset-0 flex items-center justify-center"
-                                          >
-                                            <Loader2 className="h-3 w-3 text-white animate-spin" />
-                                          </motion.div>
-                                        )}
-                                      </AnimatePresence>
-                                    </motion.button>
-                                  </div>
-
                                   {/* Remove Member Button */}
                                   <Button
                                     size="sm"

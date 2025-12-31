@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Users, Calendar, Trash2, Edit, X, Check, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -34,6 +34,9 @@ export default function HangoutsPage() {
   const [hangoutToDelete, setHangoutToDelete] = useState<string | null>(null)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [hangoutToEdit, setHangoutToEdit] = useState<any | null>(null)
+  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | 'up' | 'down' | null>(null)
+
+  const isProcessing = useRef(false)
 
   const user = useAuthStore((state) => state.user)
   const { data: pendingHangouts = [], isLoading: isLoadingPending } = usePendingHangouts()
@@ -51,23 +54,57 @@ export default function HangoutsPage() {
   console.log('myHangouts:', myHangouts)
   console.log('isLoadingMy:', isLoadingMy)
 
-  const handleSwipe = useCallback(async (hangoutId: string, response: 'yes' | 'no' | 'maybe') => {
-    try {
-      console.log('handleSwipe: Starting response for', hangoutId, 'with', response)
-      await respondToHangout.mutateAsync({ hangoutId, response })
-      console.log('handleSwipe: Response saved, moving to next card')
-      setCurrentCardIndex((prev) => prev + 1)
-    } catch (error) {
-      console.error('Failed to respond:', error)
-      // エラーが発生してもカードを進める（ユーザーが再度操作できるように）
-      setCurrentCardIndex((prev) => prev + 1)
-    }
-  }, [respondToHangout])
+  const handleSwipe = useCallback(async (direction: 'left' | 'right' | 'up' | 'down') => {
+    console.log('handleSwipe called with direction:', direction)
 
-  const handleSkip = (hangoutId: string) => {
-    // スキップ: 回答を保存せず次のカードに進む
-    setCurrentCardIndex((prev) => prev + 1)
-  }
+    // ロック中は一切処理しない
+    if (isProcessing.current) {
+      console.log('Processing already in progress, ignoring')
+      return
+    }
+
+    // ロック開始
+    isProcessing.current = true
+    console.log('Starting swipe process')
+
+    // directionをresponseに変換
+    const directionToResponse = {
+      'right': 'yes' as const,
+      'left': 'no' as const,
+      'up': 'maybe' as const,
+      'down': null // skip
+    }
+
+    const response = directionToResponse[direction]
+    console.log('Direction:', direction, 'Response:', response)
+
+    setSwipeDirection(direction)
+    setCurrentCardIndex((prev) => {
+      const newIndex = prev + 1
+      console.log('Moving to next card, new index:', newIndex)
+
+      // スワイプ処理（responseがある場合のみ）
+      if (response && pendingHangouts[prev]) {
+        console.log('Sending response for hangout:', pendingHangouts[prev].id, 'response:', response)
+        respondToHangout.mutateAsync({ hangoutId: pendingHangouts[prev].id, response })
+          .catch((error) => {
+            console.error('Failed to respond:', error)
+          })
+      } else {
+        console.log('No response to send or no hangout found')
+      }
+
+      return newIndex
+    })
+
+    // 【重要】600ms後にロック解除 (アニメーション時間より少し長く待つ)
+    setTimeout(() => {
+      isProcessing.current = false
+      setSwipeDirection(null) // 方向もリセット
+    }, 600)
+  }, [pendingHangouts, respondToHangout])
+
+
 
   const handleDeleteClick = (hangoutId: string) => {
     setHangoutToDelete(hangoutId)
@@ -150,28 +187,48 @@ export default function HangoutsPage() {
               ) : currentHangouts.length > 0 ? (
                 <>
                   <div className="relative flex-1 pb-32 overflow-hidden">
-                    {(currentHangouts.slice(0, 3) as any[]).map((hangout, index) => (
-                      <motion.div
-                        key={hangout.id}
-                        style={{
-                          position: 'absolute',
-                          width: '100%',
-                          height: '100%',
-                          zIndex: currentHangouts.length - index,
-                        }}
-                        initial={index === 0 ? { scale: 1, opacity: 1 } : { scale: 1 - index * 0.05, opacity: 1, y: index * 10 }}
-                        animate={{ scale: 1 - index * 0.05, opacity: 1, y: index * 10 }}
-                        exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2 } }}
-                      >
-                        {index === 0 && (
-                          <SwipeableCard hangout={hangout} onSwipe={handleSwipe} onSkip={handleSkip} />
-                        )}
-                      </motion.div>
-                    ))}
+                    <AnimatePresence mode="popLayout" initial={false}>
+                      {/* 表示するカードを2枚に制限してパフォーマンス改善 */}
+                      {currentHangouts.slice(0, 2).map((hangout, index) => (
+                        <motion.div
+                          key={hangout.id}
+                          layout // レイアウトアニメーションを有効化
+                          initial={
+                            index === 0
+                              ? { scale: 1, y: 0, rotate: 0 }
+                              : { scale: 0.95, y: 6, rotate: 1 }
+                          }
+                          animate={
+                            index === 0
+                              ? { scale: 1, y: 0, rotate: 0 }
+                              : { scale: 0.95, y: 6, rotate: 1 }
+                          }
+                          exit={{
+                            x: swipeDirection === 'right' ? 1000 : swipeDirection === 'left' ? -1000 : 0,
+                            opacity: 0,
+                            transition: { duration: 0.3, ease: 'easeOut' }
+                          }}
+                          style={{
+                            zIndex: 100 - index,
+                            position: 'absolute',
+                            width: '100%',
+                            height: '100%',
+                            // 【最重要】一番手前以外はクリック・タッチ不可にする
+                            pointerEvents: index === 0 ? 'auto' : 'none',
+                          }}
+                        >
+                          <SwipeableCard
+                            hangout={hangout}
+                            onSwipe={handleSwipe}
+                            isActive={index === 0}
+                          />
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
                   </div>
 
                   {/* Action Buttons with remaining count */}
-                  <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-20">
+                  <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[200]">
                     {/* Remaining count above buttons */}
                     {currentHangouts.length > 1 && (
                       <div className="text-center mb-3">
@@ -189,7 +246,7 @@ export default function HangoutsPage() {
                         onClick={(e) => {
                           e.preventDefault()
                           e.stopPropagation()
-                          handleSwipe((currentHangouts[0] as any).id, 'no')
+                          handleSwipe('left')
                         }}
                         onTouchStart={(e) => {
                           e.preventDefault()
@@ -214,7 +271,7 @@ export default function HangoutsPage() {
                         onClick={(e) => {
                           e.preventDefault()
                           e.stopPropagation()
-                          handleSwipe((currentHangouts[0] as any).id, 'maybe')
+                          handleSwipe('up')
                         }}
                         onTouchStart={(e) => {
                           e.preventDefault()
@@ -239,7 +296,7 @@ export default function HangoutsPage() {
                         onClick={(e) => {
                           e.preventDefault()
                           e.stopPropagation()
-                          handleSwipe((currentHangouts[0] as any).id, 'yes')
+                          handleSwipe('right')
                         }}
                         onTouchStart={(e) => {
                           e.preventDefault()
@@ -378,7 +435,10 @@ export default function HangoutsPage() {
                             variant="ghost"
                             size="sm"
                             className="h-8 px-3 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                            onClick={() => handleSwipe(hangout.id, hangout.my_response === 'yes' ? 'no' : hangout.my_response === 'no' ? 'maybe' : 'yes')}
+                            onClick={() => {
+                              // 回答変更のロジックはここでは実装せず、必要に応じて追加
+                              console.log('Change response for', hangout.id)
+                            }}
                             title="回答を変更"
                           >
                             変更

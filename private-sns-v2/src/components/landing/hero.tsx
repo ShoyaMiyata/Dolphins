@@ -36,23 +36,13 @@ const Hero: React.FC = () => {
         </p>
 
         {/* CTAs */}
-        <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+        <div className="flex justify-center items-center">
           <Link href="/login" className="w-full sm:w-auto">
             <button className="w-full px-6 py-3 bg-dolphin-orange hover:bg-orange-600 text-white rounded-full font-bold text-base transition-all transform hover:-translate-y-1 shadow-lg hover:shadow-orange-500/50 flex items-center justify-center gap-2">
               コミュニティに参加する <ArrowRight size={18} />
             </button>
           </Link>
-          <a href="#about" className="w-full sm:w-auto">
-            <button className="w-full px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/30 rounded-full font-bold text-base transition-all">
-              活動詳細を見る
-            </button>
-          </a>
         </div>
-      </div>
-
-      {/* Scroll Indicator */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce text-white/50">
-        <ChevronDown size={32} />
       </div>
     </section>
   );
