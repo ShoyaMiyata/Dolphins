@@ -53,10 +53,14 @@ export default function HangoutsPage() {
 
   const handleSwipe = async (hangoutId: string, response: 'yes' | 'no' | 'maybe') => {
     try {
+      console.log('handleSwipe: Starting response for', hangoutId, 'with', response)
       await respondToHangout.mutateAsync({ hangoutId, response })
+      console.log('handleSwipe: Response saved, moving to next card')
       setCurrentCardIndex((prev) => prev + 1)
     } catch (error) {
       console.error('Failed to respond:', error)
+      // エラーが発生してもカードを進める（ユーザーが再度操作できるように）
+      setCurrentCardIndex((prev) => prev + 1)
     }
   }
 
@@ -251,8 +255,8 @@ export default function HangoutsPage() {
                     maybe: 'bg-amber-100 text-amber-800 border-amber-300',
                   }
                   const responseLabels = {
-                    yes: '行ける！',
-                    no: '行けない',
+                    yes: 'YES',
+                    no: 'NO',
                     maybe: '別の日なら',
                   }
                   return (
@@ -414,7 +418,7 @@ export default function HangoutsPage() {
                             <div className="flex items-center gap-1">
                               <div className="w-3 h-3 rounded-full bg-green-500"></div>
                               <span className="text-gray-700">
-                                行ける: <strong>{yesCount}</strong>
+                                いけます: <strong>{yesCount}</strong>
                               </span>
                             </div>
                             <div className="flex items-center gap-1">
@@ -426,7 +430,7 @@ export default function HangoutsPage() {
                             <div className="flex items-center gap-1">
                               <div className="w-3 h-3 rounded-full bg-red-500"></div>
                               <span className="text-gray-700">
-                                行けない: <strong>{noCount}</strong>
+                                NO: <strong>{noCount}</strong>
                               </span>
                             </div>
                           </div>
@@ -443,7 +447,7 @@ export default function HangoutsPage() {
                                 <div className="space-y-2">
                                   <div className="flex items-center gap-2">
                                     <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                                    <p className="text-xs font-semibold text-green-700">行ける！</p>
+                                    <p className="text-xs font-semibold text-green-700">YES</p>
                                   </div>
                                   <div className="pl-4 space-y-2">
                                     {hangout.hangout_responses
@@ -503,7 +507,7 @@ export default function HangoutsPage() {
                                 <div className="space-y-2">
                                   <div className="flex items-center gap-2">
                                     <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                                    <p className="text-xs font-semibold text-red-700">行けない</p>
+                                    <p className="text-xs font-semibold text-red-700">NO</p>
                                   </div>
                                   <div className="pl-4 space-y-2">
                                     {hangout.hangout_responses
