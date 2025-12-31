@@ -35,6 +35,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Users, UserPlus, Settings, Crown, Shield, User, Check, X, MoreVertical, LogIn, LogOut } from 'lucide-react'
+import { InviteUserDialog } from '@/components/features/invite-user-dialog'
 import { motion } from 'framer-motion'
 
 export default function GroupDetailPage() {
@@ -62,8 +63,6 @@ export default function GroupDetailPage() {
   const [activeTab, setActiveTab] = useState('posts')
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false)
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<any[]>([])
   const [settingsForm, setSettingsForm] = useState({
     name: '',
     description: '',
@@ -503,88 +502,13 @@ export default function GroupDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Invite User Dialog */}
-      <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
-        <DialogContent className="max-w-[calc(100vw-2rem)] w-full sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>ユーザーを招待</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {/* Search Input */}
-            <div className="space-y-2">
-              <Input
-                placeholder="ユーザー名または表示名で検索..."
-                value={searchQuery}
-                onChange={async (e) => {
-                  const query = e.target.value
-                  setSearchQuery(query)
-
-                  if (query.trim()) {
-                    try {
-                      const result = await searchUsers.mutateAsync({ query, groupId })
-                      setSearchResults(result)
-                    } catch (error) {
-                      console.error('Search error:', error)
-                      setSearchResults([])
-                    }
-                  } else {
-                    setSearchResults([])
-                  }
-                }}
-              />
-            </div>
-
-            {/* Search Results */}
-            <div className="max-h-60 overflow-y-auto space-y-2">
-              {searchResults.length === 0 && searchQuery.trim() && (
-                <p className="text-sm text-gray-500 text-center py-4">
-                  ユーザーが見つかりません
-                </p>
-              )}
-
-              {searchResults.map((user) => (
-                <div
-                  key={user.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                >
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.avatar_url || undefined} />
-                      <AvatarFallback>
-                        {user.username.slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-medium">{user.display_name || user.username}</p>
-                      <p className="text-sm text-gray-500">@{user.username}</p>
-                    </div>
-                  </div>
-
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      inviteUser.mutate(
-                        { groupId, userId: user.id },
-                        {
-                          onSuccess: () => {
-                            setSearchQuery('')
-                            setSearchResults([])
-                            setInviteDialogOpen(false)
-                          }
-                        }
-                      )
-                    }}
-                    disabled={inviteUser.isPending}
-                  >
-                    {inviteUser.isPending ? '招待中...' : '招待'}
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Invite User Dialog Component */}
+      <InviteUserDialog
+        open={inviteDialogOpen}
+        onOpenChange={setInviteDialogOpen}
+        groupId={groupId}
+        groupName={group.name}
+      />
 
       {/* Group Settings Dialog */}
       <Dialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen}>
