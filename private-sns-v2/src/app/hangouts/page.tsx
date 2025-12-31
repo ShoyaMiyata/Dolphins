@@ -284,9 +284,8 @@ export default function HangoutsPage() {
                                 <p className="text-sm text-gray-500">@{hangout.profiles?.username}</p>
                               </div>
                               <div className="flex items-center gap-2">
-                                <span className={`px-3 py-1 rounded-full text-xs font-semibold border flex items-center gap-1 ${responseColors[hangout.my_response as keyof typeof responseColors]}`}>
-                                  <span className="text-base">{responseIcons[hangout.my_response as keyof typeof responseIcons]}</span>
-                                  {responseLabels[hangout.my_response as keyof typeof responseLabels]}
+                                <span className={`px-2 py-2 rounded-full text-lg border flex items-center justify-center ${responseColors[hangout.my_response as keyof typeof responseColors]}`}>
+                                  {responseIcons[hangout.my_response as keyof typeof responseIcons]}
                                 </span>
                                 {/* Response change button for participants */}
                                 <Button
