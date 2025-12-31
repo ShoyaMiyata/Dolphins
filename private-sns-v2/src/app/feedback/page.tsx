@@ -37,6 +37,12 @@ export default function FeedbackPage() {
 
   // フィードバック一覧を取得
   const fetchFeedbacks = async () => {
+    if (!supabase) {
+      console.warn('Supabase client is not available')
+      setIsLoading(false)
+      return
+    }
+
     try {
       console.log('フィードバック取得開始')
       const { data, error } = await supabase
@@ -65,6 +71,8 @@ export default function FeedbackPage() {
 
   useEffect(() => {
     fetchFeedbacks()
+
+    if (!supabase) return
 
     // リアルタイム更新
     const channel = supabase
@@ -96,13 +104,18 @@ export default function FeedbackPage() {
       return
     }
 
+    if (!supabase) {
+      toast.error('データベース接続が利用できません')
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
-      const { error } = await (supabase as any).from('feedbacks').insert({
+      const { error } = await supabase.from('feedbacks').insert({
         user_id: user.id,
         content: content.trim(),
-      })
+      } as any)
 
       if (error) throw error
 
