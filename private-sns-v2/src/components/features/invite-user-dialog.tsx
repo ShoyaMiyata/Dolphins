@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { useSearchUsersForInvite, useInviteUserToGroup } from '@/hooks/use-group-members'
+import { Checkbox } from '@/components/ui/checkbox'
+import { useGetAllUsersForInvite, useInviteUserToGroup } from '@/hooks/use-group-members'
 import { toast } from 'sonner'
 
 interface InviteUserDialogProps {
@@ -27,61 +28,89 @@ export function InviteUserDialog({
   groupName
 }: InviteUserDialogProps) {
   const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set())
 
-  const searchUsers = useSearchUsersForInvite()
+  const { data: allUsers = [], isLoading } = useGetAllUsersForInvite(groupId) as { data: any[], isLoading: boolean }
   const inviteUser = useInviteUserToGroup()
 
-  const handleSearch = async (query: string) => {
-    setSearchQuery(query)
+  // ダイアログが開かれたら選択状態をリセット
+  useEffect(() => {
+    if (open) {
+      setSelectedUsers(new Set())
+      setSearchQuery('')
+    }
+  }, [open])
 
-    if (query.trim()) {
-      try {
-        const result = await searchUsers.mutateAsync({ query, groupId })
-        setSearchResults(result)
-      } catch (error) {
-        console.error('Search error:', error)
-        setSearchResults([])
-        toast.error('ユーザーの検索に失敗しました')
-      }
+  // 検索フィルタリング
+  const filteredUsers = allUsers.filter(user =>
+    !searchQuery.trim() ||
+    user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (user.display_name && user.display_name.toLowerCase().includes(searchQuery.toLowerCase()))
+  )
+
+  const handleUserSelect = (userId: string, checked: boolean) => {
+    const newSelected = new Set(selectedUsers)
+    if (checked) {
+      newSelected.add(userId)
     } else {
-      setSearchResults([])
+      newSelected.delete(userId)
+    }
+    setSelectedUsers(newSelected)
+  }
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedUsers(new Set(filteredUsers.map(user => user.id)))
+    } else {
+      setSelectedUsers(new Set())
     }
   }
 
-  const handleInvite = async (userId: string, userName: string) => {
+  const handleInvite = async () => {
+    if (selectedUsers.size === 0) {
+      toast.error('招待するユーザーを選択してください')
+      return
+    }
+
     try {
-      await inviteUser.mutateAsync(
-        { groupId, userId },
-        {
-          onSuccess: () => {
-            setSearchQuery('')
-            setSearchResults([])
-            onOpenChange(false)
-            toast.success(`${userName}さんを${groupName}に招待しました`)
-          }
-        }
+      // 選択されたユーザーを順番に招待
+      const invitePromises = Array.from(selectedUsers).map(userId =>
+        inviteUser.mutateAsync({ groupId, userId })
       )
+
+      await Promise.all(invitePromises)
+
+      const selectedCount = selectedUsers.size
+      setSelectedUsers(new Set())
+      onOpenChange(false)
+      toast.success(`${selectedCount}人のユーザーを${groupName}に招待しました`)
     } catch (error) {
-      // エラーはフック側で処理されるので、ここでは何もしない
+      // エラーは個別の招待で処理されるので、ここでは何もしない
     }
   }
 
   const handleClose = () => {
+    setSelectedUsers(new Set())
     setSearchQuery('')
-    setSearchResults([])
     onOpenChange(false)
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[calc(100vw-2rem)] w-full sm:max-w-md">
+      <DialogContent className="max-w-[calc(100vw-2rem)] w-full sm:max-w-2xl max-h-[80vh]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            ユーザーを招待
-            <span className="text-sm font-normal text-gray-500">
-              - {groupName}
-            </span>
+          <DialogTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              ユーザーを招待
+              <span className="text-sm font-normal text-gray-500">
+                - {groupName}
+              </span>
+            </div>
+            {selectedUsers.size > 0 && (
+              <div className="text-sm text-blue-600 font-medium">
+                {selectedUsers.size}人選択中
+              </div>
+            )}
           </DialogTitle>
         </DialogHeader>
 
@@ -91,49 +120,69 @@ export function InviteUserDialog({
             <Input
               placeholder="ユーザー名または表示名で検索..."
               value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full"
             />
-            <p className="text-xs text-gray-500">
-              既にグループメンバーのユーザーは表示されません
-            </p>
           </div>
 
-          {/* Search Results */}
-          <div className="max-h-80 overflow-y-auto space-y-2">
-            {searchResults.length === 0 && searchQuery.trim() && !searchUsers.isPending && (
+          {/* Select All */}
+          {filteredUsers.length > 0 && (
+            <div className="flex items-center space-x-2 p-3 bg-blue-50 rounded-lg">
+              <Checkbox
+                id="select-all"
+                checked={filteredUsers.length > 0 && selectedUsers.size === filteredUsers.length}
+                onCheckedChange={handleSelectAll}
+              />
+              <label
+                htmlFor="select-all"
+                className="text-sm font-medium text-blue-900 cursor-pointer"
+              >
+                全て選択 ({filteredUsers.length}人)
+              </label>
+            </div>
+          )}
+
+          {/* Users List */}
+          <div className="max-h-96 overflow-y-auto space-y-2 border rounded-lg p-2">
+            {isLoading ? (
+              <div className="text-center py-8">
+                <p className="text-sm text-gray-500">読み込み中...</p>
+              </div>
+            ) : filteredUsers.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-sm text-gray-500">
-                  ユーザーが見つかりません
+                  {searchQuery.trim() ? '検索結果がありません' : '招待可能なユーザーがいません'}
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
-                  別のキーワードで検索してみてください
+                  {searchQuery.trim() ? '別のキーワードで検索してみてください' : '全てのユーザーが既にメンバーです'}
                 </p>
               </div>
-            )}
+            ) : (
+              filteredUsers.map((user) => (
+                <div
+                  key={user.id}
+                  className="flex items-center space-x-3 p-3 bg-white rounded-lg border hover:bg-gray-50 transition-colors"
+                >
+                  <Checkbox
+                    id={`user-${user.id}`}
+                    checked={selectedUsers.has(user.id)}
+                    onCheckedChange={(checked) => handleUserSelect(user.id, checked as boolean)}
+                  />
 
-            {searchUsers.isPending && (
-              <div className="text-center py-4">
-                <p className="text-sm text-gray-500">検索中...</p>
-              </div>
-            )}
-
-            {searchResults.map((user) => (
-              <div
-                key={user.id}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10">
+                  <Avatar className="h-10 w-10 flex-shrink-0">
                     <AvatarImage src={user.avatar_url || undefined} />
                     <AvatarFallback className="bg-blue-100 text-blue-700">
                       {user.username.slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-gray-900 truncate">
+
+                  <div className="flex-1 min-w-0">
+                    <label
+                      htmlFor={`user-${user.id}`}
+                      className="font-medium text-gray-900 cursor-pointer block truncate"
+                    >
                       {user.display_name || user.username}
-                    </p>
+                    </label>
                     <p className="text-sm text-gray-500 truncate">
                       @{user.username}
                     </p>
@@ -144,17 +193,8 @@ export function InviteUserDialog({
                     )}
                   </div>
                 </div>
-
-                <Button
-                  size="sm"
-                  onClick={() => handleInvite(user.id, user.display_name || user.username)}
-                  disabled={inviteUser.isPending}
-                  className="bg-blue-600 hover:bg-blue-700 text-white ml-3"
-                >
-                  {inviteUser.isPending ? '招待中...' : '招待'}
-                </Button>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
@@ -164,7 +204,14 @@ export function InviteUserDialog({
             onClick={handleClose}
             className="flex-1"
           >
-            閉じる
+            キャンセル
+          </Button>
+          <Button
+            onClick={handleInvite}
+            disabled={selectedUsers.size === 0 || inviteUser.isPending}
+            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            {inviteUser.isPending ? '招待中...' : `招待 (${selectedUsers.size})`}
           </Button>
         </div>
       </DialogContent>

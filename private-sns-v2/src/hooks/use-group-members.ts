@@ -23,7 +23,7 @@ export function useGroupMembers(groupId: string | null) {
         .from('group_members')
         .select('*')
         .eq('group_id', groupId)
-        .order('created_at', { ascending: true })
+        .order('joined_at', { ascending: true })
 
       if (error) {
         console.error('メンバー取得エラー:', error)
@@ -344,6 +344,42 @@ export function useInviteUserToGroup() {
       console.error('ユーザー招待エラー:', error)
       toast.error(error.message || 'ユーザーの招待に失敗しました')
     },
+  })
+}
+
+// 全ユーザーを取得（招待用）
+export function useGetAllUsersForInvite(groupId: string | null) {
+  const supabase = createClient()
+
+  return useQuery({
+    queryKey: ['all-users-for-invite', groupId],
+    queryFn: async () => {
+      if (!groupId) return []
+
+      // 既にグループメンバーであるユーザーを除外
+      const { data: members } = await supabase
+        .from('group_members')
+        .select('user_id')
+        .eq('group_id', groupId)
+
+      const memberIds = (members || []).map((m: any) => m.user_id)
+
+      let queryBuilder = supabase
+        .from('profiles')
+        .select('id, username, display_name, avatar_url, bio, created_at')
+        .order('username')
+
+      if (memberIds.length > 0) {
+        queryBuilder = queryBuilder.not('id', 'in', `(${memberIds.join(',')})`)
+      }
+
+      const { data, error } = await queryBuilder
+
+      if (error) throw error
+
+      return data || []
+    },
+    enabled: !!groupId,
   })
 }
 
