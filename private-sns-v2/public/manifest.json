@@ -1,7 +1,7 @@
 {
   "name": "Dolphins",
   "short_name": "Dolphins",
-  "description": "東葛飾高校ドルフィンズバスケットボールクラブ - プライベートSNS",
+  "description": "東葛飾高校ドルフィンズバスケット部 - プライベートSNS",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#eff6ff",
@@ -9,13 +9,13 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/images/logo-circle.png",
+      "src": "/images/Dolphins-logo.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/images/logo-circle.png",
+      "src": "/images/Dolphins-logo.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
