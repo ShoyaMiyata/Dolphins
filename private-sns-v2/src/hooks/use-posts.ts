@@ -74,12 +74,21 @@ export function usePosts() {
   return useInfiniteQuery({
     queryKey: ['posts'],
     queryFn: async ({ pageParam = 0 }) => {
+      console.log('usePosts queryFn called with pageParam:', pageParam)
       const start = pageParam * POSTS_PER_PAGE
       const end = start + POSTS_PER_PAGE - 1
 
-      const { data: session } = await supabase.auth.getSession()
-      const currentUserId = session?.session?.user?.id
+      console.log('Getting user...')
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
 
+      if (userError) {
+        console.error('User error:', userError)
+        // ユーザーが取得できなくてもクエリは続行（公開投稿を表示するため）
+      }
+      const currentUserId = user?.id
+      console.log('Current user ID:', currentUserId)
+
+      console.log('Fetching posts...')
       const { data, error, count } = await supabase
         .from('posts')
         .select(`
@@ -93,47 +102,50 @@ export function usePosts() {
         .order('created_at', { ascending: false })
         .range(start, end)
 
-      if (error) throw error
+      console.log('Posts query result:', { data, error, count })
+      if (error) {
+        console.error('Posts query error:', error)
+        throw error
+      }
 
-      // いいね・リポスト状態を取得
-      const postsWithDetails: PostWithDetails[] = await Promise.all(
-        (data || []).map(async (post: any) => {
-          let isLiked = false
-          let isReposted = false
+      // いいね・リポスト状態を一括取得（N+1問題を回避）
+      let userLikes: Set<string> = new Set()
+      let userReposts: Set<string> = new Set()
 
-          if (currentUserId) {
-            const { data: likeData } = await supabase
-              .from('likes')
-              .select('id')
-              .eq('post_id', post.id)
-              .eq('user_id', currentUserId)
-              .single()
+      if (currentUserId && data && data.length > 0) {
+        const postIds = data.map((post: any) => post.id)
 
-            const { data: repostData } = await supabase
-              .from('reposts')
-              .select('id')
-              .eq('post_id', post.id)
-              .eq('user_id', currentUserId)
-              .single()
+        // 一括でいいね状態を取得
+        const { data: likesData } = await supabase
+          .from('likes')
+          .select('post_id')
+          .eq('user_id', currentUserId)
+          .in('post_id', postIds)
 
-            isLiked = !!likeData
-            isReposted = !!repostData
-          }
+        userLikes = new Set((likesData || []).map((like: any) => like.post_id))
 
-          return {
-            ...post,
-            profiles: Array.isArray(post.profiles) ? post.profiles[0] : post.profiles,
-            post_images: Array.isArray(post.post_images)
-              ? post.post_images.sort((a: any, b: any) => a.order_index - b.order_index)
-              : [],
-            likes_count: Array.isArray(post.likes) ? post.likes[0]?.count || 0 : 0,
-            comments_count: Array.isArray(post.comments) ? post.comments[0]?.count || 0 : 0,
-            reposts_count: Array.isArray(post.reposts) ? post.reposts[0]?.count || 0 : 0,
-            is_liked: isLiked,
-            is_reposted: isReposted,
-          }
-        })
-      )
+        // 一括でリポスト状態を取得
+        const { data: repostsData } = await supabase
+          .from('reposts')
+          .select('post_id')
+          .eq('user_id', currentUserId)
+          .in('post_id', postIds)
+
+        userReposts = new Set((repostsData || []).map((repost: any) => repost.post_id))
+      }
+
+      const postsWithDetails: PostWithDetails[] = (data || []).map((post: any) => ({
+        ...post,
+        profiles: Array.isArray(post.profiles) ? post.profiles[0] : post.profiles,
+        post_images: Array.isArray(post.post_images)
+          ? post.post_images.sort((a: any, b: any) => a.order_index - b.order_index)
+          : [],
+        likes_count: Array.isArray(post.likes) ? post.likes[0]?.count || 0 : 0,
+        comments_count: Array.isArray(post.comments) ? post.comments[0]?.count || 0 : 0,
+        reposts_count: Array.isArray(post.reposts) ? post.reposts[0]?.count || 0 : 0,
+        is_liked: userLikes.has(post.id),
+        is_reposted: userReposts.has(post.id),
+      }))
 
       return {
         posts: postsWithDetails,
@@ -154,12 +166,12 @@ export function useCreatePost() {
   return useMutation({
     mutationFn: async (data: CreatePostData) => {
       // 認証チェック
-      const { data: session } = await supabase.auth.getSession()
-      if (!session?.session?.user) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
         throw new Error('ログインが必要です')
       }
 
-      const userId = session.session.user.id
+      const userId = user.id
 
       // 投稿作成
       const { data: post, error: postError } = await supabase
@@ -285,12 +297,12 @@ export function useLikePost() {
 
   return useMutation({
     mutationFn: async (postId: string) => {
-      const { data: session } = await supabase.auth.getSession()
-      if (!session?.session?.user) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
         throw new Error('ログインが必要です')
       }
 
-      const userId = session.session.user.id
+      const userId = user.id
 
       const { error } = await supabase
         .from('likes')
@@ -315,12 +327,12 @@ export function useUnlikePost() {
 
   return useMutation({
     mutationFn: async (postId: string) => {
-      const { data: session } = await supabase.auth.getSession()
-      if (!session?.session?.user) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
         throw new Error('ログインが必要です')
       }
 
-      const userId = session.session.user.id
+      const userId = user.id
 
       const { error } = await supabase
         .from('likes')
@@ -347,12 +359,12 @@ export function useRepost() {
 
   return useMutation({
     mutationFn: async (postId: string) => {
-      const { data: session } = await supabase.auth.getSession()
-      if (!session?.session?.user) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
         throw new Error('ログインが必要です')
       }
 
-      const userId = session.session.user.id
+      const userId = user.id
 
       const { error } = await supabase
         .from('reposts')
@@ -378,12 +390,12 @@ export function useUnrepost() {
 
   return useMutation({
     mutationFn: async (postId: string) => {
-      const { data: session } = await supabase.auth.getSession()
-      if (!session?.session?.user) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
         throw new Error('ログインが必要です')
       }
 
-      const userId = session.session.user.id
+      const userId = user.id
 
       const { error } = await supabase
         .from('reposts')
@@ -401,6 +413,80 @@ export function useUnrepost() {
       console.error('リポスト解除エラー:', error)
       toast.error('リポスト解除に失敗しました')
     },
+  })
+}
+
+// 特定の投稿を取得
+export function usePost(postId: string | null) {
+  const supabase = createClient()
+
+  return useQuery({
+    queryKey: ['post', postId],
+    queryFn: async () => {
+      if (!postId) return null
+
+      const { data: { user } } = await supabase.auth.getUser()
+      const currentUserId = user?.id
+
+      const { data, error } = await supabase
+        .from('posts')
+        .select(`
+          *,
+          profiles!posts_user_id_fkey(*),
+          post_images(*),
+          likes(count),
+          comments(count),
+          reposts(count)
+        `)
+        .eq('id', postId)
+        .single()
+
+      if (error) {
+        console.error('投稿取得エラー:', error)
+        throw error
+      }
+
+      // いいね・リポスト状態を取得（最適化済み）
+      let isLiked = false
+      let isReposted = false
+
+      if (currentUserId) {
+        // 2つのクエリを並列実行
+        const [likeResult, repostResult] = await Promise.all([
+          supabase
+            .from('likes')
+            .select('id')
+            .eq('post_id', data.id)
+            .eq('user_id', currentUserId)
+            .maybeSingle(),
+          supabase
+            .from('reposts')
+            .select('id')
+            .eq('post_id', data.id)
+            .eq('user_id', currentUserId)
+            .maybeSingle()
+        ])
+
+        isLiked = !!likeResult.data
+        isReposted = !!repostResult.data
+      }
+
+      const postWithDetails: PostWithDetails = {
+        ...data,
+        profiles: Array.isArray(data.profiles) ? data.profiles[0] : data.profiles,
+        post_images: Array.isArray(data.post_images)
+          ? data.post_images.sort((a: any, b: any) => a.order_index - b.order_index)
+          : [],
+        likes_count: Array.isArray(data.likes) ? data.likes[0]?.count || 0 : 0,
+        comments_count: Array.isArray(data.comments) ? data.comments[0]?.count || 0 : 0,
+        reposts_count: Array.isArray(data.reposts) ? data.reposts[0]?.count || 0 : 0,
+        is_liked: isLiked,
+        is_reposted: isReposted,
+      }
+
+      return postWithDetails
+    },
+    enabled: !!postId,
   })
 }
 
@@ -422,8 +508,8 @@ export function useUserPosts(userId: string | null) {
       const start = pageParam * POSTS_PER_PAGE
       const end = start + POSTS_PER_PAGE - 1
 
-      const { data: session } = await supabase.auth.getSession()
-      const currentUserId = session?.session?.user?.id
+      const { data: { user } } = await supabase.auth.getUser()
+      const currentUserId = user?.id
 
       const { data, error, count } = await supabase
         .from('posts')
@@ -441,45 +527,44 @@ export function useUserPosts(userId: string | null) {
 
       if (error) throw error
 
-      // いいね・リポスト状態を取得
-      const postsWithDetails: PostWithDetails[] = await Promise.all(
-        (data || []).map(async (post: any) => {
-          let isLiked = false
-          let isReposted = false
+      // いいね・リポスト状態を一括取得（N+1問題を回避）
+      let userLikes: Set<string> = new Set()
+      let userReposts: Set<string> = new Set()
 
-          if (currentUserId) {
-            const { data: likeData } = await supabase
-              .from('likes')
-              .select('id')
-              .eq('post_id', post.id)
-              .eq('user_id', currentUserId)
-              .single()
+      if (currentUserId && data && data.length > 0) {
+        const postIds = data.map((post: any) => post.id)
 
-            const { data: repostData } = await supabase
-              .from('reposts')
-              .select('id')
-              .eq('post_id', post.id)
-              .eq('user_id', currentUserId)
-              .single()
+        // 一括でいいね状態を取得
+        const { data: likesData } = await supabase
+          .from('likes')
+          .select('post_id')
+          .eq('user_id', currentUserId)
+          .in('post_id', postIds)
 
-            isLiked = !!likeData
-            isReposted = !!repostData
-          }
+        userLikes = new Set((likesData || []).map((like: any) => like.post_id))
 
-          return {
-            ...post,
-            profiles: Array.isArray(post.profiles) ? post.profiles[0] : post.profiles,
-            post_images: Array.isArray(post.post_images)
-              ? post.post_images.sort((a: any, b: any) => a.order_index - b.order_index)
-              : [],
-            likes_count: Array.isArray(post.likes) ? post.likes[0]?.count || 0 : 0,
-            comments_count: Array.isArray(post.comments) ? post.comments[0]?.count || 0 : 0,
-            reposts_count: Array.isArray(post.reposts) ? post.reposts[0]?.count || 0 : 0,
-            is_liked: isLiked,
-            is_reposted: isReposted,
-          }
-        })
-      )
+        // 一括でリポスト状態を取得
+        const { data: repostsData } = await supabase
+          .from('reposts')
+          .select('post_id')
+          .eq('user_id', currentUserId)
+          .in('post_id', postIds)
+
+        userReposts = new Set((repostsData || []).map((repost: any) => repost.post_id))
+      }
+
+      const postsWithDetails: PostWithDetails[] = (data || []).map((post: any) => ({
+        ...post,
+        profiles: Array.isArray(post.profiles) ? post.profiles[0] : post.profiles,
+        post_images: Array.isArray(post.post_images)
+          ? post.post_images.sort((a: any, b: any) => a.order_index - b.order_index)
+          : [],
+        likes_count: Array.isArray(post.likes) ? post.likes[0]?.count || 0 : 0,
+        comments_count: Array.isArray(post.comments) ? post.comments[0]?.count || 0 : 0,
+        reposts_count: Array.isArray(post.reposts) ? post.reposts[0]?.count || 0 : 0,
+        is_liked: userLikes.has(post.id),
+        is_reposted: userReposts.has(post.id),
+      }))
 
       return {
         posts: postsWithDetails,

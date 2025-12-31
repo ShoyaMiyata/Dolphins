@@ -28,6 +28,15 @@ export function Timeline() {
 
   const parentRef = useRef<HTMLDivElement>(null)
 
+  // デバッグログ
+  console.log('Timeline Debug:', {
+    isLoading,
+    isError,
+    dataPages: data?.pages?.length,
+    postsCount: data?.pages.flatMap((page) => page.posts).length,
+    data
+  })
+
   // 無限スクロール: 画面下部に到達したら次のページを読み込む
   useEffect(() => {
     if (inView && hasNextPage && !isFetchingNextPage) {

@@ -203,7 +203,7 @@ export function CreateHangoutDialog({ open, onOpenChange }: CreateHangoutDialogP
 
           {/* Date & Time */}
           <div className="space-y-1.5">
-            <Label className="flex items-center gap-1.5 text-sm font-semibold">
+            <Label htmlFor="date" className="flex items-center gap-1.5 text-sm font-semibold">
               <Calendar className="h-4 w-4 text-blue-500" />
               いつ？
             </Label>

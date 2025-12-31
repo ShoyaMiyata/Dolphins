@@ -4,7 +4,7 @@ import { AppHeader } from '@/components/layout/app-header'
 
 export default function HomePage() {
   return (
-    <div className="bg-background min-h-screen">
+    <div className="bg-background">
       {/* Header */}
       <AppHeader />
 

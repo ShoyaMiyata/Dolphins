@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -33,10 +33,13 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
   const [isNameDialogOpen, setIsNameDialogOpen] = useState(false)
   const [displayName, setDisplayName] = useState(profile.display_name || '')
   const [isUpdating, setIsUpdating] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // デバッグ用
-  console.log('ProfileHeader - isOwnProfile:', isOwnProfile, 'currentUser:', currentUser?.id, 'profile:', profile.id)
+  // クライアントサイドでマウントされたことを検知
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const { data: isFollowing, isLoading: isFollowingLoading } = useIsFollowing(profile.id)
   const { data: followerCount = 0 } = useFollowerCount(profile.id)
@@ -146,41 +149,40 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
                 />
               </div>
 
-              {/* currentUserがロードされている場合のみボタンを表示 */}
-              {currentUser && (
-                <div className="mt-16 sm:mt-20">
-                  {isOwnProfile ? (
-                    <Link href="/profile/edit">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2 rounded-full border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800 hover:border-blue-300"
-                      >
-                        <Edit className="h-4 w-4" />
-                        プロフィール編集
-                      </Button>
-                    </Link>
-                  ) : (
+              {/* ボタンエリア - クライアントサイドでのみ表示してハイドレーションミスマッチを回避 */}
+              <div className="mt-16 sm:mt-20 min-h-[40px]">
+                {mounted && currentUser && isOwnProfile && (
+                  <Link href="/profile/edit">
                     <Button
-                      variant={isFollowing ? 'outline' : 'default'}
+                      variant="outline"
                       size="sm"
-                      onClick={handleFollowToggle}
-                      disabled={isFollowingLoading || follow.isPending || unfollow.isPending}
-                      className={`min-w-[100px] rounded-full ${
-                        isFollowing
-                          ? 'border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800 hover:border-blue-300'
-                          : 'bg-blue-500 hover:bg-blue-600 text-white'
-                      }`}
+                      className="gap-2 rounded-full border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800 hover:border-blue-300"
                     >
-                      {follow.isPending || unfollow.isPending
-                        ? '処理中...'
-                        : isFollowing
-                          ? 'フォロー中'
-                          : 'フォロー'}
+                      <Edit className="h-4 w-4" />
+                      プロフィール編集
                     </Button>
-                  )}
-                </div>
-              )}
+                  </Link>
+                )}
+                {mounted && currentUser && !isOwnProfile && (
+                  <Button
+                    variant={isFollowing ? 'outline' : 'default'}
+                    size="sm"
+                    onClick={handleFollowToggle}
+                    disabled={isFollowingLoading || follow.isPending || unfollow.isPending}
+                    className={`min-w-[100px] rounded-full ${
+                      isFollowing
+                        ? 'border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800 hover:border-blue-300'
+                        : 'bg-blue-500 hover:bg-blue-600 text-white'
+                    }`}
+                  >
+                    {follow.isPending || unfollow.isPending
+                      ? '処理中...'
+                      : isFollowing
+                        ? 'フォロー中'
+                        : 'フォロー'}
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* ユーザー情報 */}

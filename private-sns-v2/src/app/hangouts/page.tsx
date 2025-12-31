@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Users, Calendar, Trash2, Edit } from 'lucide-react'
+import { Plus, Users, Calendar, Trash2, Edit, X, Check, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,8 +12,9 @@ import { SwipeableCard } from '@/components/features/swipeable-card'
 import { CreateHangoutDialog } from '@/components/features/create-hangout-dialog'
 import { BottomNav } from '@/components/layout/bottom-nav'
 import { AppHeader } from '@/components/layout/app-header'
-import { usePendingHangouts, useMyHangouts, useRespondToHangout, useDeleteHangout, useUpdateHangout } from '@/hooks/use-hangouts'
+import { usePendingHangouts, useRespondedHangouts, useMyHangouts, useRespondToHangout, useDeleteHangout, useUpdateHangout } from '@/hooks/use-hangouts'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Card, CardContent } from '@/components/ui/card'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import {
@@ -34,13 +35,31 @@ export default function HangoutsPage() {
   const [hangoutToEdit, setHangoutToEdit] = useState<any | null>(null)
 
   const { data: pendingHangouts = [], isLoading: isLoadingPending } = usePendingHangouts()
+  const { data: respondedHangouts = [], isLoading: isLoadingResponded } = useRespondedHangouts()
   const { data: myHangouts = [], isLoading: isLoadingMy } = useMyHangouts()
   const respondToHangout = useRespondToHangout()
   const deleteHangout = useDeleteHangout()
   const updateHangout = useUpdateHangout()
 
+  // デバッグ用ログ
+  console.log('pendingHangouts:', pendingHangouts)
+  console.log('isLoadingPending:', isLoadingPending)
+  console.log('respondedHangouts:', respondedHangouts)
+  console.log('isLoadingResponded:', isLoadingResponded)
+  console.log('myHangouts:', myHangouts)
+  console.log('isLoadingMy:', isLoadingMy)
+
   const handleSwipe = async (hangoutId: string, response: 'yes' | 'no' | 'maybe') => {
-    await respondToHangout.mutateAsync({ hangoutId, response })
+    try {
+      await respondToHangout.mutateAsync({ hangoutId, response })
+      setCurrentCardIndex((prev) => prev + 1)
+    } catch (error) {
+      console.error('Failed to respond:', error)
+    }
+  }
+
+  const handleSkip = (hangoutId: string) => {
+    // スキップ: 回答を保存せず次のカードに進む
     setCurrentCardIndex((prev) => prev + 1)
   }
 
@@ -97,51 +116,96 @@ export default function HangoutsPage() {
       {/* Main Content */}
       <main className="max-w-md mx-auto px-4 py-4 pb-32">
         <Tabs defaultValue="pending" className="w-full">
-          <TabsList className="w-full grid grid-cols-2 mb-6">
-            <TabsTrigger value="pending" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              回答する
+          <TabsList className="w-full grid grid-cols-3 mb-6">
+            <TabsTrigger value="pending" className="flex items-center gap-1 text-xs sm:text-sm">
+              <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">回答する</span>
+              <span className="sm:hidden">回答</span>
             </TabsTrigger>
-            <TabsTrigger value="my" className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              自分の予定
+            <TabsTrigger value="responded" className="flex items-center gap-1 text-xs sm:text-sm">
+              <Check className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">回答済み</span>
+              <span className="sm:hidden">済</span>
+            </TabsTrigger>
+            <TabsTrigger value="my" className="flex items-center gap-1 text-xs sm:text-sm">
+              <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">自分の予定</span>
+              <span className="sm:hidden">予定</span>
             </TabsTrigger>
           </TabsList>
 
           {/* Pending Hangouts - Swipe Interface */}
-          <TabsContent value="pending" className="mt-0">
-            <div className="relative min-h-[600px]">
+          <TabsContent value="pending" className="mt-0 overflow-hidden">
+            <div className="relative h-[calc(100vh-280px)] flex flex-col overflow-hidden">
               {isLoadingPending ? (
                 <div className="flex items-center justify-center py-20">
                   <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
                 </div>
               ) : currentHangouts.length > 0 ? (
-                <div className="relative">
-                  <AnimatePresence>
+                <>
+                  <div className="relative flex-1 pb-32 overflow-hidden">
                     {currentHangouts.slice(0, 3).map((hangout, index) => (
                       <motion.div
                         key={hangout.id}
                         style={{
+                          position: 'absolute',
+                          width: '100%',
+                          height: '100%',
                           zIndex: currentHangouts.length - index,
-                          scale: 1 - index * 0.05,
                         }}
-                        initial={{ scale: 1 - index * 0.05, opacity: 1 }}
-                        exit={{ opacity: 0 }}
+                        initial={index === 0 ? { scale: 1, opacity: 1 } : { scale: 1 - index * 0.05, opacity: 1, y: index * 10 }}
+                        animate={{ scale: 1 - index * 0.05, opacity: 1, y: index * 10 }}
+                        exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2 } }}
                       >
                         {index === 0 && (
-                          <SwipeableCard hangout={hangout} onSwipe={handleSwipe} />
+                          <SwipeableCard hangout={hangout} onSwipe={handleSwipe} onSkip={handleSkip} />
                         )}
                       </motion.div>
                     ))}
-                  </AnimatePresence>
+                  </div>
 
-                  {/* Remaining count */}
-                  {currentHangouts.length > 1 && (
-                    <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-sm text-gray-500">
-                      残り {currentHangouts.length - 1} 件
+                  {/* Action Buttons with remaining count */}
+                  <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-20">
+                    {/* Remaining count above buttons */}
+                    {currentHangouts.length > 1 && (
+                      <div className="text-center mb-3">
+                        <span className="text-sm text-gray-500 font-medium bg-white px-4 py-2 rounded-full shadow-md inline-block">
+                          残り {currentHangouts.length - 1} 件
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Buttons */}
+                    <div className="flex items-center justify-center gap-6">
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => handleSwipe(currentHangouts[0].id, 'no')}
+                        className="w-16 h-16 rounded-full bg-white shadow-xl flex items-center justify-center border-2 border-red-200 hover:border-red-400 transition-colors"
+                      >
+                        <X className="w-8 h-8 text-red-500" />
+                      </motion.button>
+
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => handleSwipe(currentHangouts[0].id, 'maybe')}
+                        className="w-14 h-14 rounded-full bg-white shadow-lg flex items-center justify-center border-2 border-yellow-200 hover:border-yellow-400 transition-colors"
+                      >
+                        <Calendar className="w-6 h-6 text-yellow-500" />
+                      </motion.button>
+
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => handleSwipe(currentHangouts[0].id, 'yes')}
+                        className="w-16 h-16 rounded-full bg-gradient-to-br from-green-400 to-green-600 shadow-xl flex items-center justify-center hover:from-green-500 hover:to-green-700 transition-all"
+                      >
+                        <Check className="w-8 h-8 text-white" />
+                      </motion.button>
                     </div>
-                  )}
-                </div>
+                  </div>
+                </>
               ) : (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -160,6 +224,80 @@ export default function HangoutsPage() {
                     自分で予定を作成してみましょう
                   </p>
                 </motion.div>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* Responded Hangouts */}
+          <TabsContent value="responded" className="mt-0">
+            <div className="space-y-4">
+              {isLoadingResponded ? (
+                <div className="flex items-center justify-center py-20">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                </div>
+              ) : respondedHangouts.length === 0 ? (
+                <div className="text-center py-20">
+                  <p className="text-gray-500">回答済みの予定はありません</p>
+                </div>
+              ) : (
+                respondedHangouts.map((hangout: any) => {
+                  const dateObj = new Date(hangout.date)
+                  const formattedDate = format(dateObj, 'M月d日(E)', { locale: ja })
+                  const responseColors = {
+                    yes: 'bg-green-100 text-green-700 border-green-300',
+                    no: 'bg-red-100 text-red-700 border-red-300',
+                    maybe: 'bg-yellow-100 text-yellow-700 border-yellow-300',
+                  }
+                  const responseLabels = {
+                    yes: '行ける！',
+                    no: '行けない',
+                    maybe: '別の日なら',
+                  }
+
+                  return (
+                    <Card key={hangout.id} className="bg-white border-blue-100 shadow-sm hover:shadow-md transition-shadow">
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={hangout.profiles?.avatar_url || undefined} />
+                            <AvatarFallback className="bg-blue-100 text-blue-600">
+                              {hangout.profiles?.display_name?.[0] || hangout.profiles?.username[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <p className="font-semibold text-blue-900">{hangout.profiles?.display_name || hangout.profiles?.username}</p>
+                                <p className="text-sm text-gray-500">@{hangout.profiles?.username}</p>
+                              </div>
+                              <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${responseColors[hangout.my_response as keyof typeof responseColors]}`}>
+                                {responseLabels[hangout.my_response as keyof typeof responseLabels]}
+                              </span>
+                            </div>
+                            <h3 className="font-bold text-lg mt-2 text-blue-900">{hangout.title}</h3>
+                            {hangout.description && (
+                              <p className="text-sm text-gray-600 mt-1">{hangout.description}</p>
+                            )}
+                            <div className="flex flex-col gap-1 mt-3 text-sm text-gray-700">
+                              {hangout.date && (
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="h-4 w-4 text-blue-500" />
+                                  <span>{formattedDate} {hangout.time && hangout.time}</span>
+                                </div>
+                              )}
+                              {hangout.location && (
+                                <div className="flex items-center gap-2">
+                                  <MapPin className="h-4 w-4 text-blue-500" />
+                                  <span>{hangout.location}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })
               )}
             </div>
           </TabsContent>
@@ -267,35 +405,102 @@ export default function HangoutsPage() {
                             </div>
                           </div>
 
-                          {/* Who responded */}
+                          {/* Who responded - Detailed View */}
                           {hangout.hangout_responses.length > 0 && (
-                            <div className="mt-3 pt-3 border-t">
-                              <p className="text-xs text-gray-500 mb-2">回答済み</p>
-                              <div className="flex flex-wrap gap-2">
-                                {hangout.hangout_responses.map((response: any) => (
-                                  <div
-                                    key={response.id}
-                                    className="flex items-center gap-1"
-                                  >
-                                    <Avatar className="h-6 w-6">
-                                      <AvatarImage
-                                        src={response.profiles.avatar_url || undefined}
-                                      />
-                                      <AvatarFallback className="text-xs">
-                                        {response.profiles.display_name?.[0] ||
-                                          response.profiles.username[0]}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <span className="text-xs">
-                                      {response.response === 'yes'
-                                        ? '✓'
-                                        : response.response === 'no'
-                                        ? '✗'
-                                        : '?'}
-                                    </span>
+                            <div className="mt-4 pt-4 border-t space-y-3">
+                              <p className="text-sm font-semibold text-gray-700 mb-3">
+                                回答者 ({hangout.hangout_responses.length}人)
+                              </p>
+
+                              {/* Yes Responses */}
+                              {hangout.hangout_responses.filter((r: any) => r.response === 'yes').length > 0 && (
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                    <p className="text-xs font-semibold text-green-700">行ける！</p>
                                   </div>
-                                ))}
-                              </div>
+                                  <div className="pl-4 space-y-2">
+                                    {hangout.hangout_responses
+                                      .filter((r: any) => r.response === 'yes')
+                                      .map((response: any) => (
+                                        <div key={response.id} className="flex items-center gap-2">
+                                          <Avatar className="h-7 w-7">
+                                            <AvatarImage src={response.profiles.avatar_url || undefined} />
+                                            <AvatarFallback className="text-xs bg-green-100 text-green-700">
+                                              {response.profiles.display_name?.[0] || response.profiles.username[0]}
+                                            </AvatarFallback>
+                                          </Avatar>
+                                          <div className="flex-1">
+                                            <p className="text-sm font-medium text-gray-900">
+                                              {response.profiles.display_name || response.profiles.username}
+                                            </p>
+                                            <p className="text-xs text-gray-500">@{response.profiles.username}</p>
+                                          </div>
+                                        </div>
+                                      ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Maybe Responses */}
+                              {hangout.hangout_responses.filter((r: any) => r.response === 'maybe').length > 0 && (
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
+                                    <p className="text-xs font-semibold text-yellow-700">別の日なら</p>
+                                  </div>
+                                  <div className="pl-4 space-y-2">
+                                    {hangout.hangout_responses
+                                      .filter((r: any) => r.response === 'maybe')
+                                      .map((response: any) => (
+                                        <div key={response.id} className="flex items-center gap-2">
+                                          <Avatar className="h-7 w-7">
+                                            <AvatarImage src={response.profiles.avatar_url || undefined} />
+                                            <AvatarFallback className="text-xs bg-yellow-100 text-yellow-700">
+                                              {response.profiles.display_name?.[0] || response.profiles.username[0]}
+                                            </AvatarFallback>
+                                          </Avatar>
+                                          <div className="flex-1">
+                                            <p className="text-sm font-medium text-gray-900">
+                                              {response.profiles.display_name || response.profiles.username}
+                                            </p>
+                                            <p className="text-xs text-gray-500">@{response.profiles.username}</p>
+                                          </div>
+                                        </div>
+                                      ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* No Responses */}
+                              {hangout.hangout_responses.filter((r: any) => r.response === 'no').length > 0 && (
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                                    <p className="text-xs font-semibold text-red-700">行けない</p>
+                                  </div>
+                                  <div className="pl-4 space-y-2">
+                                    {hangout.hangout_responses
+                                      .filter((r: any) => r.response === 'no')
+                                      .map((response: any) => (
+                                        <div key={response.id} className="flex items-center gap-2">
+                                          <Avatar className="h-7 w-7">
+                                            <AvatarImage src={response.profiles.avatar_url || undefined} />
+                                            <AvatarFallback className="text-xs bg-red-100 text-red-700">
+                                              {response.profiles.display_name?.[0] || response.profiles.username[0]}
+                                            </AvatarFallback>
+                                          </Avatar>
+                                          <div className="flex-1">
+                                            <p className="text-sm font-medium text-gray-900">
+                                              {response.profiles.display_name || response.profiles.username}
+                                            </p>
+                                            <p className="text-xs text-gray-500">@{response.profiles.username}</p>
+                                          </div>
+                                        </div>
+                                      ))}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -382,7 +587,7 @@ export default function HangoutsPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-sm font-semibold">いつ？</Label>
+              <Label htmlFor="edit-date" className="text-sm font-semibold">いつ？</Label>
               <div className="grid grid-cols-2 gap-2">
                 <Input
                   id="edit-date"

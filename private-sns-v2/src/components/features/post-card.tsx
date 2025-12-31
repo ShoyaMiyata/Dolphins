@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { formatDistanceToNow } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -31,6 +32,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
 import {
   useDeletePost,
@@ -41,6 +47,11 @@ import {
   useUnrepost,
   type PostWithDetails,
 } from '@/hooks/use-posts'
+import {
+  useReactions,
+  useAddReaction,
+  useRemoveReaction,
+} from '@/hooks/use-reactions'
 import { createClient } from '@/lib/supabase/client'
 
 interface PostCardProps {
@@ -48,9 +59,11 @@ interface PostCardProps {
 }
 
 export function PostCard({ post }: PostCardProps) {
+  const router = useRouter()
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isReactionPickerOpen, setIsReactionPickerOpen] = useState(false)
   const [editContent, setEditContent] = useState(post.content || '')
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [imageLoaded, setImageLoaded] = useState<{ [key: string]: boolean }>({})
@@ -66,6 +79,9 @@ export function PostCard({ post }: PostCardProps) {
   const unlikePost = useUnlikePost()
   const repost = useRepost()
   const unrepost = useUnrepost()
+  const { data: reactions = [] } = useReactions(post.id)
+  const addReaction = useAddReaction()
+  const removeReaction = useRemoveReaction()
 
   // ユーザーIDを取得
   useEffect(() => {
@@ -122,6 +138,44 @@ export function PostCard({ post }: PostCardProps) {
     setIsEditDialogOpen(false)
   }
 
+  // 投稿詳細ページへ遷移
+  const handlePostClick = (e: React.MouseEvent) => {
+    // ボタンやリンクなどのクリックは除外
+    const target = e.target as HTMLElement
+    if (
+      target.closest('button') ||
+      target.closest('a') ||
+      target.tagName === 'IMG'
+    ) {
+      return
+    }
+    router.push(`/home/${post.id}`)
+  }
+
+  // リアクション処理
+  const handleReaction = async (emoji: string) => {
+    const existingReaction = reactions.find((r) => r.emoji === emoji)
+
+    if (existingReaction?.hasReacted) {
+      // 既にリアクションしている場合は削除
+      await removeReaction.mutateAsync({
+        postId: post.id,
+        emoji,
+      })
+    } else {
+      // リアクションを追加
+      await addReaction.mutateAsync({
+        postId: post.id,
+        emoji,
+      })
+    }
+
+    setIsReactionPickerOpen(false)
+  }
+
+  // よく使う絵文字
+  const commonEmojis = ['👍', '❤️', '😊', '😂', '🎉', '🔥', '👏', '🙏']
+
   return (
     <>
       <motion.div
@@ -134,7 +188,7 @@ export function PostCard({ post }: PostCardProps) {
         }}
       >
         <Card className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-200 mb-3 border border-blue-100 hover:border-blue-200">
-          <CardContent className="p-4">
+          <CardContent className="p-4 cursor-pointer" onClick={handlePostClick}>
             <div className="flex gap-3">
             {/* アバター */}
             <Avatar className="h-10 w-10 flex-shrink-0">
@@ -163,21 +217,28 @@ export function PostCard({ post }: PostCardProps) {
                       <Button
                         variant="ghost"
                         size="icon"
+                        onClick={(e) => e.stopPropagation()}
                         className="h-8 w-8 -mt-1 -mr-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50"
                       >
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" sideOffset={8} className="border-blue-100 shadow-lg">
+                    <DropdownMenuContent align="end" sideOffset={8} className="border-blue-100 shadow-lg" onClick={(e) => e.stopPropagation()}>
                       <DropdownMenuItem
-                        onClick={() => setIsEditDialogOpen(true)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setIsEditDialogOpen(true)
+                        }}
                         className="text-blue-900 focus:bg-blue-50 focus:text-blue-900 cursor-pointer"
                       >
                         <Edit className="mr-2 h-4 w-4 text-blue-500" />
                         編集
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() => setIsDeleteDialogOpen(true)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setIsDeleteDialogOpen(true)
+                        }}
                         className="text-red-600 focus:bg-red-50 focus:text-red-600 cursor-pointer"
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
@@ -226,7 +287,10 @@ export function PostCard({ post }: PostCardProps) {
                             ? 'relative'
                             : ''
                       }`}
-                      onClick={() => setSelectedImage(image.image_url)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setSelectedImage(image.image_url)
+                      }}
                     >
                       {/* Image Loading Blur */}
                       {!imageLoaded[image.id] && (
@@ -271,6 +335,10 @@ export function PostCard({ post }: PostCardProps) {
                   <Button
                     variant="ghost"
                     size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      router.push(`/home/${post.id}`)
+                    }}
                     className="h-8 gap-1.5 text-gray-500 hover:text-blue-500 hover:bg-blue-50 px-2 py-1 rounded-full transition-colors"
                   >
                     <MessageCircle className="h-4 w-4" />
@@ -290,7 +358,10 @@ export function PostCard({ post }: PostCardProps) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={handleRepost}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleRepost()
+                    }}
                     disabled={repost.isPending || unrepost.isPending}
                     className={`h-8 gap-1.5 px-2 py-1 rounded-full transition-colors ${
                       post.is_reposted
@@ -310,7 +381,10 @@ export function PostCard({ post }: PostCardProps) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={handleLike}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleLike()
+                    }}
                     disabled={likePost.isPending || unlikePost.isPending}
                     className={`h-8 gap-1.5 px-2 py-1 rounded-full transition-colors ${
                       post.is_liked
@@ -334,15 +408,67 @@ export function PostCard({ post }: PostCardProps) {
 
                 {/* リアクション */}
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 gap-1.5 text-gray-500 hover:text-yellow-500 hover:bg-yellow-50 px-2 py-1 rounded-full transition-colors"
-                  >
-                    <Smile className="h-4 w-4" />
-                  </Button>
+                  <Popover open={isReactionPickerOpen} onOpenChange={setIsReactionPickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => e.stopPropagation()}
+                        className="h-8 gap-1.5 text-gray-500 hover:text-yellow-500 hover:bg-yellow-50 px-2 py-1 rounded-full transition-colors"
+                      >
+                        <Smile className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64 p-2" align="start" onClick={(e) => e.stopPropagation()}>
+                      <div className="grid grid-cols-4 gap-2">
+                        {commonEmojis.map((emoji) => (
+                          <Button
+                            key={emoji}
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleReaction(emoji)
+                            }}
+                            className="h-12 text-2xl hover:bg-gray-100 rounded-lg"
+                          >
+                            {emoji}
+                          </Button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </motion.div>
               </motion.div>
+
+              {/* リアクション表示 */}
+              {reactions.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex flex-wrap gap-2 mt-2"
+                >
+                  {reactions.map((reaction) => (
+                    <Button
+                      key={reaction.emoji}
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleReaction(reaction.emoji)
+                      }}
+                      className={`h-7 px-2 py-1 rounded-full text-sm gap-1 transition-colors ${
+                        reaction.hasReacted
+                          ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      <span className="text-base">{reaction.emoji}</span>
+                      <span className="text-xs font-medium">{reaction.count}</span>
+                    </Button>
+                  ))}
+                </motion.div>
+              )}
             </div>
           </div>
         </CardContent>

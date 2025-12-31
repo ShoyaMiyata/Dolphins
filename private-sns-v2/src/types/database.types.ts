@@ -122,6 +122,29 @@ export interface Database {
           updated_at?: string
         }
       }
+      comment_images: {
+        Row: {
+          id: string
+          comment_id: string
+          image_url: string
+          order_index: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          comment_id: string
+          image_url: string
+          order_index: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          comment_id?: string
+          image_url?: string
+          order_index?: number
+          created_at?: string
+        }
+      }
       reposts: {
         Row: {
           id: string
@@ -297,6 +320,142 @@ export interface Database {
           id?: string
           hangout_id?: string
           user_id?: string
+          created_at?: string
+        }
+      }
+      groups: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          image_url: string | null
+          owner_id: string
+          join_type: 'free' | 'approval'
+          visibility_type: 'public' | 'private'
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          image_url?: string | null
+          owner_id: string
+          join_type?: 'free' | 'approval'
+          visibility_type?: 'public' | 'private'
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          image_url?: string | null
+          owner_id?: string
+          join_type?: 'free' | 'approval'
+          visibility_type?: 'public' | 'private'
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      group_members: {
+        Row: {
+          id: string
+          group_id: string
+          user_id: string
+          role: 'owner' | 'admin' | 'member'
+          joined_at: string
+        }
+        Insert: {
+          id?: string
+          group_id: string
+          user_id: string
+          role?: 'owner' | 'admin' | 'member'
+          joined_at?: string
+        }
+        Update: {
+          id?: string
+          group_id?: string
+          user_id?: string
+          role?: 'owner' | 'admin' | 'member'
+          joined_at?: string
+        }
+      }
+      group_join_requests: {
+        Row: {
+          id: string
+          group_id: string
+          user_id: string
+          status: 'pending' | 'approved' | 'rejected'
+          requested_at: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+        }
+        Insert: {
+          id?: string
+          group_id: string
+          user_id: string
+          status?: 'pending' | 'approved' | 'rejected'
+          requested_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+        }
+        Update: {
+          id?: string
+          group_id?: string
+          user_id?: string
+          status?: 'pending' | 'approved' | 'rejected'
+          requested_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+        }
+      }
+      group_posts: {
+        Row: {
+          id: string
+          group_id: string
+          user_id: string
+          content: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          group_id: string
+          user_id: string
+          content?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          group_id?: string
+          user_id?: string
+          content?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      group_post_images: {
+        Row: {
+          id: string
+          group_post_id: string
+          image_url: string
+          order_index: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          group_post_id: string
+          image_url: string
+          order_index: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          group_post_id?: string
+          image_url?: string
+          order_index?: number
           created_at?: string
         }
       }

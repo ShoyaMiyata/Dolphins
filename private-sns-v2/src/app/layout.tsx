@@ -19,10 +19,6 @@ export const metadata: Metadata = {
   title: "東葛 Dolphins B.B.C.",
   description: "東葛飾高校ドルフィンズバスケットボールクラブ - プライベートSNS",
   manifest: "/manifest.json",
-  icons: {
-    icon: "/images/logo-circle.png",
-    apple: "/images/logo-circle.png",
-  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

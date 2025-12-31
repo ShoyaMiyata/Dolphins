@@ -9,6 +9,17 @@ interface NavbarProps {
 const Navbar: React.FC<NavbarProps> = ({ scrolled }) => {
   const [isOpen, setIsOpen] = useState(false);
 
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault();
+    const targetId = href.replace('#', '');
+    const targetElement = document.getElementById(targetId);
+
+    if (targetElement) {
+      targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setIsOpen(false);
+    }
+  };
+
   return (
     <header 
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -32,10 +43,11 @@ const Navbar: React.FC<NavbarProps> = ({ scrolled }) => {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">
             {NAV_LINKS.map((link) => (
-              <a 
-                key={link.name} 
+              <a
+                key={link.name}
                 href={link.href}
-                className={`text-sm font-medium transition-colors hover:text-dolphin-orange ${
+                onClick={(e) => handleNavClick(e, link.href)}
+                className={`text-sm font-medium transition-colors hover:text-dolphin-orange cursor-pointer ${
                   scrolled ? 'text-gray-700' : 'text-white/90'
                 }`}
               >
@@ -66,11 +78,11 @@ const Navbar: React.FC<NavbarProps> = ({ scrolled }) => {
         <div className="md:hidden absolute top-full left-0 right-0 bg-white shadow-xl border-t">
           <div className="flex flex-col p-4 gap-4">
             {NAV_LINKS.map((link) => (
-              <a 
-                key={link.name} 
+              <a
+                key={link.name}
                 href={link.href}
-                className="text-gray-700 font-medium py-2 border-b border-gray-100"
-                onClick={() => setIsOpen(false)}
+                onClick={(e) => handleNavClick(e, link.href)}
+                className="text-gray-700 font-medium py-2 border-b border-gray-100 cursor-pointer"
               >
                 {link.name}
               </a>

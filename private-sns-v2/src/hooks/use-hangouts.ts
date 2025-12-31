@@ -15,6 +15,53 @@ interface HangoutWithProfile extends Hangout {
   hangout_responses: HangoutResponse[]
 }
 
+// 回答済みのhangoutsを取得
+export function useRespondedHangouts() {
+  return useQuery({
+    queryKey: ['hangouts', 'responded'],
+    queryFn: async () => {
+      const supabase = createClient()
+      const { data: session } = await supabase.auth.getSession()
+
+      if (!session?.session?.user) {
+        throw new Error('Not authenticated')
+      }
+
+      const userId = session.session.user.id
+
+      // 1つのクエリで全て取得 (JOINを使用)
+      const { data: responses, error } = await supabase
+        .from('hangout_responses')
+        .select(`
+          hangout_id,
+          response,
+          created_at,
+          hangouts (
+            *,
+            profiles:user_id (
+              display_name,
+              username,
+              avatar_url
+            )
+          )
+        `)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      if (!responses || responses.length === 0) return []
+
+      // データを整形
+      return responses.map((response: any) => ({
+        ...response.hangouts,
+        profiles: response.hangouts.profiles,
+        my_response: response.response,
+        responded_at: response.created_at
+      }))
+    },
+  })
+}
+
 // 未回答のhangoutsを取得
 export function usePendingHangouts() {
   return useQuery({
@@ -29,42 +76,30 @@ export function usePendingHangouts() {
 
       const userId = session.session.user.id
 
-      // 自分が作成したものではなく、まだ回答していないhangoutsを取得
-      const { data: hangouts, error: hangoutsError } = await supabase
+      // 1つのクエリで全て取得 (JOINを使用)
+      const { data: hangouts, error } = await supabase
         .from('hangouts')
-        .select('*')
+        .select(`
+          *,
+          profiles:user_id (
+            display_name,
+            username,
+            avatar_url
+          ),
+          hangout_responses (
+            id,
+            user_id,
+            response
+          )
+        `)
         .neq('user_id', userId)
         .order('created_at', { ascending: false })
 
-      if (hangoutsError) throw hangoutsError
-
-      // 各hangoutのプロファイルと回答を取得
-      const hangoutsWithDetails = await Promise.all(
-        (hangouts || []).map(async (hangout) => {
-          // プロファイル取得
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('display_name, username, avatar_url')
-            .eq('id', hangout.user_id)
-            .single()
-
-          // 回答取得
-          const { data: responses } = await supabase
-            .from('hangout_responses')
-            .select('id, user_id, response')
-            .eq('hangout_id', hangout.id)
-
-          return {
-            ...hangout,
-            profiles: profile,
-            hangout_responses: responses || []
-          }
-        })
-      )
+      if (error) throw error
 
       // 自分の回答がまだないものだけフィルタリング
-      const pendingHangouts = hangoutsWithDetails.filter(
-        (hangout) => !hangout.hangout_responses.some((r: any) => r.user_id === userId)
+      const pendingHangouts = (hangouts || []).filter(
+        (hangout: any) => !hangout.hangout_responses.some((r: any) => r.user_id === userId)
       )
 
       return pendingHangouts
@@ -84,55 +119,33 @@ export function useMyHangouts() {
         throw new Error('Not authenticated')
       }
 
-      const { data: hangouts, error: hangoutsError } = await supabase
+      // 1つのクエリで全て取得 (JOINを使用)
+      const { data: hangouts, error } = await supabase
         .from('hangouts')
-        .select('*')
+        .select(`
+          *,
+          profiles:user_id (
+            display_name,
+            username,
+            avatar_url
+          ),
+          hangout_responses (
+            id,
+            response,
+            user_id,
+            profiles:user_id (
+              display_name,
+              username,
+              avatar_url
+            )
+          )
+        `)
         .eq('user_id', session.session.user.id)
         .order('created_at', { ascending: false })
 
-      if (hangoutsError) throw hangoutsError
+      if (error) throw error
 
-      // 各hangoutのプロファイルと回答を取得
-      const hangoutsWithDetails = await Promise.all(
-        (hangouts || []).map(async (hangout) => {
-          // プロファイル取得
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('display_name, username, avatar_url')
-            .eq('id', hangout.user_id)
-            .single()
-
-          // 回答とそのプロファイルを取得
-          const { data: responses } = await supabase
-            .from('hangout_responses')
-            .select('id, response, user_id')
-            .eq('hangout_id', hangout.id)
-
-          // 各回答のプロファイルを取得
-          const responsesWithProfiles = await Promise.all(
-            (responses || []).map(async (response) => {
-              const { data: responseProfile } = await supabase
-                .from('profiles')
-                .select('display_name, username, avatar_url')
-                .eq('id', response.user_id)
-                .single()
-
-              return {
-                ...response,
-                profiles: responseProfile
-              }
-            })
-          )
-
-          return {
-            ...hangout,
-            profiles: profile,
-            hangout_responses: responsesWithProfiles
-          }
-        })
-      )
-
-      return hangoutsWithDetails
+      return hangouts || []
     },
   })
 }

@@ -6,17 +6,12 @@ export default function HomeLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen">
+    <>
       {/* Main Content */}
-      <div>
-        {children}
-      </div>
+      {children}
 
       {/* Bottom Navigation */}
       <BottomNav />
-
-      {/* Bottom padding to prevent content being hidden behind nav */}
-      <div className="h-16" />
-    </div>
+    </>
   )
 }

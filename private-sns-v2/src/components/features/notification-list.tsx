@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils'
 
 export function NotificationList() {
   const router = useRouter()
-  const { data: notifications, isLoading } = useNotifications()
+  const { data: notifications, isLoading, error, isError } = useNotifications()
   const markAsRead = useMarkNotificationAsRead()
   const markAllAsRead = useMarkAllNotificationsAsRead()
   const deleteNotification = useDeleteNotification()
@@ -49,6 +49,20 @@ export function NotificationList() {
           <NotificationSkeleton key={i} />
         ))}
       </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <Card className="p-8 text-center bg-white rounded-xl shadow-sm border border-red-100">
+        <div className="mx-auto w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-4">
+          <Heart className="w-6 h-6 text-red-500" />
+        </div>
+        <h3 className="text-lg font-semibold mb-2 text-red-600">通知の取得に失敗しました</h3>
+        <p className="text-sm text-muted-foreground">
+          {error instanceof Error ? error.message : 'エラーが発生しました'}
+        </p>
+      </Card>
     )
   }
 
@@ -192,14 +206,14 @@ function NotificationIcon({ type }: { type: string }) {
 
 function NotificationSkeleton() {
   return (
-    <Card className="p-4">
+    <Card className="p-4 bg-white rounded-xl shadow-sm border border-gray-100">
       <div className="flex items-start gap-3">
-        <Skeleton className="w-8 h-8 rounded-full" />
-        <Skeleton className="w-10 h-10 rounded-full" />
+        <Skeleton className="w-8 h-8 rounded-full bg-gray-200" />
+        <Skeleton className="w-10 h-10 rounded-full bg-gray-200" />
         <div className="flex-1 space-y-2">
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-3 w-1/2" />
-          <Skeleton className="h-3 w-1/4" />
+          <Skeleton className="h-4 w-3/4 bg-gray-200" />
+          <Skeleton className="h-3 w-1/2 bg-gray-200" />
+          <Skeleton className="h-3 w-1/4 bg-gray-200" />
         </div>
       </div>
     </Card>

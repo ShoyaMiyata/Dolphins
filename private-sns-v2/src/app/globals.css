@@ -33,6 +33,12 @@
   --color-dolphins-700: #1d4ed8;
   --color-dolphins-800: #1e40af;
   --color-dolphins-900: #1e3a8a;
+
+  /* Landing page Dolphins theme colors */
+  --color-dolphin-blue: #0055AA;
+  --color-dolphin-light: #4DA6FF;
+  --color-dolphin-dark: #003366;
+  --color-dolphin-orange: #FF8800;
 }
 
 @media (prefers-color-scheme: dark) {
