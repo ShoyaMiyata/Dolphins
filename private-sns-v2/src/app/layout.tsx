@@ -16,13 +16,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "東葛 Dolphins B.B.C.",
+  title: "Dolphins",
   description: "東葛飾高校ドルフィンズバスケットボールクラブ - プライベートSNS",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "東葛 Dolphins",
+    title: "Dolphins",
   },
 };
 
