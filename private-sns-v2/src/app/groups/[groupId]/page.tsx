@@ -269,29 +269,58 @@ export default function GroupDetailPage() {
 
           {/* Members Tab */}
           <TabsContent value="members" className="mt-4">
-            <div className="space-y-4">
-              {/* Join Requests (for owners/admins) */}
+            <div className="space-y-6">
+              {/* Header with Invite Button */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    メンバー管理
+                  </h3>
+                  <Badge variant="secondary" className="text-sm">
+                    {members?.length || 0}人
+                  </Badge>
+                </div>
+                {canManageMembers && (
+                  <Button
+                    onClick={() => setInviteDialogOpen(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    メンバーを招待
+                  </Button>
+                )}
+              </div>
+
+              {/* Join Requests Section */}
               {canManageMembers && joinRequests && joinRequests.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
+                <Card className="border-orange-200 bg-orange-50/50">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-orange-800">
                       <UserPlus className="h-5 w-5" />
-                      参加リクエスト ({joinRequests.length})
+                      参加リクエスト
+                      <Badge variant="outline" className="border-orange-300 text-orange-700">
+                        {joinRequests.length}
+                      </Badge>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {joinRequests.map((request) => (
-                      <div key={request.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div key={request.id} className="flex items-center justify-between p-4 bg-white rounded-lg border border-orange-100">
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
+                          <Avatar className="h-10 w-10">
                             <AvatarImage src={request.profiles.avatar_url || undefined} />
-                            <AvatarFallback>
+                            <AvatarFallback className="bg-orange-100 text-orange-700">
                               {request.profiles.username.slice(0, 2).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="font-medium">{request.profiles.display_name || request.profiles.username}</p>
+                            <p className="font-medium text-gray-900">
+                              {request.profiles.display_name || request.profiles.username}
+                            </p>
                             <p className="text-sm text-gray-500">@{request.profiles.username}</p>
+                            <p className="text-xs text-gray-400">
+                              {new Date(request.created_at).toLocaleDateString('ja-JP')} に申請
+                            </p>
                           </div>
                         </div>
                         <div className="flex gap-2">
@@ -303,8 +332,10 @@ export default function GroupDetailPage() {
                               userId: request.user_id
                             })}
                             disabled={approveJoinRequest.isPending}
+                            className="bg-green-600 hover:bg-green-700"
                           >
-                            <Check className="h-4 w-4" />
+                            <Check className="h-4 w-4 mr-1" />
+                            承認
                           </Button>
                           <Button
                             size="sm"
@@ -314,8 +345,10 @@ export default function GroupDetailPage() {
                               groupId: request.group_id
                             })}
                             disabled={rejectJoinRequest.isPending}
+                            className="border-red-300 text-red-600 hover:bg-red-50"
                           >
-                            <X className="h-4 w-4" />
+                            <X className="h-4 w-4 mr-1" />
+                            拒否
                           </Button>
                         </div>
                       </div>
@@ -326,111 +359,125 @@ export default function GroupDetailPage() {
 
               {/* Members List */}
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
+                <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    メンバー ({members?.length || 0})
+                    <Users className="h-5 w-5 text-blue-600" />
+                    メンバー一覧
                   </CardTitle>
-                  {canManageMembers && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setInviteDialogOpen(true)}
-                      className="flex items-center gap-2"
-                    >
-                      <UserPlus className="h-4 w-4" />
-                      招待
-                    </Button>
-                  )}
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {members?.map((member) => {
                       const isCurrentUser = member.user_id === currentUser?.id
                       const canManageThisMember = canManageMembers && !isCurrentUser && member.role !== 'owner'
+                      const joinedDate = new Date(member.joined_at).toLocaleDateString('ja-JP')
 
                       return (
-                        <div key={member.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10">
-                              <AvatarImage src={member.profiles.avatar_url || undefined} />
-                              <AvatarFallback>
-                                {member.profiles.username.slice(0, 2).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <p className="font-medium">
+                        <div key={member.id} className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-100 hover:shadow-sm transition-shadow">
+                          <div className="flex items-center gap-4">
+                            {/* Avatar */}
+                            <div className="relative">
+                              <Avatar className="h-12 w-12">
+                                <AvatarImage src={member.profiles.avatar_url || undefined} />
+                                <AvatarFallback className="bg-blue-100 text-blue-700 text-sm font-medium">
+                                  {member.profiles.username.slice(0, 2).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              {isCurrentUser && (
+                                <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* User Info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="font-semibold text-gray-900 truncate">
                                   {member.profiles.display_name || member.profiles.username}
                                 </p>
                                 {member.role === 'owner' && (
-                                  <Badge variant="default" className="bg-yellow-500">
+                                  <Badge variant="default" className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white border-0">
                                     <Crown className="h-3 w-3 mr-1" />
                                     オーナー
                                   </Badge>
                                 )}
                                 {member.role === 'admin' && (
-                                  <Badge variant="secondary">
+                                  <Badge variant="secondary" className="bg-gradient-to-r from-blue-400 to-blue-600 text-white border-0">
                                     <Shield className="h-3 w-3 mr-1" />
                                     管理者
                                   </Badge>
                                 )}
                                 {member.role === 'member' && (
-                                  <Badge variant="outline">
+                                  <Badge variant="outline" className="border-gray-300 text-gray-600">
                                     <User className="h-3 w-3 mr-1" />
                                     メンバー
                                   </Badge>
                                 )}
+                                {isCurrentUser && (
+                                  <Badge variant="outline" className="border-blue-300 text-blue-600">
+                                    あなた
+                                  </Badge>
+                                )}
                               </div>
-                              <p className="text-sm text-gray-500">@{member.profiles.username}</p>
+                              <p className="text-sm text-gray-500 mb-1">@{member.profiles.username}</p>
+                              <p className="text-xs text-gray-400">
+                                {joinedDate} に参加
+                              </p>
+                              {member.profiles.bio && (
+                                <p className="text-xs text-gray-600 mt-1 line-clamp-1 max-w-md">
+                                  {member.profiles.bio}
+                                </p>
+                              )}
                             </div>
                           </div>
 
-                          {/* Member management menu */}
+                          {/* Management Actions */}
                           {canManageThisMember && (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                {member.role !== 'admin' && (
-                                  <DropdownMenuItem
-                                    onClick={() => updateMemberRole.mutate({
-                                      groupId: member.group_id,
-                                      userId: member.user_id,
-                                      role: 'admin'
-                                    })}
-                                  >
-                                    <Shield className="h-4 w-4 mr-2" />
-                                    管理者にする
-                                  </DropdownMenuItem>
-                                )}
-                                {member.role === 'admin' && (
-                                  <DropdownMenuItem
-                                    onClick={() => updateMemberRole.mutate({
-                                      groupId: member.group_id,
-                                      userId: member.user_id,
-                                      role: 'member'
-                                    })}
-                                  >
-                                    <User className="h-4 w-4 mr-2" />
-                                    メンバーに戻す
-                                  </DropdownMenuItem>
-                                )}
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => removeMember.mutate({
+                            <div className="flex gap-2">
+                              {member.role !== 'admin' && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => updateMemberRole.mutate({
                                     groupId: member.group_id,
-                                    userId: member.user_id
+                                    userId: member.user_id,
+                                    role: 'admin'
                                   })}
-                                  className="text-red-600"
+                                  className="text-blue-600 border-blue-300 hover:bg-blue-50"
                                 >
-                                  グループから除外
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                                  <Shield className="h-3 w-3 mr-1" />
+                                  管理者
+                                </Button>
+                              )}
+                              {member.role === 'admin' && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => updateMemberRole.mutate({
+                                    groupId: member.group_id,
+                                    userId: member.user_id,
+                                    role: 'member'
+                                  })}
+                                  className="text-gray-600 border-gray-300 hover:bg-gray-50"
+                                >
+                                  <User className="h-3 w-3 mr-1" />
+                                  メンバー
+                                </Button>
+                              )}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => removeMember.mutate({
+                                  groupId: member.group_id,
+                                  userId: member.user_id
+                                })}
+                                className="text-red-600 border-red-300 hover:bg-red-50"
+                              >
+                                <X className="h-3 w-3 mr-1" />
+                                除外
+                              </Button>
+                            </div>
                           )}
                         </div>
                       )
