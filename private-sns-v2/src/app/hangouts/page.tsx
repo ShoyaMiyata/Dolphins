@@ -276,6 +276,16 @@ export default function HangoutsPage() {
                                 <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${responseColors[hangout.my_response as keyof typeof responseColors]}`}>
                                   {responseLabels[hangout.my_response as keyof typeof responseLabels]}
                                 </span>
+                                {/* Response change button for participants */}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-green-500 hover:text-green-600 hover:bg-green-50"
+                                  onClick={() => handleSwipe(hangout.id, hangout.my_response === 'yes' ? 'no' : hangout.my_response === 'no' ? 'maybe' : 'yes')}
+                                  title="回答を変更"
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
                                 {/* Edit button for hangout creator - plans content */}
                                 {/* Creator can edit the hangout content */}
                                 {hangout.user_id === user?.id && (
