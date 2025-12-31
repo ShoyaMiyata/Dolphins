@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+
+// 動的レンダリングを強制（ビルド時のプリレンダリングを無効化）
+export const dynamic = 'force-dynamic'
 import { AppHeader } from '@/components/layout/app-header'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
