@@ -246,14 +246,19 @@ export default function HangoutsPage() {
                   const dateObj = new Date(hangout.date)
                   const formattedDate = format(dateObj, 'M月d日(E)', { locale: ja })
                   const responseColors = {
-                    yes: 'bg-green-100 text-green-700 border-green-300',
-                    no: 'bg-red-100 text-red-700 border-red-300',
-                    maybe: 'bg-yellow-100 text-yellow-700 border-yellow-300',
+                    yes: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+                    no: 'bg-rose-100 text-rose-800 border-rose-300',
+                    maybe: 'bg-amber-100 text-amber-800 border-amber-300',
                   }
                   const responseLabels = {
                     yes: '行ける！',
                     no: '行けない',
                     maybe: '別の日なら',
+                  }
+                  const responseIcons = {
+                    yes: '😊',
+                    no: '😅',
+                    maybe: '🤔',
                   }
 
                   return (
@@ -273,18 +278,19 @@ export default function HangoutsPage() {
                                 <p className="text-sm text-gray-500">@{hangout.profiles?.username}</p>
                               </div>
                               <div className="flex items-center gap-2">
-                                <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${responseColors[hangout.my_response as keyof typeof responseColors]}`}>
+                                <span className={`px-3 py-1 rounded-full text-xs font-semibold border flex items-center gap-1 ${responseColors[hangout.my_response as keyof typeof responseColors]}`}>
+                                  <span>{responseIcons[hangout.my_response as keyof typeof responseIcons]}</span>
                                   {responseLabels[hangout.my_response as keyof typeof responseLabels]}
                                 </span>
                                 {/* Response change button for participants */}
                                 <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-green-500 hover:text-green-600 hover:bg-green-50"
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 px-2 text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:border-blue-300"
                                   onClick={() => handleSwipe(hangout.id, hangout.my_response === 'yes' ? 'no' : hangout.my_response === 'no' ? 'maybe' : 'yes')}
                                   title="回答を変更"
                                 >
-                                  <Check className="h-4 w-4" />
+                                  変更
                                 </Button>
                                 {/* Edit button for hangout creator - plans content */}
                                 {/* Creator can edit the hangout content */}
@@ -292,11 +298,11 @@ export default function HangoutsPage() {
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                                    className="h-7 w-7 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
                                     onClick={() => handleEditClick(hangout)}
                                     title="予定の内容を編集"
                                   >
-                                    <Edit className="h-4 w-4" />
+                                    <Edit className="h-3.5 w-3.5" />
                                   </Button>
                                 )}
                               </div>
