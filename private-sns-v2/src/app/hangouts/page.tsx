@@ -296,11 +296,11 @@ export default function HangoutsPage() {
               ) : (
                 respondedHangouts.map((hangout: any) => {
                   const dateObj = new Date(hangout.date)
-                  const formattedDate = format(dateObj, 'M月d日(E)', { locale: ja })
+                  const formattedDate = format(dateObj, 'yyyy/MM/dd(E) HH:mm', { locale: ja })
                   const responseColors = {
-                    yes: 'bg-emerald-100 text-emerald-800 border-emerald-300',
-                    no: 'bg-rose-100 text-rose-800 border-rose-300',
-                    maybe: 'bg-amber-100 text-amber-800 border-amber-300',
+                    yes: 'bg-green-100 text-green-700',
+                    no: 'bg-red-100 text-red-700',
+                    maybe: 'bg-yellow-100 text-yellow-700',
                   }
                   const responseLabels = {
                     yes: 'YES',
@@ -313,72 +313,91 @@ export default function HangoutsPage() {
                     maybe: '△', // 三角
                   }
                   return (
-                    <Card key={hangout.id} className="bg-white border-blue-100 shadow-sm hover:shadow-md transition-shadow">
-                      <CardContent className="p-4">
-                        <div className="flex items-start gap-3">
-                          <Avatar className="h-10 w-10">
+                    <motion.div
+                      key={hangout.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-lg transition-all duration-200 p-6"
+                    >
+                      {/* 上段: ユーザー情報 + ステータスバッジ */}
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10 ring-2 ring-gray-100">
                             <AvatarImage src={hangout.profiles?.avatar_url || undefined} />
-                            <AvatarFallback className="bg-blue-100 text-blue-600">
+                            <AvatarFallback className="bg-blue-100 text-blue-600 text-sm">
                               {hangout.profiles?.display_name?.[0] || hangout.profiles?.username[0]}
                             </AvatarFallback>
                           </Avatar>
-                          <div className="flex-1">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <p className="font-semibold text-blue-900">{hangout.profiles?.display_name || hangout.profiles?.username}</p>
-                                <p className="text-sm text-gray-500">@{hangout.profiles?.username}</p>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className={`px-2 py-2 rounded-full text-lg border flex items-center justify-center ${responseColors[hangout.my_response as keyof typeof responseColors]}`}>
-                                  {responseIcons[hangout.my_response as keyof typeof responseIcons]}
-                                </span>
-                                {/* Response change button for participants */}
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-7 px-2 text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:border-blue-300"
-                                  onClick={() => handleSwipe(hangout.id, hangout.my_response === 'yes' ? 'no' : hangout.my_response === 'no' ? 'maybe' : 'yes')}
-                                  title="回答を変更"
-                                >
-                                  変更
-                                </Button>
-                                {/* Edit button for hangout creator - plans content */}
-                                {/* Creator can edit the hangout content */}
-                                {hangout.user_id === user?.id && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
-                                    onClick={() => handleEditClick(hangout)}
-                                    title="予定の内容を編集"
-                                  >
-                                    <Edit className="h-3.5 w-3.5" />
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                            <h3 className="font-bold text-lg mt-2 text-blue-900">{hangout.title}</h3>
-                            {hangout.description && (
-                              <p className="text-sm text-gray-600 mt-1">{hangout.description}</p>
-                            )}
-                            <div className="flex flex-col gap-1 mt-3 text-sm text-gray-700">
-                              {hangout.date && (
-                                <div className="flex items-center gap-2">
-                                  <Calendar className="h-4 w-4 text-blue-500" />
-                                  <span>{formattedDate} {hangout.time && hangout.time}</span>
-                                </div>
-                              )}
-                              {hangout.location && (
-                                <div className="flex items-center gap-2">
-                                  <MapPin className="h-4 w-4 text-blue-500" />
-                                  <span>{hangout.location}</span>
-                                </div>
-                              )}
-                            </div>
+                          <div>
+                            <p className="font-semibold text-gray-900 text-sm">
+                              {hangout.profiles?.display_name || hangout.profiles?.username}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              @{hangout.profiles?.username}
+                            </p>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium border ${responseColors[hangout.my_response as keyof typeof responseColors]}`}>
+                            {responseIcons[hangout.my_response as keyof typeof responseIcons]} {responseLabels[hangout.my_response as keyof typeof responseLabels]}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 中段: イベントタイトル + 説明文 */}
+                      <div className="mb-4">
+                        <h3 className="text-xl font-bold text-gray-900 mb-2 leading-tight">
+                          {hangout.title}
+                        </h3>
+                        {hangout.description && (
+                          <p className="text-sm text-gray-600 leading-relaxed line-clamp-2">
+                            {hangout.description}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* 下段: 日時・場所 + アクションボタン */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex flex-col gap-1 text-sm text-gray-700">
+                          {hangout.date && (
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4 text-gray-500" />
+                              <span className="font-medium">{formattedDate}</span>
+                            </div>
+                          )}
+                          {hangout.location && (
+                            <div className="flex items-center gap-2">
+                              <MapPin className="h-4 w-4 text-gray-500" />
+                              <span className="font-medium">{hangout.location}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {/* 回答変更ボタン */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-3 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                            onClick={() => handleSwipe(hangout.id, hangout.my_response === 'yes' ? 'no' : hangout.my_response === 'no' ? 'maybe' : 'yes')}
+                            title="回答を変更"
+                          >
+                            変更
+                          </Button>
+                          {/* 編集ボタン（作成者のみ） */}
+                          {hangout.user_id === user?.id && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                              onClick={() => handleEditClick(hangout)}
+                              title="予定の内容を編集"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
                   )
                 })
               )}
