@@ -46,6 +46,7 @@ export function SwipeableCard({ hangout, onSwipe, onSkip }: SwipeableCardProps) 
   const [exitY, setExitY] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [showFullDescription, setShowFullDescription] = useState(false)
+  const [hasSwiped, setHasSwiped] = useState(false)
 
   const controls = useAnimation()
   const x = useMotionValue(0)
@@ -70,29 +71,34 @@ export function SwipeableCard({ hangout, onSwipe, onSkip }: SwipeableCardProps) 
   const handleDragEnd = (_: any, info: PanInfo) => {
     setIsDragging(false)
 
+    // 既にスワイプ処理済みの場合は何もしない
+    if (hasSwiped) return
+
     const swipeVelocity = Math.abs(info.velocity.x) > SWIPE_VELOCITY || Math.abs(info.velocity.y) > SWIPE_VELOCITY
     const swipeDistance = Math.abs(info.offset.x) > SWIPE_THRESHOLD || Math.abs(info.offset.y) > SWIPE_THRESHOLD
 
     if (swipeVelocity || swipeDistance) {
+      setHasSwiped(true) // スワイプ処理済みフラグをセット
+
       // 上スワイプ: maybe
       if (Math.abs(info.offset.y) > Math.abs(info.offset.x) && info.offset.y < -50) {
         setExitY(-1000)
-        setTimeout(() => onSwipe(hangout.id, 'maybe'), 100)
+        onSwipe(hangout.id, 'maybe') // 即座に実行
       }
       // 下スワイプ: skip (保留)
       else if (Math.abs(info.offset.y) > Math.abs(info.offset.x) && info.offset.y > 50) {
         setExitY(1000)
-        setTimeout(() => onSkip(hangout.id), 100)
+        onSkip(hangout.id) // 即座に実行
       }
       // 右スワイプ: yes
       else if (info.offset.x > 50) {
         setExitX(1000)
-        setTimeout(() => onSwipe(hangout.id, 'yes'), 100)
+        onSwipe(hangout.id, 'yes') // 即座に実行
       }
       // 左スワイプ: no
       else if (info.offset.x < -50) {
         setExitX(-1000)
-        setTimeout(() => onSwipe(hangout.id, 'no'), 100)
+        onSwipe(hangout.id, 'no') // 即座に実行
       } else {
         controls.start({ x: 0, y: 0, rotate: 0 })
       }
@@ -121,12 +127,12 @@ export function SwipeableCard({ hangout, onSwipe, onSkip }: SwipeableCardProps) 
       animate={
         exitX !== 0 || exitY !== 0
           ? {
-              x: exitX,
-              y: exitY,
-              opacity: 0,
-              scale: 0.8,
-              transition: { duration: 0.3, ease: 'easeOut' }
-            }
+            x: exitX,
+            y: exitY,
+            opacity: 0,
+            scale: 0.8,
+            transition: { duration: 0.3, ease: 'easeOut' }
+          }
           : controls
       }
       transition={{
