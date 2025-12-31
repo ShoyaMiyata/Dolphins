@@ -187,6 +187,8 @@ export default function HangoutsPage() {
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
                         onClick={() => handleSwipe((currentHangouts[0] as any).id, 'no')}
+                        onTouchStart={(e) => e.stopPropagation()}
+                        onPointerDown={(e) => e.stopPropagation()}
                         className="w-16 h-16 rounded-full bg-white shadow-xl flex items-center justify-center border-2 border-red-200 hover:border-red-400 transition-colors"
                       >
                         <X className="w-8 h-8 text-red-500" />
@@ -196,6 +198,8 @@ export default function HangoutsPage() {
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
                         onClick={() => handleSwipe((currentHangouts[0] as any).id, 'maybe')}
+                        onTouchStart={(e) => e.stopPropagation()}
+                        onPointerDown={(e) => e.stopPropagation()}
                         className="w-14 h-14 rounded-full bg-white shadow-lg flex items-center justify-center border-2 border-yellow-200 hover:border-yellow-400 transition-colors"
                       >
                         <Calendar className="w-6 h-6 text-yellow-500" />
@@ -205,6 +209,8 @@ export default function HangoutsPage() {
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
                         onClick={() => handleSwipe((currentHangouts[0] as any).id, 'yes')}
+                        onTouchStart={(e) => e.stopPropagation()}
+                        onPointerDown={(e) => e.stopPropagation()}
                         className="w-16 h-16 rounded-full bg-gradient-to-br from-green-400 to-green-600 shadow-xl flex items-center justify-center hover:from-green-500 hover:to-green-700 transition-all"
                       >
                         <Check className="w-8 h-8 text-white" />
