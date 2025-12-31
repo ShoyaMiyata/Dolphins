@@ -181,8 +181,19 @@ export default function HangoutsPage() {
                       </div>
                     )}
 
-                    {/* Buttons */}
-                    <div className="flex items-center justify-center gap-6">
+                    {/* Buttons - Circle, X, Triangle layout */}
+                    <div className="flex items-center justify-center gap-8">
+                      {/* Circle (Yes) - Left */}
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => handleSwipe((currentHangouts[0] as any).id, 'yes')}
+                        className="w-16 h-16 rounded-full bg-gradient-to-br from-green-400 to-green-600 shadow-xl flex items-center justify-center hover:from-green-500 hover:to-green-700 transition-all"
+                      >
+                        <div className="w-8 h-8 rounded-full border-4 border-white"></div>
+                      </motion.button>
+
+                      {/* X (No) - Center */}
                       <motion.button
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
@@ -192,22 +203,14 @@ export default function HangoutsPage() {
                         <X className="w-8 h-8 text-red-500" />
                       </motion.button>
 
+                      {/* Triangle (Maybe) - Right */}
                       <motion.button
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
                         onClick={() => handleSwipe((currentHangouts[0] as any).id, 'maybe')}
-                        className="w-14 h-14 rounded-full bg-white shadow-lg flex items-center justify-center border-2 border-yellow-200 hover:border-yellow-400 transition-colors"
+                        className="w-16 h-16 rounded-full bg-white shadow-xl flex items-center justify-center border-2 border-yellow-200 hover:border-yellow-400 transition-colors"
                       >
-                        <Calendar className="w-6 h-6 text-yellow-500" />
-                      </motion.button>
-
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        onClick={() => handleSwipe((currentHangouts[0] as any).id, 'yes')}
-                        className="w-16 h-16 rounded-full bg-gradient-to-br from-green-400 to-green-600 shadow-xl flex items-center justify-center hover:from-green-500 hover:to-green-700 transition-all"
-                      >
-                        <Check className="w-8 h-8 text-white" />
+                        <div className="w-0 h-0 border-l-[12px] border-r-[12px] border-b-[20px] border-l-transparent border-r-transparent border-b-yellow-500"></div>
                       </motion.button>
                     </div>
                   </div>
