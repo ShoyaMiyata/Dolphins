@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useGroup } from '@/hooks/use-groups'
 import { useGroupPosts } from '@/hooks/use-group-posts'
-import { useGroupMembers, useApproveJoinRequest, useRejectJoinRequest, useUpdateMemberRole, useRemoveGroupMember, useJoinGroup, useLeaveGroup, useInviteUserToGroup, useSearchUsersForInvite } from '@/hooks/use-group-members'
+import { useGroupMembers, useApproveJoinRequest, useRejectJoinRequest, useUpdateMemberRole, useRemoveGroupMember, useJoinGroup, useLeaveGroup, useInviteUserToGroup, useSearchUsersForInvite, useUpdateGroup } from '@/hooks/use-group-members'
 import { useGroupJoinRequests } from '@/hooks/use-group-members'
 import { useUser } from '@/hooks/use-user'
 import { AppHeader } from '@/components/layout/app-header'
@@ -15,6 +15,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -47,18 +56,28 @@ export default function GroupDetailPage() {
   const removeMember = useRemoveGroupMember()
   const inviteUser = useInviteUserToGroup()
   const searchUsers = useSearchUsersForInvite()
+  const updateGroup = useUpdateGroup()
 
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('posts')
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false)
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
+  const [settingsForm, setSettingsForm] = useState({
+    name: '',
+    description: '',
+    visibility_type: 'public' as 'public' | 'private',
+    join_type: 'free' as 'free' | 'approval'
+  })
 
   // 現在のユーザーの役割を取得
   const currentUserRole = members?.find(member => member.user_id === currentUser?.id)?.role || null
   const isOwner = currentUserRole === 'owner'
   const isAdmin = currentUserRole === 'admin'
-  const canManageMembers = isOwner || isAdmin
+  const isMember = group?.is_member || false
+  // 全メンバーがメンバー管理可能（オーナーのみ除外）
+  const canManageMembers = isMember && currentUserRole !== 'owner'
 
   if (isGroupLoading) {
     return (
@@ -81,8 +100,6 @@ export default function GroupDetailPage() {
       </div>
     )
   }
-
-  const isMember = group.is_member
 
   return (
     <div className="bg-background">
@@ -117,6 +134,21 @@ export default function GroupDetailPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setSettingsForm({
+                        name: group.name,
+                        description: group.description || '',
+                        visibility_type: group.visibility_type,
+                        join_type: group.join_type,
+                      })
+                      setSettingsDialogOpen(true)
+                    }}
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    グループ設定
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={() => leaveGroup.mutate(groupId)}
                     disabled={leaveGroup.isPending}
@@ -503,6 +535,126 @@ export default function GroupDetailPage() {
                 </div>
               ))}
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Group Settings Dialog */}
+      <Dialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen}>
+        <DialogContent className="max-w-[calc(100vw-2rem)] w-full sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>グループ設定</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+            {/* Group Name */}
+            <div className="space-y-2">
+              <Label htmlFor="group-name">グループ名</Label>
+              <Input
+                id="group-name"
+                value={settingsForm.name}
+                onChange={(e) => setSettingsForm(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="グループの名前"
+                maxLength={100}
+              />
+            </div>
+
+            {/* Description */}
+            <div className="space-y-2">
+              <Label htmlFor="group-description">説明（任意）</Label>
+              <Textarea
+                id="group-description"
+                value={settingsForm.description}
+                onChange={(e) => setSettingsForm(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="グループの説明"
+                rows={3}
+              />
+            </div>
+
+            {/* Visibility Type */}
+            <div className="space-y-2">
+              <Label>公開設定</Label>
+              <Select
+                value={settingsForm.visibility_type}
+                onValueChange={(value: 'public' | 'private') =>
+                  setSettingsForm(prev => ({ ...prev, visibility_type: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="public">パブリック</SelectItem>
+                  <SelectItem value="private">プライベート</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">
+                {settingsForm.visibility_type === 'public'
+                  ? '誰でもグループを検索・閲覧できます'
+                  : 'メンバーのみがグループを閲覧できます'}
+              </p>
+            </div>
+
+            {/* Join Type */}
+            <div className="space-y-2">
+              <Label>参加方法</Label>
+              <Select
+                value={settingsForm.join_type}
+                onValueChange={(value: 'free' | 'approval') =>
+                  setSettingsForm(prev => ({ ...prev, join_type: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="free">自由参加</SelectItem>
+                  <SelectItem value="approval">承認制</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">
+                {settingsForm.join_type === 'free'
+                  ? '誰でも自由に参加できます'
+                  : '参加には承認が必要です'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-4 border-t">
+            <Button
+              variant="outline"
+              onClick={() => setSettingsDialogOpen(false)}
+              className="flex-1"
+            >
+              キャンセル
+            </Button>
+            <Button
+              onClick={() => {
+                // 変更されたフィールドのみを更新
+                const updates: any = {}
+                if (settingsForm.name !== group.name) updates.name = settingsForm.name
+                if (settingsForm.description !== (group.description || '')) updates.description = settingsForm.description
+                if (settingsForm.visibility_type !== group.visibility_type) updates.visibility_type = settingsForm.visibility_type
+                if (settingsForm.join_type !== group.join_type) updates.join_type = settingsForm.join_type
+
+                if (Object.keys(updates).length > 0) {
+                  updateGroup.mutate(
+                    { groupId, updates },
+                    {
+                      onSuccess: () => {
+                        setSettingsDialogOpen(false)
+                      }
+                    }
+                  )
+                } else {
+                  setSettingsDialogOpen(false)
+                }
+              }}
+              disabled={updateGroup.isPending}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {updateGroup.isPending ? '保存中...' : '保存'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -381,3 +381,55 @@ export function useSearchUsersForInvite() {
     },
   })
 }
+
+// グループ設定を更新
+export function useUpdateGroup() {
+  const queryClient = useQueryClient()
+  const supabase = createClient()
+
+  return useMutation({
+    mutationFn: async ({
+      groupId,
+      updates
+    }: {
+      groupId: string
+      updates: {
+        name?: string
+        description?: string
+        visibility_type?: 'public' | 'private'
+        join_type?: 'free' | 'approval'
+      }
+    }) => {
+      // 更新データを準備
+      const updateData: any = {
+        updated_at: new Date().toISOString(),
+      }
+
+      if (updates.name !== undefined) updateData.name = updates.name
+      if (updates.description !== undefined) updateData.description = updates.description
+      if (updates.visibility_type !== undefined) updateData.visibility_type = updates.visibility_type
+      if (updates.join_type !== undefined) updateData.join_type = updates.join_type
+
+      // @ts-expect-error - Supabase type inference issue
+      const { data, error } = await supabase
+        .from('groups')
+        .update(updateData)
+        .eq('id', groupId)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      return data
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['group', variables.groupId] })
+      queryClient.invalidateQueries({ queryKey: ['groups'] })
+      toast.success('グループ設定を更新しました')
+    },
+    onError: (error) => {
+      console.error('グループ設定更新エラー:', error)
+      toast.error('グループ設定の更新に失敗しました')
+    },
+  })
+}
