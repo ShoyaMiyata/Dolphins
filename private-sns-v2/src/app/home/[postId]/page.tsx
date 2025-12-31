@@ -563,68 +563,6 @@ export default function PostDetailPage() {
             コメント {comments.length > 0 && `(${comments.length})`}
           </h2>
 
-          {/* コメント入力フォーム */}
-          <Card className="bg-white rounded-xl shadow-sm border border-blue-100">
-            <CardContent className="p-4">
-              <Textarea
-                value={commentContent}
-                onChange={(e) => setCommentContent(e.target.value)}
-                placeholder="コメントを入力..."
-                className="min-h-[80px] rounded-lg border-blue-100 resize-none mb-3"
-              />
-
-              {/* 画像プレビュー */}
-              {commentImagePreviews.length > 0 && (
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  {commentImagePreviews.map((preview, index) => (
-                    <div key={index} className="relative">
-                      <img
-                        src={preview}
-                        alt={`プレビュー ${index + 1}`}
-                        className="w-full h-32 object-cover rounded-lg"
-                      />
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        onClick={() => handleImageRemove(index)}
-                        className="absolute top-1 right-1 h-6 w-6"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex gap-2">
-                <input
-                  type="file"
-                  id="comment-image-input"
-                  accept="image/*"
-                  multiple
-                  onChange={handleImageSelect}
-                  className="hidden"
-                />
-                <Button
-                  variant="outline"
-                  onClick={() => document.getElementById('comment-image-input')?.click()}
-                  disabled={commentImages.length >= 4}
-                  className="flex-shrink-0"
-                >
-                  <ImageIcon className="h-4 w-4 mr-2" />
-                  画像 ({commentImages.length}/4)
-                </Button>
-                <Button
-                  onClick={handleCreateComment}
-                  disabled={createComment.isPending || (!commentContent.trim() && commentImages.length === 0)}
-                  className="flex-1 rounded-lg"
-                >
-                  {createComment.isPending ? '投稿中...' : 'コメントする'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* コメント一覧 */}
           {isCommentsLoading ? (
             <div className="text-center text-gray-500 py-4">読み込み中...</div>
@@ -732,6 +670,68 @@ export default function PostDetailPage() {
               ))}
             </div>
           )}
+
+          {/* コメント入力フォーム */}
+          <Card className="bg-white rounded-xl shadow-sm border border-blue-100 sticky bottom-16">
+            <CardContent className="p-4">
+              <Textarea
+                value={commentContent}
+                onChange={(e) => setCommentContent(e.target.value)}
+                placeholder="コメントを入力..."
+                className="min-h-[80px] rounded-lg border-blue-100 resize-none mb-3"
+              />
+
+              {/* 画像プレビュー */}
+              {commentImagePreviews.length > 0 && (
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  {commentImagePreviews.map((preview, index) => (
+                    <div key={index} className="relative">
+                      <img
+                        src={preview}
+                        alt={`プレビュー ${index + 1}`}
+                        className="w-full h-32 object-cover rounded-lg"
+                      />
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => handleImageRemove(index)}
+                        className="absolute top-1 right-1 h-6 w-6"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <input
+                  type="file"
+                  id="comment-image-input"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageSelect}
+                  className="hidden"
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => document.getElementById('comment-image-input')?.click()}
+                  disabled={commentImages.length >= 4}
+                  className="flex-shrink-0"
+                >
+                  <ImageIcon className="h-4 w-4 mr-2" />
+                  画像 ({commentImages.length}/4)
+                </Button>
+                <Button
+                  onClick={handleCreateComment}
+                  disabled={createComment.isPending || (!commentContent.trim() && commentImages.length === 0)}
+                  className="flex-1 rounded-lg"
+                >
+                  {createComment.isPending ? '投稿中...' : 'コメントする'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
