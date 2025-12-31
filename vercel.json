@@ -1,8 +1,4 @@
 {
-  "buildCommand": "cd private-sns-v2 && npm run build",
-  "installCommand": "cd private-sns-v2 && npm install",
-  "devCommand": "cd private-sns-v2 && npm run dev",
-  "outputDirectory": "private-sns-v2/.next",
   "framework": "nextjs",
   "rootDirectory": "private-sns-v2"
 }
