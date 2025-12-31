@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Users, Calendar, Trash2, Edit, X, Check, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -51,7 +51,7 @@ export default function HangoutsPage() {
   console.log('myHangouts:', myHangouts)
   console.log('isLoadingMy:', isLoadingMy)
 
-  const handleSwipe = async (hangoutId: string, response: 'yes' | 'no' | 'maybe') => {
+  const handleSwipe = useCallback(async (hangoutId: string, response: 'yes' | 'no' | 'maybe') => {
     try {
       console.log('handleSwipe: Starting response for', hangoutId, 'with', response)
       await respondToHangout.mutateAsync({ hangoutId, response })
@@ -62,7 +62,7 @@ export default function HangoutsPage() {
       // エラーが発生してもカードを進める（ユーザーが再度操作できるように）
       setCurrentCardIndex((prev) => prev + 1)
     }
-  }
+  }, [respondToHangout])
 
   const handleSkip = (hangoutId: string) => {
     // スキップ: 回答を保存せず次のカードに進む
