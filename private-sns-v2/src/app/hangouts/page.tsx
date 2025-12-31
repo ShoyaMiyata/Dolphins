@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent } from '@/components/ui/card'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
+import { useAuthStore } from '@/stores/auth-store'
 import {
   Dialog,
   DialogContent,
@@ -34,6 +35,7 @@ export default function HangoutsPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [hangoutToEdit, setHangoutToEdit] = useState<any | null>(null)
 
+  const user = useAuthStore((state) => state.user)
   const { data: pendingHangouts = [], isLoading: isLoadingPending } = usePendingHangouts()
   const { data: respondedHangouts = [], isLoading: isLoadingResponded } = useRespondedHangouts()
   const { data: myHangouts = [], isLoading: isLoadingMy } = useMyHangouts()
@@ -274,15 +276,19 @@ export default function HangoutsPage() {
                                 <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${responseColors[hangout.my_response as keyof typeof responseColors]}`}>
                                   {responseLabels[hangout.my_response as keyof typeof responseLabels]}
                                 </span>
-                                {/* Edit button for hangout creator */}
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
-                                  onClick={() => handleEditClick(hangout)}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
+                                {/* Edit button for hangout creator - plans content */}
+                                {/* Creator can edit the hangout content */}
+                                {hangout.user_id === user?.id && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                                    onClick={() => handleEditClick(hangout)}
+                                    title="予定の内容を編集"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                )}
                               </div>
                             </div>
                             <h3 className="font-bold text-lg mt-2 text-blue-900">{hangout.title}</h3>
