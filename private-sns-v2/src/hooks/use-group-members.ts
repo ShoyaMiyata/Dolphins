@@ -219,3 +219,85 @@ export function useRejectJoinRequest() {
     },
   })
 }
+
+// グループに参加（参加リクエストを作成または直接参加）
+export function useJoinGroup() {
+  const queryClient = useQueryClient()
+  const supabase = createClient()
+
+  return useMutation({
+    mutationFn: async ({ groupId, joinType }: { groupId: string; joinType: 'free' | 'approval' }) => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('ログインが必要です')
+
+      const userId = user.id
+
+      if (joinType === 'free') {
+        // 自由参加の場合は直接メンバーとして追加
+        const { error } = await supabase
+          .from('group_members')
+          .insert({
+            group_id: groupId,
+            user_id: userId,
+            role: 'member',
+          } as any)
+
+        if (error) throw error
+      } else {
+        // 承認制の場合は参加リクエストを作成
+        const { error } = await supabase
+          .from('group_join_requests')
+          .insert({
+            group_id: groupId,
+            user_id: userId,
+            status: 'pending',
+          } as any)
+
+        if (error) throw error
+      }
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['group-members', variables.groupId] })
+      queryClient.invalidateQueries({ queryKey: ['group', variables.groupId] })
+      queryClient.invalidateQueries({ queryKey: ['groups'] })
+      toast.success(variables.joinType === 'free' ? 'グループに参加しました' : '参加リクエストを送信しました')
+    },
+    onError: (error) => {
+      console.error('グループ参加エラー:', error)
+      toast.error('グループ参加に失敗しました')
+    },
+  })
+}
+
+// グループから退会
+export function useLeaveGroup() {
+  const queryClient = useQueryClient()
+  const supabase = createClient()
+
+  return useMutation({
+    mutationFn: async (groupId: string) => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('ログインが必要です')
+
+      const userId = user.id
+
+      const { error } = await supabase
+        .from('group_members')
+        .delete()
+        .eq('group_id', groupId)
+        .eq('user_id', userId)
+
+      if (error) throw error
+    },
+    onSuccess: (_, groupId) => {
+      queryClient.invalidateQueries({ queryKey: ['group-members', groupId] })
+      queryClient.invalidateQueries({ queryKey: ['group', groupId] })
+      queryClient.invalidateQueries({ queryKey: ['groups'] })
+      toast.success('グループから退会しました')
+    },
+    onError: (error) => {
+      console.error('グループ退会エラー:', error)
+      toast.error('グループ退会に失敗しました')
+    },
+  })
+}
