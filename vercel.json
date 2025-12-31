@@ -1,4 +1,3 @@
 {
-  "framework": "nextjs",
-  "rootDirectory": "private-sns-v2"
+  "framework": "nextjs"
 }
