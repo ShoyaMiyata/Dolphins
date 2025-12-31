@@ -295,11 +295,17 @@ export function useRespondToHangout() {
 
       const { data, error } = await (supabase as any)
         .from('hangout_responses')
-        .upsert({
-          hangout_id: hangoutId,
-          user_id: session.session.user.id,
-          response,
-        })
+        .upsert(
+          {
+            hangout_id: hangoutId,
+            user_id: session.session.user.id,
+            response,
+          },
+          {
+            onConflict: 'hangout_id,user_id',
+            ignoreDuplicates: false
+          }
+        )
         .select()
         .single()
 
