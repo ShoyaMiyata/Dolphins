@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog'
 import { useFollow, useUnfollow, useIsFollowing, useFollowerCount, useFollowingCount } from '@/hooks/use-follows'
 import { useUser } from '@/hooks/use-user'
+import { FollowListDialog } from './follow-list-dialog'
 import type { Profile } from '@/lib/supabase/auth'
 import { Calendar, Edit, Camera, Loader2 } from 'lucide-react'
 import { format } from 'date-fns'
@@ -34,6 +35,8 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
   const [displayName, setDisplayName] = useState(profile.display_name || '')
   const [isUpdating, setIsUpdating] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [isFollowListOpen, setIsFollowListOpen] = useState(false)
+  const [followListTab, setFollowListTab] = useState<'followers' | 'following'>('followers')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // クライアントサイドでマウントされたことを検知
@@ -217,11 +220,23 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
 
             {/* フォロー・フォロワー数 */}
             <div className="flex items-center gap-4 text-sm">
-              <button className="hover:underline transition-colors">
+              <button 
+                className="hover:underline transition-colors"
+                onClick={() => {
+                  setFollowListTab('following')
+                  setIsFollowListOpen(true)
+                }}
+              >
                 <span className="font-bold text-blue-900">{followingCount}</span>
                 <span className="text-blue-600 ml-1">フォロー中</span>
               </button>
-              <button className="hover:underline transition-colors">
+              <button 
+                className="hover:underline transition-colors"
+                onClick={() => {
+                  setFollowListTab('followers')
+                  setIsFollowListOpen(true)
+                }}
+              >
                 <span className="font-bold text-blue-900">{followerCount}</span>
                 <span className="text-blue-600 ml-1">フォロワー</span>
               </button>
@@ -230,6 +245,14 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
         </div>
       </CardContent>
     </Card>
+
+    {/* フォロー・フォロワー一覧ダイアログ */}
+    <FollowListDialog
+      userId={profile.id}
+      open={isFollowListOpen}
+      onOpenChange={setIsFollowListOpen}
+      defaultTab={followListTab}
+    />
 
     {/* 名前変更ダイアログ */}
     <Dialog open={isNameDialogOpen} onOpenChange={setIsNameDialogOpen}>
