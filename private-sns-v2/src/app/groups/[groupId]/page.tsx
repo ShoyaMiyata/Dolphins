@@ -129,13 +129,13 @@ export default function GroupDetailPage() {
             </Button>
 
             {/* Group Name */}
-            <div className="flex items-center gap-2 flex-1 justify-center">
-              <div className="p-2 bg-gradient-to-r from-blue-100 to-sky-100 rounded-full">
+            <div className="flex items-center gap-3 flex-1 justify-center">
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-100 to-sky-100 rounded-full flex items-center justify-center flex-shrink-0">
                 {group.image_url ? (
                   <img
                     src={group.image_url}
                     alt={group.name}
-                    className="w-5 h-5 rounded-full object-cover"
+                    className="w-full h-full rounded-full object-cover"
                   />
                 ) : (
                   <Users className="h-5 w-5 text-blue-600" />
