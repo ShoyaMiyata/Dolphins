@@ -23,6 +23,7 @@ export interface UpdateGroupPostData {
   postId: string
   groupId: string
   content: string
+  images?: File[]
 }
 
 export interface DeleteGroupPostData {
@@ -180,7 +181,16 @@ export function useUpdateGroupPost() {
   const supabase = createClient()
 
   return useMutation({
-    mutationFn: async ({ postId, groupId, content }: UpdateGroupPostData) => {
+    mutationFn: async ({ postId, groupId, content, images }: UpdateGroupPostData) => {
+      // 認証チェック
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        throw new Error('ログインが必要です')
+      }
+
+      const userId = user.id
+
+      // 投稿内容を更新
       const { data, error } = await (supabase as any)
         .from('group_posts')
         .update({
@@ -192,6 +202,39 @@ export function useUpdateGroupPost() {
         .single()
 
       if (error) throw error
+
+      // 画像がある場合はアップロード
+      if (images && images.length > 0) {
+        const imageUrls = await Promise.all(
+          images.map(async (image) => uploadImage(image, userId))
+        )
+
+        // 既存の画像の最大order_indexを取得
+        const { data: existingImages } = await supabase
+          .from('group_post_images')
+          .select('order_index')
+          .eq('group_post_id', postId)
+          .order('order_index', { ascending: false })
+          .limit(1)
+
+        const maxOrderIndex = existingImages && existingImages.length > 0 
+          ? (existingImages[0] as any).order_index 
+          : -1
+
+        // group_post_imagesに保存
+        const postImages = imageUrls.map((url, index) => ({
+          group_post_id: postId,
+          image_url: url,
+          order_index: maxOrderIndex + 1 + index,
+        }))
+
+        const { error: imagesError } = await supabase
+          .from('group_post_images')
+          .insert(postImages as any)
+
+        if (imagesError) throw imagesError
+      }
+
       return data
     },
     onSuccess: (_, variables) => {

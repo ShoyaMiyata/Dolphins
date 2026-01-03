@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { useGroup } from '@/hooks/use-groups'
+import { useGroup, useUpdateGroup } from '@/hooks/use-groups'
 import { useGroupPosts } from '@/hooks/use-group-posts'
-import { useGroupMembers, useApproveJoinRequest, useRejectJoinRequest, useUpdateMemberRole, useRemoveGroupMember, useJoinGroup, useLeaveGroup, useInviteUserToGroup, useSearchUsersForInvite, useUpdateGroup } from '@/hooks/use-group-members'
+import { useGroupMembers, useApproveJoinRequest, useRejectJoinRequest, useUpdateMemberRole, useRemoveGroupMember, useJoinGroup, useLeaveGroup, useInviteUserToGroup, useSearchUsersForInvite } from '@/hooks/use-group-members'
 import { useGroupJoinRequests } from '@/hooks/use-group-members'
 import { useUser } from '@/hooks/use-user'
 import { AppHeader } from '@/components/layout/app-header'
@@ -71,6 +71,11 @@ export default function GroupDetailPage() {
     visibility_type: 'public' as 'public' | 'private',
     join_type: 'free' as 'free' | 'approval'
   })
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null)
+  const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null)
+  const [iconImageFile, setIconImageFile] = useState<File | null>(null)
+  const [iconImagePreview, setIconImagePreview] = useState<string | null>(null)
+  const coverImageInputRef = useState<HTMLInputElement | null>(null)[0]
 
   // 現在のユーザーの役割を取得
   const currentUserRole = members?.find(member => member.user_id === currentUser?.id)?.role || null
@@ -159,6 +164,10 @@ export default function GroupDetailPage() {
                         visibility_type: group.visibility_type,
                         join_type: group.join_type,
                       })
+                      setCoverImagePreview(group.cover_image_url || null)
+                      setCoverImageFile(null)
+                      setIconImagePreview(group.image_url || null)
+                      setIconImageFile(null)
                       setSettingsDialogOpen(true)
                     }}
                     className="hover:bg-gradient-to-r hover:from-[#4DA6FF]/10 hover:to-[#0055AA]/10 focus:from-[#4DA6FF]/10 focus:to-[#0055AA]/10 transition-all duration-200 rounded-lg mx-1 my-1"
@@ -212,9 +221,58 @@ export default function GroupDetailPage() {
       </header>
 
       {/* Main Content */}
-      <main className="container max-w-md mx-auto pb-32 px-4">
+      <main className="container max-w-md mx-auto pb-32 px-0 sm:px-4">
+        {/* グループヘッダーセクション */}
+        <div className="relative mb-4">
+          {/* カバー画像 */}
+          <div className="h-32 sm:h-48 bg-gradient-to-br from-blue-500 via-blue-600 to-sky-600 overflow-hidden relative">
+            {group.cover_image_url && (
+              <img
+                src={group.cover_image_url}
+                alt="カバー画像"
+                className="w-full h-full object-cover"
+              />
+            )}
+          </div>
+
+          {/* グループ情報カード */}
+          <div className="px-4">
+            <div className="bg-white rounded-xl shadow-lg border border-blue-100 p-4 -mt-8 relative z-10">
+              <div className="flex items-start gap-3">
+                {/* グループアイコン */}
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-blue-400 to-sky-500 rounded-xl flex items-center justify-center text-white font-bold text-2xl sm:text-3xl flex-shrink-0 shadow-md border-2 border-white">
+                  {group.image_url ? (
+                    <img src={group.image_url} alt={group.name} className="w-full h-full object-cover rounded-xl" />
+                  ) : (
+                    <Users className="w-8 h-8 sm:w-10 sm:h-10" />
+                  )}
+                </div>
+
+                {/* グループ名と説明 */}
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-lg sm:text-xl font-bold text-blue-900 truncate">{group.name}</h2>
+                  {group.description && (
+                    <p className="text-sm text-gray-600 mt-1 line-clamp-2">{group.description}</p>
+                  )}
+                  <div className="flex items-center gap-3 mt-2 text-xs text-blue-600">
+                    <div className="flex items-center gap-1">
+                      <Users className="h-3 w-3" />
+                      <span>{members?.length || 0}人</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Badge variant="outline" className="text-xs px-2 py-0 border-blue-200 text-blue-600">
+                        {group.visibility_type === 'public' ? 'パブリック' : 'プライベート'}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4 px-4 sm:px-0">
           <TabsList className="grid w-full grid-cols-2 bg-gradient-to-r from-blue-50 to-sky-50 p-1 rounded-xl">
             <TabsTrigger value="posts" className="flex items-center gap-2 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
               <MessageSquare className="h-4 w-4" />
@@ -288,6 +346,7 @@ export default function GroupDetailPage() {
                         is_liked: false,
                         is_reposted: false,
                       }}
+                      groupId={groupId}
                     />
                   </motion.div>
                 ))}
@@ -536,12 +595,144 @@ export default function GroupDetailPage() {
 
       {/* Group Settings Dialog */}
       <Dialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen}>
-        <DialogContent className="max-w-[calc(100vw-2rem)] w-full sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="max-w-[calc(100vw-2rem)] w-full sm:max-w-md max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>グループ設定</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+          <div className="space-y-4 py-4 overflow-y-auto flex-1 px-1">
+            {/* アイコン画像 */}
+            <div className="space-y-2">
+              <Label>グループアイコン</Label>
+              <div className="flex items-center gap-4">
+                <div className="relative w-20 h-20 bg-gradient-to-br from-blue-100 to-sky-100 rounded-xl overflow-hidden border-2 border-blue-200 flex-shrink-0">
+                  {iconImagePreview ? (
+                    <img
+                      src={iconImagePreview}
+                      alt="アイコン画像"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-blue-400">
+                      <Users className="h-10 w-10" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => document.getElementById('group-icon-image-input')?.click()}
+                    className="text-sm"
+                  >
+                    アイコンを変更
+                  </Button>
+                  {iconImagePreview && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setIconImagePreview(null)
+                        setIconImageFile(null)
+                      }}
+                      className="text-sm text-red-600"
+                    >
+                      削除
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <input
+                id="group-icon-image-input"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+                  if (file.size > 5 * 1024 * 1024) {
+                    alert('ファイルサイズは5MB以下にしてください')
+                    return
+                  }
+                  setIconImageFile(file)
+                  const reader = new FileReader()
+                  reader.onloadend = () => {
+                    setIconImagePreview(reader.result as string)
+                  }
+                  reader.readAsDataURL(file)
+                }}
+              />
+              <p className="text-xs text-gray-500">
+                推奨: 正方形の画像、最大5MB
+              </p>
+            </div>
+
+            {/* カバー画像 */}
+            <div className="space-y-2">
+              <Label>カバー画像</Label>
+              <div className="relative w-full h-32 bg-gradient-to-r from-blue-100 to-sky-100 rounded-xl overflow-hidden border-2 border-blue-200">
+                {coverImagePreview ? (
+                  <img
+                    src={coverImagePreview}
+                    alt="カバー画像"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-blue-400">
+                    <svg className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById('group-cover-image-input')?.click()}
+                  className="text-sm"
+                >
+                  カバー画像を変更
+                </Button>
+                {coverImagePreview && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setCoverImagePreview(null)
+                      setCoverImageFile(null)
+                    }}
+                    className="text-sm text-red-600"
+                  >
+                    削除
+                  </Button>
+                )}
+              </div>
+              <input
+                id="group-cover-image-input"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+                  setCoverImageFile(file)
+                  const reader = new FileReader()
+                  reader.onloadend = () => {
+                    setCoverImagePreview(reader.result as string)
+                  }
+                  reader.readAsDataURL(file)
+                }}
+              />
+              <p className="text-xs text-gray-500">
+                推奨: 横長の画像（16:9）、最大10MB
+              </p>
+            </div>
+
             {/* Group Name */}
             <div className="space-y-2">
               <Label htmlFor="group-name">グループ名</Label>
@@ -615,7 +806,7 @@ export default function GroupDetailPage() {
             </div>
           </div>
 
-          <div className="flex gap-2 pt-4 border-t">
+          <div className="flex gap-2 pt-4 border-t flex-shrink-0">
             <Button
               variant="outline"
               onClick={() => setSettingsDialogOpen(false)}
@@ -632,9 +823,9 @@ export default function GroupDetailPage() {
                 if (settingsForm.visibility_type !== group.visibility_type) updates.visibility_type = settingsForm.visibility_type
                 if (settingsForm.join_type !== group.join_type) updates.join_type = settingsForm.join_type
 
-                if (Object.keys(updates).length > 0) {
+                if (Object.keys(updates).length > 0 || coverImageFile || iconImageFile) {
                   updateGroup.mutate(
-                    { groupId, updates },
+                    { groupId, ...updates, coverImage: coverImageFile || undefined, image: iconImageFile || undefined },
                     {
                       onSuccess: () => {
                         setSettingsDialogOpen(false)

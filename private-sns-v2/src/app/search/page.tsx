@@ -21,6 +21,10 @@ export default function SearchPage() {
   const { data: commentResults = [], isLoading: isLoadingComments } = useSearchComments(query)
   const { data: groupPostResults = [], isLoading: isLoadingGroupPosts } = useSearchGroupPosts(query)
 
+  // 投稿・コメント・グループ投稿を統合
+  const isLoadingContent = isLoadingPosts || isLoadingComments || isLoadingGroupPosts
+  const totalContentCount = postResults.length + commentResults.length + groupPostResults.length
+
   return (
     <div className="min-h-screen bg-background pb-32">
       {/* Header */}
@@ -40,34 +44,15 @@ export default function SearchPage() {
           />
         </div>
 
-        {!query ? (
-          <div className="text-center py-16">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-blue-100 to-sky-100 mb-4">
-              <SearchIcon className="h-10 w-10 text-blue-600" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">検索</h2>
-            <p className="text-gray-600">
-              ユーザーや投稿を検索できます
-            </p>
-          </div>
-        ) : (
-          <Tabs defaultValue="posts" className="w-full">
-            <TabsList className="w-full grid grid-cols-4 mb-4">
-              <TabsTrigger value="posts" className="flex items-center gap-1 text-xs sm:text-sm">
-                <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">投稿</span> ({postResults.length})
+        <Tabs defaultValue="users" className="w-full">
+            <TabsList className="w-full grid grid-cols-2 mb-4">
+              <TabsTrigger value="users" className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                ユーザー ({userResults.length})
               </TabsTrigger>
-              <TabsTrigger value="comments" className="flex items-center gap-1 text-xs sm:text-sm">
-                <MessageCircle className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">コメント</span> ({commentResults.length})
-              </TabsTrigger>
-              <TabsTrigger value="groups" className="flex items-center gap-1 text-xs sm:text-sm">
-                <UsersIcon className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">グループ</span> ({groupPostResults.length})
-              </TabsTrigger>
-              <TabsTrigger value="users" className="flex items-center gap-1 text-xs sm:text-sm">
-                <Users className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">ユーザー</span> ({userResults.length})
+              <TabsTrigger value="content" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                投稿・コメント ({totalContentCount})
               </TabsTrigger>
             </TabsList>
 
@@ -132,17 +117,55 @@ export default function SearchPage() {
               )}
             </TabsContent>
 
-            {/* Posts Tab */}
-            <TabsContent value="posts" className="mt-0">
-              {isLoadingPosts ? (
+            {/* Content Tab (Posts, Comments, Group Posts) */}
+            <TabsContent value="content" className="mt-0">
+              {!query ? (
+                <div className="text-center py-16">
+                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-blue-100 to-sky-100 mb-4">
+                    <FileText className="h-10 w-10 text-blue-600" />
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-900 mb-2">投稿・コメントを検索</h2>
+                  <p className="text-gray-600">
+                    キーワードを入力して投稿やコメントを検索できます
+                  </p>
+                </div>
+              ) : isLoadingContent ? (
                 <div className="flex items-center justify-center py-20">
                   <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
                 </div>
-              ) : postResults.length > 0 ? (
+              ) : totalContentCount > 0 ? (
                 <div className="space-y-4">
-                  {postResults.map((post) => (
-                    <PostCard key={post.id} post={post} />
-                  ))}
+                  {/* Group Posts */}
+                  {groupPostResults.length > 0 && (
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-semibold text-gray-700 px-1">
+                        {query ? `グループ投稿 (${groupPostResults.length})` : `参加中のグループの投稿 (${groupPostResults.length})`}
+                      </h3>
+                      {groupPostResults.map((post) => (
+                        <GroupPostSearchResult key={post.id} post={post} />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Posts */}
+                  {postResults.length > 0 && (
+                    <div className="space-y-4 mt-6">
+                      <h3 className="text-sm font-semibold text-gray-700 px-1">投稿 ({postResults.length})</h3>
+                      {postResults.map((post) => (
+                        <PostCard key={post.id} post={post} />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Comments */}
+                  {commentResults.length > 0 && (
+                    <div className="space-y-3 mt-6">
+                      <h3 className="text-sm font-semibold text-gray-700 px-1">コメント ({commentResults.length})</h3>
+                      {commentResults.map((comment) => (
+                        <CommentSearchResult key={comment.id} comment={comment} />
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-16">
@@ -150,61 +173,7 @@ export default function SearchPage() {
                     <FileText className="h-10 w-10 text-gray-400" />
                   </div>
                   <h2 className="text-xl font-bold text-gray-900 mb-2">
-                    投稿が見つかりませんでした
-                  </h2>
-                  <p className="text-gray-600">
-                    別のキーワードで検索してみてください
-                  </p>
-                </div>
-              )}
-            </TabsContent>
-
-            {/* Comments Tab */}
-            <TabsContent value="comments" className="mt-0">
-              {isLoadingComments ? (
-                <div className="flex items-center justify-center py-20">
-                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-                </div>
-              ) : commentResults.length > 0 ? (
-                <div className="space-y-3">
-                  {commentResults.map((comment) => (
-                    <CommentSearchResult key={comment.id} comment={comment} />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-16">
-                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-100 mb-4">
-                    <MessageCircle className="h-10 w-10 text-gray-400" />
-                  </div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-2">
-                    コメントが見つかりませんでした
-                  </h2>
-                  <p className="text-gray-600">
-                    別のキーワードで検索してみてください
-                  </p>
-                </div>
-              )}
-            </TabsContent>
-
-            {/* Group Posts Tab */}
-            <TabsContent value="groups" className="mt-0">
-              {isLoadingGroupPosts ? (
-                <div className="flex items-center justify-center py-20">
-                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-                </div>
-              ) : groupPostResults.length > 0 ? (
-                <div className="space-y-3">
-                  {groupPostResults.map((post) => (
-                    <GroupPostSearchResult key={post.id} post={post} />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-16">
-                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-100 mb-4">
-                    <UsersIcon className="h-10 w-10 text-gray-400" />
-                  </div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-2">
-                    グループ投稿が見つかりませんでした
+                    投稿・コメントが見つかりませんでした
                   </h2>
                   <p className="text-gray-600">
                     別のキーワードで検索してみてください
@@ -213,7 +182,6 @@ export default function SearchPage() {
               )}
             </TabsContent>
           </Tabs>
-        )}
       </main>
 
       <BottomNav />

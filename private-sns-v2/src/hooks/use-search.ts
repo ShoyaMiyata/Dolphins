@@ -44,9 +44,16 @@ export function useSearchUsers(query: string) {
   return useQuery({
     queryKey: ['search', 'users', query],
     queryFn: async () => {
-      // クエリが空の場合は空配列を返す
+      // クエリが空の場合は全ユーザーを取得
       if (!query.trim()) {
-        return []
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .limit(SEARCH_LIMIT)
+          .order('created_at', { ascending: false })
+
+        if (error) throw error
+        return data as Profile[]
       }
 
       // ユーザー名または表示名で検索（大文字小文字を区別しない）
@@ -61,7 +68,7 @@ export function useSearchUsers(query: string) {
 
       return data as Profile[]
     },
-    enabled: query.trim().length > 0, // クエリが空でない場合のみ実行
+    enabled: true, // 常に実行
   })
 }
 
@@ -187,7 +194,7 @@ export function useSearchGroupPosts(query: string) {
       // nullを除外して返す
       return filteredPosts.filter((post) => post !== null) as GroupPostWithDetails[]
     },
-    enabled: query.trim().length > 0,
+    enabled: query.trim().length > 0, // クエリが空でない場合のみ実行
   })
 }
 
