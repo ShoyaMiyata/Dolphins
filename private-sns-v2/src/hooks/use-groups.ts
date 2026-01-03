@@ -13,6 +13,7 @@ export type GroupWithDetails = Group & {
   member_count: number
   is_member: boolean
   is_owner: boolean
+  cover_image_url: string | null
 }
 
 export interface CreateGroupData {
@@ -28,6 +29,7 @@ export interface UpdateGroupData {
   name?: string
   description?: string
   image?: File
+  coverImage?: File
   joinType?: 'free' | 'approval'
   visibilityType?: 'public' | 'private'
 }
@@ -64,6 +66,35 @@ async function uploadImage(file: File, userId: string): Promise<string> {
   // 公開URLを取得
   const { data: { publicUrl } } = supabase.storage
     .from('group-images')
+    .getPublicUrl(data.path)
+
+  return publicUrl
+}
+
+// カバー画像をStorageにアップロード
+async function uploadCoverImage(file: File, userId: string): Promise<string> {
+  const supabase = createClient()
+
+  // 画像を圧縮
+  const compressedFile = await imageCompression(file, compressionOptions)
+
+  // ファイル名を生成
+  const fileExt = compressedFile.name.split('.').pop()
+  const fileName = `${userId}/cover-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+
+  // Storageにアップロード
+  const { data, error } = await supabase.storage
+    .from('cover-images')
+    .upload(fileName, compressedFile, {
+      cacheControl: '3600',
+      upsert: false,
+    })
+
+  if (error) throw error
+
+  // 公開URLを取得
+  const { data: { publicUrl } } = supabase.storage
+    .from('cover-images')
     .getPublicUrl(data.path)
 
   return publicUrl
@@ -253,17 +284,23 @@ export function useUpdateGroup() {
   const supabase = createClient()
 
   return useMutation({
-    mutationFn: async ({ groupId, name, description, image, joinType, visibilityType }: UpdateGroupData) => {
+    mutationFn: async ({ groupId, name, description, image, coverImage, joinType, visibilityType }: UpdateGroupData) => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         throw new Error('ログインが必要です')
       }
 
       let imageUrl: string | undefined
+      let coverImageUrl: string | undefined
 
-      // 画像がある場合はアップロード
+      // アイコン画像がある場合はアップロード
       if (image) {
         imageUrl = await uploadImage(image, user.id)
+      }
+
+      // カバー画像がある場合はアップロード
+      if (coverImage) {
+        coverImageUrl = await uploadCoverImage(coverImage, user.id)
       }
 
       const updateData: any = {
@@ -273,6 +310,7 @@ export function useUpdateGroup() {
       if (name !== undefined) updateData.name = name
       if (description !== undefined) updateData.description = description
       if (imageUrl) updateData.image_url = imageUrl
+      if (coverImageUrl) updateData.cover_image_url = coverImageUrl
       if (joinType !== undefined) updateData.join_type = joinType
       if (visibilityType !== undefined) updateData.visibility_type = visibilityType
 
