@@ -31,7 +31,7 @@ export function FollowListDialog({ userId, open, onOpenChange, defaultTab = 'fol
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[calc(100vw-2rem)] w-full sm:max-w-md rounded-2xl border-2 border-blue-200 bg-white p-0 max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+      <DialogContent className="max-w-[calc(100vw-2rem)] w-full sm:max-w-md h-[600px] rounded-2xl border-2 border-blue-200 bg-white p-0 flex flex-col shadow-2xl overflow-hidden">
         {/* ヘッダーグラデーション - Dolphins Theme */}
         <div className="relative bg-gradient-to-br from-blue-500 via-blue-600 to-sky-600 px-6 pt-6 pb-5">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.1)_0%,transparent_70%)]"></div>

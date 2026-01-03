@@ -37,11 +37,15 @@ export function useFollow() {
 
       if (error) throw error
     },
-    onSuccess: (_, followingId) => {
+    onSuccess: async (_, followingId) => {
+      const { data: session } = await supabase.auth.getSession()
+      const userId = session?.session?.user?.id
+      
       queryClient.invalidateQueries({ queryKey: ['followers', followingId] })
-      queryClient.invalidateQueries({ queryKey: ['following'] })
+      queryClient.invalidateQueries({ queryKey: ['following', userId] })
       queryClient.invalidateQueries({ queryKey: ['isFollowing', followingId] })
       queryClient.invalidateQueries({ queryKey: ['followerCount', followingId] })
+      queryClient.invalidateQueries({ queryKey: ['followingCount', userId] })
       toast.success('フォローしました')
     },
     onError: (error) => {
@@ -77,11 +81,15 @@ export function useUnfollow() {
 
       if (error) throw error
     },
-    onSuccess: (_, followingId) => {
+    onSuccess: async (_, followingId) => {
+      const { data: session } = await supabase.auth.getSession()
+      const userId = session?.session?.user?.id
+      
       queryClient.invalidateQueries({ queryKey: ['followers', followingId] })
-      queryClient.invalidateQueries({ queryKey: ['following'] })
+      queryClient.invalidateQueries({ queryKey: ['following', userId] })
       queryClient.invalidateQueries({ queryKey: ['isFollowing', followingId] })
       queryClient.invalidateQueries({ queryKey: ['followerCount', followingId] })
+      queryClient.invalidateQueries({ queryKey: ['followingCount', userId] })
       toast.success('フォロー解除しました')
     },
     onError: (error) => {
