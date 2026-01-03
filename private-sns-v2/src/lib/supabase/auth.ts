@@ -96,10 +96,17 @@ export async function signInWithGoogle(): Promise<AuthResponse> {
   try {
     const supabase = createClient()
 
+    // 環境に応じたリダイレクトURLを設定
+    const currentUrl = new URL(window.location.href)
+    const isLocalhost = currentUrl.hostname === 'localhost' || currentUrl.hostname === '127.0.0.1'
+    const redirectTo = isLocalhost
+      ? 'http://localhost:3000/auth/callback'
+      : `${currentUrl.protocol}//${currentUrl.host}/auth/callback`
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo,
         queryParams: {
           access_type: 'offline',
           prompt: 'consent',
@@ -138,10 +145,17 @@ export async function signInWithTwitter(): Promise<AuthResponse> {
   try {
     const supabase = createClient()
 
+    // 環境に応じたリダイレクトURLを設定
+    const currentUrl = new URL(window.location.href)
+    const isLocalhost = currentUrl.hostname === 'localhost' || currentUrl.hostname === '127.0.0.1'
+    const redirectTo = isLocalhost
+      ? 'http://localhost:3000/auth/callback'
+      : `${currentUrl.protocol}//${currentUrl.host}/auth/callback`
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'twitter',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo,
       },
     })
 
@@ -306,8 +320,15 @@ export async function resetPassword(email: string): Promise<AuthResponse> {
   try {
     const supabase = createClient()
 
+    // 環境に応じたリダイレクトURLを設定
+    const currentUrl = new URL(window.location.href)
+    const isLocalhost = currentUrl.hostname === 'localhost' || currentUrl.hostname === '127.0.0.1'
+    const redirectTo = isLocalhost
+      ? 'http://localhost:3000/auth/reset-password'
+      : `${currentUrl.protocol}//${currentUrl.host}/auth/reset-password`
+
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
+      redirectTo,
     })
 
     if (error) {
