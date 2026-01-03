@@ -103,6 +103,8 @@ export async function signInWithGoogle(): Promise<AuthResponse> {
       ? 'http://localhost:3000/auth/callback'
       : `${currentUrl.protocol}//${currentUrl.host}/auth/callback`
 
+    console.log('Google OAuth redirectTo:', redirectTo)
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
