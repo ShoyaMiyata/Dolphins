@@ -205,44 +205,4 @@ function FollowUserItem({ user, currentUserId, index = 0 }: FollowUserItemProps)
       )}
     </div>
   )
-              {user.display_name || user.username}
-            </p>
-            <p className="text-sm text-blue-600 truncate">@{user.username}</p>
-          </div>
-        </Link>
-        {!isOwnProfile && currentUserId && (
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Button
-              variant={isFollowing ? 'outline' : 'default'}
-              size="sm"
-              onClick={handleFollowToggle}
-              disabled={follow.isPending || unfollow.isPending}
-              className={`ml-2 rounded-full shrink-0 font-semibold shadow-sm transition-all duration-200 ${
-                isFollowing
-                  ? 'border-2 border-blue-300 text-blue-700 hover:bg-blue-100 hover:text-blue-800 hover:border-blue-400 hover:shadow-md'
-                  : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white hover:shadow-lg hover:shadow-blue-500/50'
-              }`}
-            >
-              {follow.isPending || unfollow.isPending ? (
-                <>
-                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                  処理中
-                </>
-              ) : isFollowing ? (
-                'フォロー中'
-              ) : (
-                <>
-                  <UserPlus className="h-3 w-3 mr-1" />
-                  フォロー
-                </>
-              )}
-            </Button>
-          </motion.div>
-        )}
-      </div>
-    </motion.div>
-  )
 }
