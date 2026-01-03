@@ -131,12 +131,13 @@ export function useSearchGroupPosts(query: string) {
       const { data: session } = await supabase.auth.getSession()
       const currentUserId = session?.session?.user?.id
 
-      // グループ投稿内容で検索
+      console.log('Group posts search - query:', query, 'userId:', currentUserId)
+
+      // グループ投稿内容で検索（プロフィールは別途取得）
       const { data, error } = await supabase
         .from('group_posts')
         .select(`
           *,
-          profiles!group_posts_user_id_fkey(*),
           groups!group_posts_group_id_fkey(id, name, visibility_type),
           group_post_images(*)
         `)
@@ -144,6 +145,8 @@ export function useSearchGroupPosts(query: string) {
         .not('content', 'is', null)
         .limit(SEARCH_LIMIT)
         .order('created_at', { ascending: false })
+
+      console.log('Group posts search - raw data:', data)
 
       if (error) throw error
 
@@ -154,9 +157,16 @@ export function useSearchGroupPosts(query: string) {
 
           // 公開グループの場合はそのまま返す
           if (group.visibility_type === 'public') {
+            // プロフィールを取得
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', post.user_id)
+              .single()
+
             return {
               ...post,
-              profiles: Array.isArray(post.profiles) ? post.profiles[0] : post.profiles,
+              profiles: profile,
               groups: group,
               group_post_images: Array.isArray(post.group_post_images)
                 ? post.group_post_images.sort((a: any, b: any) => a.order_index - b.order_index)
@@ -174,10 +184,19 @@ export function useSearchGroupPosts(query: string) {
               .eq('is_active', true)
               .single()
 
+            console.log('Group posts search - member check:', group.id, currentUserId, memberData)
+
             if (memberData) {
+              // プロフィールを取得
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', post.user_id)
+                .single()
+
               return {
                 ...post,
-                profiles: Array.isArray(post.profiles) ? post.profiles[0] : post.profiles,
+                profiles: profile,
                 groups: group,
                 group_post_images: Array.isArray(post.group_post_images)
                   ? post.group_post_images.sort((a: any, b: any) => a.order_index - b.order_index)
@@ -191,8 +210,11 @@ export function useSearchGroupPosts(query: string) {
         })
       )
 
+      const result = filteredPosts.filter((post) => post !== null) as GroupPostWithDetails[]
+      console.log('Group posts search - filtered result:', result)
+
       // nullを除外して返す
-      return filteredPosts.filter((post) => post !== null) as GroupPostWithDetails[]
+      return result
     },
     enabled: query.trim().length > 0, // クエリが空でない場合のみ実行
   })
