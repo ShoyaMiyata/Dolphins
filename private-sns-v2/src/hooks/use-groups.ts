@@ -145,17 +145,25 @@ export function useGroups() {
             .eq('user_id', user.id)
             .maybeSingle() as any
 
+          const isMember = !!membership
+          const isOwner = (membership as any)?.role === 'owner'
+
           return {
             ...group,
             profiles: ownerProfile,
             member_count: count || 0,
-            is_member: !!membership,
-            is_owner: (membership as any)?.role === 'owner',
+            is_member: isMember,
+            is_owner: isOwner,
           }
         })
       )
 
-      return groupsWithDetails as GroupWithDetails[]
+      // プライベートグループはメンバーのみ表示
+      const filteredGroups = groupsWithDetails.filter((group: any) => {
+        return group.visibility_type === 'public' || group.is_member || group.is_owner
+      })
+
+      return filteredGroups as GroupWithDetails[]
     },
   })
 }
