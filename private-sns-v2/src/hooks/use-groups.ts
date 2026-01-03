@@ -298,17 +298,21 @@ export function useUpdateGroup() {
         throw new Error('ログインが必要です')
       }
 
-      let imageUrl: string | undefined
-      let coverImageUrl: string | undefined
+      let imageUrl: string | null | undefined
+      let coverImageUrl: string | null | undefined
 
-      // アイコン画像がある場合はアップロード
+      // アイコン画像がある場合はアップロード、nullの場合は削除
       if (image) {
         imageUrl = await uploadImage(image, user.id)
+      } else if (image === null) {
+        imageUrl = null // 削除
       }
 
-      // カバー画像がある場合はアップロード
+      // カバー画像がある場合はアップロード、nullの場合は削除
       if (coverImage) {
         coverImageUrl = await uploadCoverImage(coverImage, user.id)
+      } else if (coverImage === null) {
+        coverImageUrl = null // 削除
       }
 
       const updateData: any = {
@@ -317,8 +321,8 @@ export function useUpdateGroup() {
 
       if (name !== undefined) updateData.name = name
       if (description !== undefined) updateData.description = description
-      if (imageUrl) updateData.image_url = imageUrl
-      if (coverImageUrl) updateData.cover_image_url = coverImageUrl
+      if (imageUrl !== undefined) updateData.image_url = imageUrl
+      if (coverImageUrl !== undefined) updateData.cover_image_url = coverImageUrl
       if (joinType !== undefined) updateData.join_type = joinType
       if (visibilityType !== undefined) updateData.visibility_type = visibilityType
 

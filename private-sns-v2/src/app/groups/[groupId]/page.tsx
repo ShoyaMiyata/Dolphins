@@ -650,6 +650,20 @@ export default function GroupDetailPage() {
                       削除
                     </Button>
                   )}
+                  {group.image_url && !iconImagePreview && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setIconImagePreview('')
+                        setIconImageFile(null)
+                      }}
+                      className="text-sm text-red-600"
+                    >
+                      削除
+                    </Button>
+                  )}
                 </div>
               </div>
               <input
