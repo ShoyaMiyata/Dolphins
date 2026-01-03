@@ -845,9 +845,12 @@ export default function GroupDetailPage() {
                 if (settingsForm.visibility_type !== group.visibility_type) updates.visibility_type = settingsForm.visibility_type
                 if (settingsForm.join_type !== group.join_type) updates.join_type = settingsForm.join_type
 
-                if (Object.keys(updates).length > 0 || coverImageFile || iconImageFile) {
+                // 画像削除の場合も更新を実行
+                const hasImageChanges = coverImageFile !== null || iconImageFile !== null || coverImageFile === null || iconImageFile === null
+
+                if (Object.keys(updates).length > 0 || hasImageChanges) {
                   updateGroup.mutate(
-                    { groupId, ...updates, coverImage: coverImageFile || undefined, image: iconImageFile || undefined },
+                    { groupId, ...updates, coverImage: coverImageFile, image: iconImageFile },
                     {
                       onSuccess: () => {
                         setSettingsDialogOpen(false)
