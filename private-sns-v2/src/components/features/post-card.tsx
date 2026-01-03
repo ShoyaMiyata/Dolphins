@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -49,6 +50,10 @@ import {
   type PostWithDetails,
 } from '@/hooks/use-posts'
 import {
+  useDeleteGroupPost,
+  useUpdateGroupPost,
+} from '@/hooks/use-group-posts'
+import {
   useReactions,
   useAddReaction,
   useRemoveReaction,
@@ -59,17 +64,20 @@ import {
 } from '@/hooks/use-custom-stamps'
 import { createClient } from '@/lib/supabase/client'
 
-interface PostCardProps {
+export interface PostCardProps {
   post: PostWithDetails
+  groupId?: string // グループIDを追加（グループ投稿の場合に使用）
 }
 
-export function PostCard({ post }: PostCardProps) {
+export function PostCard({ post, groupId }: PostCardProps) {
   const router = useRouter()
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isReactionPickerOpen, setIsReactionPickerOpen] = useState(false)
   const [editContent, setEditContent] = useState(post.content || '')
+  const [editImages, setEditImages] = useState<File[]>([])
+  const [editImagePreviews, setEditImagePreviews] = useState<string[]>([])
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [imageLoaded, setImageLoaded] = useState<{ [key: string]: boolean }>({})
 
@@ -78,8 +86,13 @@ export function PostCard({ post }: PostCardProps) {
     threshold: 0.1,
   })
 
+  // グループ投稿かどうかで使用するフックを切り替え
+  const isGroupPost = !!groupId
+  
   const deletePost = useDeletePost()
+  const deleteGroupPost = useDeleteGroupPost()
   const updatePost = useUpdatePost()
+  const updateGroupPost = useUpdateGroupPost()
   const likePost = useLikePost()
   const unlikePost = useUnlikePost()
   const repost = useRepost()
@@ -130,19 +143,68 @@ export function PostCard({ post }: PostCardProps) {
 
   // 削除処理
   const handleDelete = async () => {
-    await deletePost.mutateAsync(post.id)
+    if (isGroupPost && groupId) {
+      // グループ投稿の削除
+      await deleteGroupPost.mutateAsync({
+        postId: post.id,
+        groupId: groupId,
+      })
+    } else {
+      // 通常の投稿の削除
+      await deletePost.mutateAsync(post.id)
+    }
     setIsDeleteDialogOpen(false)
+  }
+
+  // 画像選択処理
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+
+    // 既存の画像と合わせて4枚まで
+    const remainingSlots = 4 - editImages.length
+    const newFiles = files.slice(0, remainingSlots)
+
+    setEditImages((prev) => [...prev, ...newFiles])
+
+    // プレビュー生成
+    newFiles.forEach((file) => {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setEditImagePreviews((prev) => [...prev, reader.result as string])
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
+  // 画像削除処理
+  const handleRemoveImage = (index: number) => {
+    setEditImages((prev) => prev.filter((_, i) => i !== index))
+    setEditImagePreviews((prev) => prev.filter((_, i) => i !== index))
   }
 
   // 更新処理
   const handleUpdate = async () => {
-    if (!editContent.trim()) return
+    if (!editContent.trim() && editImages.length === 0) return
 
-    await updatePost.mutateAsync({
-      postId: post.id,
-      content: editContent,
-    })
+    if (isGroupPost && groupId) {
+      // グループ投稿の更新（画像も含む）
+      await updateGroupPost.mutateAsync({
+        postId: post.id,
+        groupId: groupId,
+        content: editContent,
+        images: editImages.length > 0 ? editImages : undefined,
+      })
+    } else {
+      // 通常の投稿の更新（現在は画像追加非対応）
+      await updatePost.mutateAsync({
+        postId: post.id,
+        content: editContent,
+      })
+    }
     setIsEditDialogOpen(false)
+    setEditImages([])
+    setEditImagePreviews([])
   }
 
   // 投稿詳細ページへ遷移
@@ -563,10 +625,10 @@ export function PostCard({ post }: PostCardProps) {
             <Button
               variant="destructive"
               onClick={handleDelete}
-              disabled={deletePost.isPending}
+              disabled={isGroupPost ? deleteGroupPost.isPending : deletePost.isPending}
               className="flex-1 rounded-lg"
             >
-              {deletePost.isPending ? '削除中...' : '削除'}
+              {(isGroupPost ? deleteGroupPost.isPending : deletePost.isPending) ? '削除中...' : '削除'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -588,6 +650,65 @@ export function PostCard({ post }: PostCardProps) {
             <div className="text-sm text-blue-600">
               {editContent.length} / 500
             </div>
+
+            {/* 画像プレビュー */}
+            {editImagePreviews.length > 0 && (
+              <div className="grid grid-cols-2 gap-2">
+                {editImagePreviews.map((preview, index) => (
+                  <div key={index} className="relative">
+                    <img
+                      src={preview}
+                      alt={`プレビュー ${index + 1}`}
+                      className="w-full h-32 object-cover rounded-lg"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2 h-6 w-6 rounded-full"
+                      onClick={() => handleRemoveImage(index)}
+                    >
+                      <span className="text-xs">×</span>
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 画像追加ボタン */}
+            {editImages.length < 4 && (
+              <div>
+                <input
+                  type="file"
+                  id="edit-image-upload"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageSelect}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => document.getElementById('edit-image-upload')?.click()}
+                  className="w-full"
+                >
+                  <svg
+                    className="h-4 w-4 mr-2"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
+                  画像を追加 ({editImages.length}/4)
+                </Button>
+              </div>
+            )}
           </div>
           <DialogFooter className="flex gap-2 mt-4">
             <Button
@@ -600,13 +721,13 @@ export function PostCard({ post }: PostCardProps) {
             <Button
               onClick={handleUpdate}
               disabled={
-                updatePost.isPending ||
-                !editContent.trim() ||
+                (isGroupPost ? updateGroupPost.isPending : updatePost.isPending) ||
+                (!editContent.trim() && editImages.length === 0) ||
                 editContent.length > 500
               }
               className="flex-1 rounded-lg"
             >
-              {updatePost.isPending ? '更新中...' : '更新'}
+              {(isGroupPost ? updateGroupPost.isPending : updatePost.isPending) ? '更新中...' : '更新'}
             </Button>
           </DialogFooter>
         </DialogContent>
