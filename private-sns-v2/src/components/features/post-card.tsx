@@ -265,12 +265,20 @@ export function PostCard({ post, groupId }: PostCardProps) {
           <CardContent className="p-4 cursor-pointer" onClick={handlePostClick}>
             <div className="flex gap-3">
               {/* アバター */}
-              <Avatar className="h-10 w-10 flex-shrink-0">
-                <AvatarImage src={post.profiles.avatar_url || undefined} />
-                <AvatarFallback>
-                  {post.profiles.display_name?.[0] || post.profiles.username[0]}
-                </AvatarFallback>
-              </Avatar>
+              <div
+                onClick={(e) => {
+                  e.stopPropagation()
+                  router.push(`/profile/${post.profiles.username}`)
+                }}
+                className="cursor-pointer"
+              >
+                <Avatar className="h-10 w-10 flex-shrink-0 hover:ring-2 hover:ring-blue-300 transition-all">
+                  <AvatarImage src={post.profiles.avatar_url || undefined} />
+                  <AvatarFallback>
+                    {post.profiles.display_name?.[0] || post.profiles.username[0]}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
 
               <div className="flex-1 space-y-2">
                 {/* ヘッダー */}
