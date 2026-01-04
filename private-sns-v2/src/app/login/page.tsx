@@ -24,9 +24,8 @@ import { Separator } from '@/components/ui/separator'
 
 export default function LoginPage() {
   const supabase = createClient()
-  const { signIn, signInGoogle, signInTwitter, isLoading } = useAuth()
+  const { signIn, signInGoogle, isLoading } = useAuth()
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
-  const [isTwitterLoading, setIsTwitterLoading] = useState(false)
 
   const {
     register,
@@ -53,17 +52,7 @@ export default function LoginPage() {
     }
   }
 
-  const handleTwitterLogin = async () => {
-    try {
-      setIsTwitterLoading(true)
-      const result = await signInTwitter()
-      // OAuth redirect happens automatically
-    } catch (error) {
-      console.error('Twitter login error:', error)
-    } finally {
-      setIsTwitterLoading(false)
-    }
-  }
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-500 via-blue-600 to-sky-600 flex items-center justify-center p-4">
@@ -98,7 +87,7 @@ export default function LoginPage() {
               variant="outline"
               className="w-full hover:bg-blue-50"
               onClick={handleGoogleLogin}
-              disabled={isGoogleLoading || isTwitterLoading || isLoading}
+              disabled={isGoogleLoading || isLoading}
             >
               {isGoogleLoading ? (
                 <span className="flex items-center gap-2">
@@ -126,26 +115,6 @@ export default function LoginPage() {
                     />
                   </svg>
                   Googleでログイン
-                </span>
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full hover:bg-blue-50"
-              onClick={handleTwitterLogin}
-              disabled={isGoogleLoading || isTwitterLoading || isLoading}
-            >
-              {isTwitterLoading ? (
-                <span className="flex items-center gap-2">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  処理中...
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                  </svg>
-                  Twitterでログイン
                 </span>
               )}
             </Button>
@@ -196,7 +165,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold"
-              disabled={isLoading || isGoogleLoading || isTwitterLoading}
+              disabled={isLoading || isGoogleLoading}
             >
               {isLoading ? (
                 <span className="flex items-center gap-2">

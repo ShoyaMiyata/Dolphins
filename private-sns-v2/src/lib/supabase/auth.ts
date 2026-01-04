@@ -140,50 +140,7 @@ export async function signInWithGoogle(): Promise<AuthResponse> {
   }
 }
 
-/**
- * Sign in with Twitter OAuth
- */
-export async function signInWithTwitter(): Promise<AuthResponse> {
-  try {
-    const supabase = createClient()
 
-    // 環境に応じたリダイレクトURLを設定
-    const currentUrl = new URL(window.location.href)
-    const isLocalhost = currentUrl.hostname === 'localhost' || currentUrl.hostname === '127.0.0.1'
-    const redirectTo = isLocalhost
-      ? 'http://localhost:3000/auth/callback'
-      : `${currentUrl.protocol}//${currentUrl.host}/auth/callback`
-
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'twitter',
-      options: {
-        redirectTo,
-      },
-    })
-
-    if (error) {
-      return {
-        data: null,
-        error: {
-          message: error.message,
-          code: error.code,
-        },
-      }
-    }
-
-    return {
-      data: null,
-      error: null,
-    }
-  } catch (err) {
-    return {
-      data: null,
-      error: {
-        message: err instanceof Error ? err.message : 'Twitterログインに失敗しました',
-      },
-    }
-  }
-}
 
 /**
  * Sign up with email and password
