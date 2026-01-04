@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Menu, X, Home as HomeIcon, LogOut, ExternalLink, MessageSquare, Users, Plus, ChevronDown, ChevronRight, Globe, Lock } from 'lucide-react'
+import { Menu, X, Home as HomeIcon, LogOut, ExternalLink, MessageSquare, Users, Plus, ChevronDown, ChevronRight, Globe, Lock, RotateCcw } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -275,8 +275,16 @@ export function AppHeader({ groupName }: AppHeaderProps = {}) {
             )}
           </div>
 
-          {/* Spacer for balance */}
-          <div className="w-10" />
+          {/* Reload Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => window.location.reload()}
+            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+            title="リロード"
+          >
+            <RotateCcw className="h-6 w-6" />
+          </Button>
         </div>
       </div>
 
