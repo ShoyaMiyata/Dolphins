@@ -3,7 +3,6 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
   signInWithEmail,
-  signInWithGoogle,
   signUpWithEmail,
   signOut as authSignOut,
   resetPassword as authResetPassword,
@@ -65,37 +64,6 @@ export function useAuth() {
     },
     [setLoading, router]
   )
-
-  // Sign in with Google
-  const signInGoogle = useCallback(async () => {
-    setLoading(true)
-    try {
-      const { error } = await signInWithGoogle()
-
-      if (error) {
-        toast.error('Googleログインに失敗しました', {
-          description: error.message,
-        })
-        return { success: false, error }
-      }
-
-      // OAuth redirect will happen automatically
-      return { success: true, error: null }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Googleログインに失敗しました'
-      toast.error('Googleログインに失敗しました', {
-        description: errorMessage,
-      })
-      return {
-        success: false,
-        error: { message: errorMessage },
-      }
-    } finally {
-      setLoading(false)
-    }
-  }, [setLoading])
-
-
 
   // Sign up with email/password
   const signUp = useCallback(
@@ -237,7 +205,6 @@ export function useAuth() {
     isAuthenticated,
     isInitialized,
     signIn,
-    signInGoogle,
     signUp,
     signOut,
     resetPassword,
