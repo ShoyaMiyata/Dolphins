@@ -17,7 +17,7 @@ import { useFollow, useUnfollow, useIsFollowing, useFollowerCount, useFollowingC
 import { useUser } from '@/hooks/use-user'
 import { FollowListDialog } from './follow-list-dialog'
 import type { Profile } from '@/lib/supabase/auth'
-import { Calendar, Edit, Camera, Loader2 } from 'lucide-react'
+import { Calendar, Edit, Camera, Loader2, X } from 'lucide-react'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import Link from 'next/link'
@@ -28,7 +28,7 @@ interface ProfileHeaderProps {
 }
 
 export function ProfileHeader({ profile }: ProfileHeaderProps) {
-  const { user: currentUser, uploadAvatar, updateProfile } = useUser()
+  const { user: currentUser, uploadAvatar, updateProfile, uploadCoverImage, deleteCoverImage } = useUser()
   const isOwnProfile = currentUser?.id === profile.id
 
   const [isNameDialogOpen, setIsNameDialogOpen] = useState(false)
@@ -38,6 +38,7 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
   const [isFollowListOpen, setIsFollowListOpen] = useState(false)
   const [followListTab, setFollowListTab] = useState<'followers' | 'following'>('followers')
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const coverImageInputRef = useRef<HTMLInputElement>(null)
 
   // クライアントサイドでマウントされたことを検知
   useEffect(() => {
@@ -109,6 +110,43 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
     }
   }
 
+  const handleCoverImageClick = () => {
+    if (isOwnProfile) {
+      coverImageInputRef.current?.click()
+    }
+  }
+
+  const handleCoverImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // ファイルサイズチェック (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('ファイルサイズは10MB以下にしてください')
+      return
+    }
+
+    // ファイルタイプチェック
+    if (!file.type.startsWith('image/')) {
+      toast.error('画像ファイルを選択してください')
+      return
+    }
+
+    setIsUpdating(true)
+    const result = await uploadCoverImage(file)
+    setIsUpdating(false)
+
+    if (coverImageInputRef.current) {
+      coverImageInputRef.current.value = ''
+    }
+  }
+
+  const handleCoverImageDelete = async () => {
+    setIsUpdating(true)
+    const result = await deleteCoverImage()
+    setIsUpdating(false)
+  }
+
   const joinedDate = profile.created_at
     ? format(new Date(profile.created_at), 'yyyy年M月', { locale: ja })
     : ''
@@ -117,8 +155,50 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
     <>
       <Card className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-200 border border-blue-100 hover:border-blue-200 mb-4">
         <CardContent className="p-0">
-          {/* カバー画像（Dolphinsテーマ） */}
-          <div className="h-32 sm:h-48 bg-gradient-to-br from-blue-500 via-blue-600 to-sky-600" />
+          {/* カバー画像 */}
+          <div
+            className={`h-32 sm:h-48 bg-gradient-to-br from-blue-500 via-blue-600 to-sky-600 overflow-hidden relative ${isOwnProfile ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}`}
+            onClick={handleCoverImageClick}
+          >
+            {profile.cover_image_url && (
+              <img
+                src={profile.cover_image_url}
+                alt="カバー画像"
+                className="w-full h-full object-cover"
+              />
+            )}
+            {isOwnProfile && (
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black/50">
+                <div className="flex items-center gap-2 text-white">
+                  <Camera className="h-6 w-6" />
+                  <span className="text-sm font-medium">カバー画像を変更</span>
+                </div>
+              </div>
+            )}
+            {isOwnProfile && profile.cover_image_url && (
+              <div className="absolute top-2 right-2">
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleCoverImageDelete()
+                  }}
+                  disabled={isUpdating}
+                  className="h-8 w-8 rounded-full bg-red-500 hover:bg-red-600 border-2 border-white"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            <input
+              ref={coverImageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleCoverImageChange}
+            />
+          </div>
 
           <div className="px-4 pb-4">
             {/* アバターとボタン */}
