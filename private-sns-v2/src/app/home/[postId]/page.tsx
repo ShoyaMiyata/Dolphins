@@ -294,12 +294,17 @@ export default function PostDetailPage() {
           <CardContent className="p-6">
             <div className="flex gap-3">
               {/* アバター */}
-              <Avatar className="h-12 w-12 flex-shrink-0">
-                <AvatarImage src={post.profiles.avatar_url || undefined} />
-                <AvatarFallback>
-                  {post.profiles.display_name?.[0] || post.profiles.username[0]}
-                </AvatarFallback>
-              </Avatar>
+              <div
+                onClick={() => router.push(`/profile/${post.profiles.username}`)}
+                className="cursor-pointer"
+              >
+                <Avatar className="h-12 w-12 flex-shrink-0 hover:ring-2 hover:ring-blue-300 transition-all">
+                  <AvatarImage src={post.profiles.avatar_url || undefined} />
+                  <AvatarFallback>
+                    {post.profiles.display_name?.[0] || post.profiles.username[0]}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
 
               <div className="flex-1 space-y-3">
                 {/* ヘッダー */}
@@ -579,12 +584,17 @@ export default function PostDetailPage() {
                 >
                   <CardContent className="p-4">
                     <div className="flex gap-3">
-                      <Avatar className="h-10 w-10 flex-shrink-0">
-                        <AvatarImage src={comment.profiles.avatar_url || undefined} />
-                        <AvatarFallback>
-                          {comment.profiles.display_name?.[0] || comment.profiles.username[0]}
-                        </AvatarFallback>
-                      </Avatar>
+                      <div
+                        onClick={() => router.push(`/profile/${comment.profiles.username}`)}
+                        className="cursor-pointer"
+                      >
+                        <Avatar className="h-10 w-10 flex-shrink-0 hover:ring-2 hover:ring-blue-300 transition-all">
+                          <AvatarImage src={comment.profiles.avatar_url || undefined} />
+                          <AvatarFallback>
+                            {comment.profiles.display_name?.[0] || comment.profiles.username[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2 mb-1">
                           <div className="flex flex-col">
