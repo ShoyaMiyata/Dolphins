@@ -6,7 +6,6 @@ import Hero from './hero'
 import About from './about'
 import Features from './features'
 import Gallery from './gallery'
-import Cta from './cta'
 import Footer from './footer'
 
 export function LandingPage() {
@@ -29,7 +28,6 @@ export function LandingPage() {
         <About />
         <Features />
         <Gallery />
-        <Cta />
       </main>
       <Footer />
     </div>
