@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import type { Profile } from '@/lib/supabase/auth'
 import type { Database } from '@/types/database.types'
+
+type Profile = Database['public']['Tables']['profiles']['Row']
 import {
   useAuthStore,
   selectUser,
