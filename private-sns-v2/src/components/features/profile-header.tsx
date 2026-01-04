@@ -16,7 +16,9 @@ import {
 import { useFollow, useUnfollow, useIsFollowing, useFollowerCount, useFollowingCount } from '@/hooks/use-follows'
 import { useUser } from '@/hooks/use-user'
 import { FollowListDialog } from './follow-list-dialog'
-import type { Profile } from '@/lib/supabase/auth'
+import type { Database } from '@/types/database.types'
+
+type Profile = Database['public']['Tables']['profiles']['Row']
 import { Calendar, Edit, Camera, Loader2, X } from 'lucide-react'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
