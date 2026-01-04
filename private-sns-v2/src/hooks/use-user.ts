@@ -198,6 +198,114 @@ export function useUser() {
     }
   }, [user?.id, profile?.avatar_url, updateProfile])
 
+  // Upload cover image
+  const uploadCoverImage = useCallback(
+    async (file: File) => {
+      if (!user?.id) {
+        toast.error('ユーザー情報が取得できませんでした')
+        return { success: false, error: { message: 'Not authenticated' } }
+      }
+
+      setIsUpdating(true)
+      try {
+        const supabase = createClient()
+
+        // Upload file to storage
+        const fileExt = file.name.split('.').pop()
+        const fileName = `cover-${user.id}-${Date.now()}.${fileExt}`
+        const filePath = `${user.id}/${fileName}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('cover-images')
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false,
+          })
+
+        if (uploadError) {
+          toast.error('カバー画像のアップロードに失敗しました', {
+            description: uploadError.message,
+          })
+          return {
+            success: false,
+            error: { message: uploadError.message },
+          }
+        }
+
+        // Get public URL
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from('cover-images').getPublicUrl(filePath)
+
+        // Update profile with new cover image URL
+        const result = await updateProfile({ cover_image_url: publicUrl })
+
+        if (result.success) {
+          toast.success('カバー画像を更新しました')
+        }
+
+        return result
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'カバー画像のアップロードに失敗しました'
+        toast.error('カバー画像のアップロードに失敗しました', {
+          description: errorMessage,
+        })
+        return {
+          success: false,
+          error: { message: errorMessage },
+        }
+      } finally {
+        setIsUpdating(false)
+      }
+    },
+    [user?.id, updateProfile]
+  )
+
+  // Delete cover image
+  const deleteCoverImage = useCallback(async () => {
+    if (!user?.id || !profile?.cover_image_url) {
+      return { success: false, error: { message: 'No cover image to delete' } }
+    }
+
+    setIsUpdating(true)
+    try {
+      const supabase = createClient()
+
+      // Extract file path from URL
+      const url = new URL(profile.cover_image_url)
+      const filePath = url.pathname.split('/').slice(-2).join('/')
+
+      // Delete file from storage
+      const { error: deleteError } = await supabase.storage
+        .from('cover-images')
+        .remove([filePath])
+
+      if (deleteError) {
+        console.error('Cover image deletion error:', deleteError)
+      }
+
+      // Update profile to remove cover image URL
+      const result = await updateProfile({ cover_image_url: null })
+
+      if (result.success) {
+        toast.success('カバー画像を削除しました')
+      }
+
+      return result
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'カバー画像の削除に失敗しました'
+      toast.error('カバー画像の削除に失敗しました', {
+        description: errorMessage,
+      })
+      return {
+        success: false,
+        error: { message: errorMessage },
+      }
+    } finally {
+      setIsUpdating(false)
+    }
+  }, [user?.id, profile?.cover_image_url, updateProfile])
+
   // Refresh user profile
   const refreshProfile = useCallback(async () => {
     if (!user?.id) {
@@ -232,6 +340,8 @@ export function useUser() {
     updateProfile,
     uploadAvatar,
     deleteAvatar,
+    uploadCoverImage,
+    deleteCoverImage,
     refreshProfile,
   }
 }
