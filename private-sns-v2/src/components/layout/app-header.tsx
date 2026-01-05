@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Menu, X, Home as HomeIcon, LogOut, ExternalLink, MessageSquare, Users, Plus, ChevronDown, ChevronRight, Globe, Lock, RotateCcw } from 'lucide-react'
+import { Menu, X, Home as HomeIcon, LogOut, ExternalLink, MessageSquare, Users, Plus, ChevronDown, ChevronRight, Globe, Lock, RotateCcw, Shield } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -35,6 +35,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useGroups, useCreateGroup } from '@/hooks/use-groups'
+import { useAdmin } from '@/hooks/use-admin'
 import { Image as ImageIcon } from 'lucide-react'
 
 interface AppHeaderProps {
@@ -59,6 +60,7 @@ export function AppHeader({ groupName }: AppHeaderProps = {}) {
 
   const { data: groups, isLoading: groupsLoading } = useGroups()
   const createGroup = useCreateGroup()
+  const { isAdmin } = useAdmin()
 
   // 画像選択処理
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -162,6 +164,15 @@ export function AppHeader({ groupName }: AppHeaderProps = {}) {
                       改善要望
                     </Button>
                   </Link>
+
+                  {isAdmin && (
+                    <Link href="/admin" onClick={() => setOpen(false)}>
+                      <Button variant="ghost" className="w-full justify-start gap-2 text-base text-red-600">
+                        <Shield className="h-5 w-5" />
+                        管理者パネル
+                      </Button>
+                    </Link>
+                  )}
                 </div>
 
                 <Separator className="my-3" />

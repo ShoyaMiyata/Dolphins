@@ -10,6 +10,7 @@ export interface Database {
           cover_image_url: string | null
           bio: string | null
           role: string
+          last_access_at: string
           created_at: string
           updated_at: string
         }
@@ -21,6 +22,7 @@ export interface Database {
           cover_image_url?: string | null
           bio?: string | null
           role?: string
+          last_access_at?: string
           created_at?: string
           updated_at?: string
         }
@@ -32,6 +34,7 @@ export interface Database {
           cover_image_url?: string | null
           bio?: string | null
           role?: string
+          last_access_at?: string
           created_at?: string
           updated_at?: string
         }
