@@ -171,21 +171,24 @@ export interface Database {
       reactions: {
         Row: {
           id: string
-          post_id: string
+          post_id: string | null
+          comment_id: string | null
           user_id: string
           emoji: string
           created_at: string
         }
         Insert: {
           id?: string
-          post_id: string
+          post_id?: string | null
+          comment_id?: string | null
           user_id: string
           emoji: string
           created_at?: string
         }
         Update: {
           id?: string
-          post_id?: string
+          post_id?: string | null
+          comment_id?: string | null
           user_id?: string
           emoji?: string
           created_at?: string

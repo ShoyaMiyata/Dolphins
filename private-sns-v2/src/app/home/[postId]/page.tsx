@@ -65,6 +65,7 @@ import {
   useAddReaction,
   useRemoveReaction,
 } from '@/hooks/use-reactions'
+import { ReactionButton } from '@/components/features'
 import { createClient } from '@/lib/supabase/client'
 
 export default function PostDetailPage() {
@@ -673,6 +674,13 @@ export default function PostDetailPage() {
                             ))}
                           </div>
                         )}
+
+                        {/* コメントリアクション */}
+                        <ReactionButton
+                          targetId={comment.id}
+                          isComment={true}
+                          className="mt-2"
+                        />
                       </div>
                     </div>
                   </CardContent>

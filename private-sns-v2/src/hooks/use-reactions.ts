@@ -18,12 +18,14 @@ export interface ReactionGroup {
 }
 
 export interface AddReactionData {
-  postId: string
+  postId?: string
+  commentId?: string
   emoji: string
 }
 
 export interface RemoveReactionData {
-  postId: string
+  postId?: string
+  commentId?: string
   emoji: string
 }
 
@@ -32,7 +34,7 @@ export function useReactions(postId: string | null) {
   const supabase = createClient()
 
   return useQuery({
-    queryKey: ['reactions', postId],
+    queryKey: ['reactions', 'post', postId],
     queryFn: async () => {
       if (!postId) return []
 
@@ -84,13 +86,70 @@ export function useReactions(postId: string | null) {
   })
 }
 
+// 特定のコメントのリアクション一覧を取得
+export function useCommentReactions(commentId: string | null) {
+  const supabase = createClient()
+
+  return useQuery({
+    queryKey: ['reactions', 'comment', commentId],
+    queryFn: async () => {
+      if (!commentId) return []
+
+      const { data: { user } } = await supabase.auth.getUser()
+      const currentUserId = user?.id
+
+      const { data, error } = await supabase
+        .from('reactions')
+        .select(`
+          *,
+          profiles!reactions_user_id_fkey(*)
+        `)
+        .eq('comment_id', commentId)
+        .order('created_at', { ascending: true })
+
+      if (error) {
+        console.error('コメントリアクション取得エラー:', error)
+        throw error
+      }
+
+      const reactionsWithProfile: ReactionWithProfile[] = (data || []).map((reaction: any) => ({
+        ...reaction,
+        profiles: Array.isArray(reaction.profiles) ? reaction.profiles[0] : reaction.profiles,
+      }))
+
+      // 絵文字ごとにグループ化
+      const grouped = reactionsWithProfile.reduce((acc, reaction) => {
+        const existing = acc.find((g) => g.emoji === reaction.emoji)
+        if (existing) {
+          existing.count++
+          existing.users.push(reaction.profiles)
+          if (currentUserId === reaction.user_id) {
+            existing.hasReacted = true
+          }
+        } else {
+          acc.push({
+            emoji: reaction.emoji,
+            count: 1,
+            users: [reaction.profiles],
+            hasReacted: currentUserId === reaction.user_id,
+          })
+        }
+        return acc
+      }, [] as ReactionGroup[])
+
+      return grouped
+    },
+    enabled: !!commentId,
+  })
+}
+
 // リアクションを追加
 export function useAddReaction() {
   const queryClient = useQueryClient()
   const supabase = createClient()
 
   return useMutation({
-    mutationFn: async ({ postId, emoji }: AddReactionData) => {
+    mutationFn: async ({ postId, commentId, emoji }: AddReactionData) => {
       // 認証チェック
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
@@ -100,13 +159,19 @@ export function useAddReaction() {
       const userId = user.id
 
       // 既存のリアクションをチェック
-      const { data: existing } = await supabase
+      const existingQuery = supabase
         .from('reactions')
         .select('id')
-        .eq('post_id', postId)
         .eq('user_id', userId)
         .eq('emoji', emoji)
-        .single()
+
+      if (postId) {
+        existingQuery.eq('post_id', postId)
+      } else if (commentId) {
+        existingQuery.eq('comment_id', commentId)
+      }
+
+      const { data: existing } = await existingQuery.single()
 
       if (existing) {
         // 既に同じリアクションが存在する場合は何もしない
@@ -114,13 +179,20 @@ export function useAddReaction() {
       }
 
       // リアクションを追加
+      const reactionData: any = {
+        user_id: userId,
+        emoji,
+      }
+
+      if (postId) {
+        reactionData.post_id = postId
+      } else if (commentId) {
+        reactionData.comment_id = commentId
+      }
+
       const { data, error } = await supabase
         .from('reactions')
-        .insert({
-          post_id: postId,
-          user_id: userId,
-          emoji,
-        } as any)
+        .insert(reactionData)
         .select()
         .single()
 
@@ -129,7 +201,11 @@ export function useAddReaction() {
     },
     onSuccess: (_, variables) => {
       // リアクション一覧を更新
-      queryClient.invalidateQueries({ queryKey: ['reactions', variables.postId] })
+      if (variables.postId) {
+        queryClient.invalidateQueries({ queryKey: ['reactions', 'post', variables.postId] })
+      } else if (variables.commentId) {
+        queryClient.invalidateQueries({ queryKey: ['reactions', 'comment', variables.commentId] })
+      }
     },
     onError: (error) => {
       console.error('リアクション追加エラー:', error)
@@ -144,7 +220,7 @@ export function useRemoveReaction() {
   const supabase = createClient()
 
   return useMutation({
-    mutationFn: async ({ postId, emoji }: RemoveReactionData) => {
+    mutationFn: async ({ postId, commentId, emoji }: RemoveReactionData) => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         throw new Error('ログインが必要です')
@@ -152,18 +228,29 @@ export function useRemoveReaction() {
 
       const userId = user.id
 
-      const { error } = await supabase
+      const deleteQuery = supabase
         .from('reactions')
         .delete()
-        .eq('post_id', postId)
         .eq('user_id', userId)
         .eq('emoji', emoji)
+
+      if (postId) {
+        deleteQuery.eq('post_id', postId)
+      } else if (commentId) {
+        deleteQuery.eq('comment_id', commentId)
+      }
+
+      const { error } = await deleteQuery
 
       if (error) throw error
     },
     onSuccess: (_, variables) => {
       // リアクション一覧を更新
-      queryClient.invalidateQueries({ queryKey: ['reactions', variables.postId] })
+      if (variables.postId) {
+        queryClient.invalidateQueries({ queryKey: ['reactions', 'post', variables.postId] })
+      } else if (variables.commentId) {
+        queryClient.invalidateQueries({ queryKey: ['reactions', 'comment', variables.commentId] })
+      }
     },
     onError: (error) => {
       console.error('リアクション削除エラー:', error)
