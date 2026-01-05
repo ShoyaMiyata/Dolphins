@@ -177,22 +177,7 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
                 </div>
               </div>
             )}
-            {isOwnProfile && profile.cover_image_url && (
-              <div className="absolute top-2 right-2">
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleCoverImageDelete()
-                  }}
-                  disabled={isUpdating}
-                  className="h-8 w-8 rounded-full bg-red-500 hover:bg-red-600 border-2 border-white"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
+
             <input
               ref={coverImageInputRef}
               type="file"
