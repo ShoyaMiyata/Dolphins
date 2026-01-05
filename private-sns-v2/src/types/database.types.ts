@@ -82,19 +82,22 @@ export interface Database {
       likes: {
         Row: {
           id: string
-          post_id: string
+          post_id: string | null
+          comment_id: string | null
           user_id: string
           created_at: string
         }
         Insert: {
           id?: string
-          post_id: string
+          post_id?: string | null
+          comment_id?: string | null
           user_id: string
           created_at?: string
         }
         Update: {
           id?: string
-          post_id?: string
+          post_id?: string | null
+          comment_id?: string | null
           user_id?: string
           created_at?: string
         }

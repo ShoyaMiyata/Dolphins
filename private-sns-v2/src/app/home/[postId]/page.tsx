@@ -65,6 +65,11 @@ import {
   useAddReaction,
   useRemoveReaction,
 } from '@/hooks/use-reactions'
+import {
+  useCommentLikes,
+  useLikeComment,
+  useUnlikeComment,
+} from '@/hooks/use-comment-likes'
 import { ReactionButton } from '@/components/features'
 import { createClient } from '@/lib/supabase/client'
 
@@ -255,6 +260,45 @@ export default function PostDetailPage() {
 
   // よく使う絵文字
   const commonEmojis = ['👍', '❤️', '😊', '😂', '🎉', '🔥', '👏', '🙏']
+
+  // コメントいいねボタンコンポーネント
+  const CommentLikeButton = ({ commentId }: { commentId: string }) => {
+    const { data: likeData } = useCommentLikes(commentId)
+    const likeComment = useLikeComment()
+    const unlikeComment = useUnlikeComment()
+
+    const handleLike = async () => {
+      if (likeData?.isLiked) {
+        await unlikeComment.mutateAsync({ commentId })
+      } else {
+        await likeComment.mutateAsync({ commentId })
+      }
+    }
+
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={(e) => {
+          e.stopPropagation()
+          handleLike()
+        }}
+        disabled={likeComment.isPending || unlikeComment.isPending}
+        className={`h-7 gap-1 text-xs px-2 py-1 rounded-full transition-colors ${
+          likeData?.isLiked
+            ? 'text-red-500 hover:text-red-600 bg-red-50'
+            : 'text-gray-500 hover:text-red-500 hover:bg-red-50'
+        }`}
+      >
+        <Heart
+          className={`h-3 w-3 ${likeData?.isLiked ? 'fill-current' : ''}`}
+        />
+        {likeData && likeData.likesCount > 0 && (
+          <span className="text-xs font-medium">{likeData.likesCount}</span>
+        )}
+      </Button>
+    )
+  }
 
   if (isPostLoading) {
     return (
@@ -675,12 +719,18 @@ export default function PostDetailPage() {
                           </div>
                         )}
 
-                        {/* コメントリアクション */}
-                        <ReactionButton
-                          targetId={comment.id}
-                          isComment={true}
-                          className="mt-2"
-                        />
+                        {/* コメントアクション */}
+                        <div className="flex items-center gap-3 mt-2">
+                          {/* いいねボタン */}
+                          <CommentLikeButton commentId={comment.id} />
+
+                          {/* リアクションボタン */}
+                          <ReactionButton
+                            targetId={comment.id}
+                            isComment={true}
+                            className=""
+                          />
+                        </div>
                       </div>
                     </div>
                   </CardContent>
