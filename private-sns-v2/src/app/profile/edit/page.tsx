@@ -224,18 +224,6 @@ export default function ProfileEditPage() {
                       <Camera className="h-4 w-4" />
                       カバー画像を変更
                     </Button>
-                    {coverImagePreview && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={handleRemoveCoverImage}
-                        className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                      >
-                        <X className="h-4 w-4" />
-                        削除
-                      </Button>
-                    )}
                   </div>
                   <input
                     ref={coverImageInputRef}
