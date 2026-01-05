@@ -24,6 +24,9 @@ CREATE INDEX IF NOT EXISTS idx_likes_comment_id ON likes(comment_id) WHERE comme
 -- Update RLS policies to allow likes on comments
 DROP POLICY IF EXISTS "Users can like posts" ON likes;
 DROP POLICY IF EXISTS "Users can unlike posts" ON likes;
+DROP POLICY IF EXISTS "Users can like posts and comments" ON likes;
+DROP POLICY IF EXISTS "Users can unlike posts and comments" ON likes;
+DROP POLICY IF EXISTS "Likes are viewable by everyone" ON likes;
 
 CREATE POLICY "Users can like posts and comments" ON likes
   FOR INSERT WITH CHECK (auth.uid() = user_id);

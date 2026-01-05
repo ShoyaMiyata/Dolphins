@@ -26,6 +26,7 @@ interface ReactionButtonProps {
   targetId: string
   isComment?: boolean
   className?: string
+  preventNavigation?: boolean
 }
 
 export function ReactionButton({ targetId, isComment = false, className }: ReactionButtonProps) {

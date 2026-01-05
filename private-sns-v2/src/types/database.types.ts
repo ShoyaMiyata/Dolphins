@@ -9,6 +9,7 @@ export interface Database {
           avatar_url: string | null
           cover_image_url: string | null
           bio: string | null
+          role: string
           created_at: string
           updated_at: string
         }
@@ -19,6 +20,7 @@ export interface Database {
           avatar_url?: string | null
           cover_image_url?: string | null
           bio?: string | null
+          role?: string
           created_at?: string
           updated_at?: string
         }
@@ -29,6 +31,7 @@ export interface Database {
           avatar_url?: string | null
           cover_image_url?: string | null
           bio?: string | null
+          role?: string
           created_at?: string
           updated_at?: string
         }

@@ -258,15 +258,22 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
             {/* ユーザー情報 */}
             <div className="mt-4 space-y-3">
               <div>
-                <h1
-                  className={`text-xl font-bold text-blue-900 ${
-                    isOwnProfile ? 'cursor-pointer hover:text-blue-700 transition-colors' : ''
-                  }`}
-                  onClick={handleNameClick}
-                >
-                  {profile.display_name || profile.username}
-                  {isOwnProfile && <Edit className="inline h-4 w-4 ml-2 text-blue-500" />}
-                </h1>
+                <div className="flex items-center gap-2">
+                  <h1
+                    className={`text-xl font-bold text-blue-900 ${
+                      isOwnProfile ? 'cursor-pointer hover:text-blue-700 transition-colors' : ''
+                    }`}
+                    onClick={handleNameClick}
+                  >
+                    {profile.display_name || profile.username}
+                    {isOwnProfile && <Edit className="inline h-4 w-4 ml-2 text-blue-500" />}
+                  </h1>
+                  {profile.role === 'admin' && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                      管理者
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm text-blue-600">@{profile.username}</p>
               </div>
 
