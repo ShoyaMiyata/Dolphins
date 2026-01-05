@@ -14,14 +14,17 @@ import { toast } from 'sonner'
 
 export default function ProfileEditPage() {
   const router = useRouter()
-  const { user, profile, isUpdating, updateProfile, uploadAvatar, deleteAvatar } = useUser()
+  const { user, profile, isUpdating, updateProfile, uploadAvatar, deleteAvatar, uploadCoverImage, deleteCoverImage } = useUser()
 
   const [displayName, setDisplayName] = useState(profile?.display_name || '')
   const [username, setUsername] = useState(profile?.username || '')
   const [bio, setBio] = useState(profile?.bio || '')
   const [avatarPreview, setAvatarPreview] = useState<string | null>(profile?.avatar_url || null)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [coverImagePreview, setCoverImagePreview] = useState<string | null>(profile?.cover_image_url || null)
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const coverImageInputRef = useRef<HTMLInputElement>(null)
 
   // 認証チェック
   useEffect(() => {
@@ -61,6 +64,37 @@ export default function ProfileEditPage() {
     setAvatarPreview(null)
   }
 
+  const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // ファイルサイズチェック (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('ファイルサイズは10MB以下にしてください')
+      return
+    }
+
+    // ファイルタイプチェック
+    if (!file.type.startsWith('image/')) {
+      toast.error('画像ファイルを選択してください')
+      return
+    }
+
+    setCoverImageFile(file)
+
+    // プレビュー表示
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setCoverImagePreview(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleRemoveCoverImage = () => {
+    setCoverImageFile(null)
+    setCoverImagePreview(null)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -74,6 +108,20 @@ export default function ProfileEditPage() {
     if (!usernameRegex.test(username)) {
       toast.error('ユーザー名は英数字とアンダースコアのみ使用できます')
       return
+    }
+
+    // カバー画像の変更がある場合
+    if (coverImageFile) {
+      const result = await uploadCoverImage(coverImageFile)
+      if (!result.success) {
+        return
+      }
+    } else if (coverImagePreview === null && profile?.cover_image_url) {
+      // カバー画像を削除する場合
+      const result = await deleteCoverImage()
+      if (!result.success) {
+        return
+      }
     }
 
     // アバターの変更がある場合
@@ -146,6 +194,62 @@ export default function ProfileEditPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* カバー画像 */}
+              <div className="space-y-2">
+                <Label className="text-blue-900 font-semibold">カバー画像</Label>
+                <div className="space-y-3">
+                  {/* カバー画像プレビュー */}
+                  <div className="relative w-full h-48 bg-gradient-to-r from-blue-100 to-sky-100 rounded-xl overflow-hidden border-2 border-blue-200">
+                    {coverImagePreview ? (
+                      <img
+                        src={coverImagePreview}
+                        alt="カバー画像"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-blue-400">
+                        <Camera className="h-12 w-12" />
+                      </div>
+                    )}
+                  </div>
+                  {/* カバー画像ボタン */}
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => coverImageInputRef.current?.click()}
+                      className="gap-2 border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800 hover:border-blue-300"
+                    >
+                      <Camera className="h-4 w-4" />
+                      カバー画像を変更
+                    </Button>
+                    {coverImagePreview && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRemoveCoverImage}
+                        className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                      >
+                        <X className="h-4 w-4" />
+                        削除
+                      </Button>
+                    )}
+                  </div>
+                  <input
+                    ref={coverImageInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleCoverImageChange}
+                  />
+                  <p className="text-sm text-blue-600">
+                    推奨: 横長の画像（16:9）、最大10MB
+                  </p>
+                </div>
+              </div>
+
               {/* アバター */}
               <div className="space-y-2">
                 <Label className="text-blue-900 font-semibold">プロフィール画像</Label>

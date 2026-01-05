@@ -97,8 +97,8 @@ export function InviteUserDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[calc(100vw-2rem)] w-full sm:max-w-2xl max-h-[80vh]">
-        <DialogHeader>
+      <DialogContent className="max-w-[calc(100vw-2rem)] w-full sm:max-w-2xl max-h-[calc(100vh-8rem)] sm:max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               ユーザーを招待
@@ -114,7 +114,7 @@ export function InviteUserDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-y-auto flex-1 min-h-0">
           {/* Search Input */}
           <div className="space-y-2">
             <Input
@@ -144,7 +144,7 @@ export function InviteUserDialog({
           )}
 
           {/* Users List */}
-          <div className="max-h-96 overflow-y-auto space-y-2 border rounded-lg p-2">
+          <div className="flex-1 overflow-y-auto space-y-2 border rounded-lg p-2">
             {isLoading ? (
               <div className="text-center py-8">
                 <p className="text-sm text-gray-500">読み込み中...</p>
@@ -199,7 +199,7 @@ export function InviteUserDialog({
           </div>
         </div>
 
-        <div className="flex gap-2 pt-4 border-t">
+        <div className="flex gap-2 pt-4 border-t flex-shrink-0 bg-white">
           <Button
             variant="outline"
             onClick={handleClose}

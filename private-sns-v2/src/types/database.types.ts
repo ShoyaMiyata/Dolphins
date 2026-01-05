@@ -7,6 +7,7 @@ export interface Database {
           username: string
           display_name: string | null
           avatar_url: string | null
+          cover_image_url: string | null
           bio: string | null
           created_at: string
           updated_at: string
@@ -16,6 +17,7 @@ export interface Database {
           username: string
           display_name?: string | null
           avatar_url?: string | null
+          cover_image_url?: string | null
           bio?: string | null
           created_at?: string
           updated_at?: string
@@ -25,6 +27,7 @@ export interface Database {
           username?: string
           display_name?: string | null
           avatar_url?: string | null
+          cover_image_url?: string | null
           bio?: string | null
           created_at?: string
           updated_at?: string
@@ -355,6 +358,7 @@ export interface Database {
           name: string
           description: string | null
           image_url: string | null
+          cover_image_url: string | null
           owner_id: string
           join_type: 'free' | 'approval'
           visibility_type: 'public' | 'private'
@@ -366,6 +370,7 @@ export interface Database {
           name: string
           description?: string | null
           image_url?: string | null
+          cover_image_url?: string | null
           owner_id: string
           join_type?: 'free' | 'approval'
           visibility_type?: 'public' | 'private'
@@ -377,6 +382,7 @@ export interface Database {
           name?: string
           description?: string | null
           image_url?: string | null
+          cover_image_url?: string | null
           owner_id?: string
           join_type?: 'free' | 'approval'
           visibility_type?: 'public' | 'private'

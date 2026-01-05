@@ -5,6 +5,21 @@ export function createClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dummy.supabase.co'
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy-key'
 
+  // 環境に応じたリダイレクトURLを設定
+  const getRedirectUrl = () => {
+    if (typeof window === 'undefined') return undefined
+
+    const currentUrl = new URL(window.location.href)
+    const isLocalhost = currentUrl.hostname === 'localhost' || currentUrl.hostname === '127.0.0.1'
+
+    if (isLocalhost) {
+      return `${currentUrl.protocol}//${currentUrl.host}/auth/callback`
+    }
+
+    // 本番環境の場合は現在のドメインを使用
+    return `${currentUrl.protocol}//${currentUrl.host}/auth/callback`
+  }
+
   return createBrowserClient<Database>(
     url,
     key,
