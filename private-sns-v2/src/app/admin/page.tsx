@@ -31,15 +31,13 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { useAdmin } from '@/hooks/use-admin'
 import {
   useAdminUsers,
@@ -379,22 +377,24 @@ export default function AdminPage() {
         </Tabs>
 
         {/* Delete Feedback Dialog */}
-        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>改善要望を削除しますか？</AlertDialogTitle>
-              <AlertDialogDescription>
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>改善要望を削除しますか？</DialogTitle>
+              <DialogDescription>
                 この操作は取り消せません。改善要望が完全に削除されます。
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>キャンセル</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteFeedback} className="bg-red-500 hover:bg-red-600">
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+                キャンセル
+              </Button>
+              <Button onClick={handleDeleteFeedback} className="bg-red-500 hover:bg-red-600">
                 削除
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )
