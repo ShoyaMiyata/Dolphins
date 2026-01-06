@@ -41,12 +41,10 @@ export function useAdminUsers() {
 // Admin: Update user role
 export function useUpdateUserRole() {
   const queryClient = useQueryClient()
-  const supabase = createClient()
+  const supabase = createUntypedClient()
 
   return useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: 'user' | 'admin' }) => {
-      // Use raw SQL to bypass TypeScript issues
-      // @ts-ignore - Schema mismatch due to recent migrations
       const { data, error } = await supabase
         .from('profiles')
         .update({
@@ -74,11 +72,10 @@ export function useUpdateUserRole() {
 // Admin: Update last access time manually
 export function useUpdateLastAccess() {
   const queryClient = useQueryClient()
-  const supabase = createClient()
+  const supabase = createUntypedClient()
 
   return useMutation({
     mutationFn: async (userId: string) => {
-      // @ts-ignore - Schema mismatch due to recent migrations
       const { data, error } = await supabase
         .from('profiles')
         .update({ last_access_at: new Date().toISOString() })
@@ -128,7 +125,7 @@ export function useAdminFeedback() {
 // Admin: Update feedback status
 export function useUpdateFeedbackStatus() {
   const queryClient = useQueryClient()
-  const supabase = createClient()
+  const supabase = createUntypedClient()
 
   return useMutation({
     mutationFn: async ({
@@ -138,7 +135,6 @@ export function useUpdateFeedbackStatus() {
       feedbackId: string
       status: 'pending' | 'in_progress' | 'completed' | 'declined'
     }) => {
-      // @ts-ignore - Schema mismatch due to recent migrations
       const { data, error } = await supabase
         .from('feedbacks')
         .update({
