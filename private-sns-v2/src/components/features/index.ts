@@ -1,5 +1,5 @@
 export { PostForm } from './post-form'
-export { PostCard } from './post-card'
+export { default as PostCard } from './post-card'
 export { PostFeed } from './post-feed'
 export { PostSkeleton } from './post-skeleton'
 export { Timeline } from './timeline'
