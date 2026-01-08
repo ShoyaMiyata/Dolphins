@@ -1,6 +1,6 @@
 'use client'
 
-import { PostCard } from './post-card'
+import PostCard from './post-card'
 import type { PostWithDetails } from '@/hooks/use-posts'
 
 interface PostSearchResultProps {
