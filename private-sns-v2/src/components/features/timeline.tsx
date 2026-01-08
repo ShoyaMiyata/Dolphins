@@ -6,7 +6,7 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { motion } from 'framer-motion'
 import { Loader2, RefreshCw } from 'lucide-react'
 import { usePosts } from '@/hooks/use-posts'
-import { PostCard } from './post-card'
+import PostCard from './post-card'
 import { PostSkeleton } from './post-skeleton'
 import { Button } from '@/components/ui/button'
 

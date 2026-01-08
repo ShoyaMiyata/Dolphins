@@ -1,8 +1,9 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { formatDistanceToNow } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -70,7 +71,7 @@ export interface PostCardProps {
   groupId?: string // グループIDを追加（グループ投稿の場合に使用）
 }
 
-export function PostCard({ post, groupId }: PostCardProps) {
+function PostCard({ post, groupId }: PostCardProps) {
   const router = useRouter()
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -894,3 +895,17 @@ export function PostCard({ post, groupId }: PostCardProps) {
     </>
   )
 }
+
+// React.memoでメモ化してエクスポート
+export default memo(PostCard, (prevProps, nextProps) => {
+  // post.idが同じ場合は再レンダリングをスキップ
+  return (
+    prevProps.post.id === nextProps.post.id &&
+    prevProps.post.is_liked === nextProps.post.is_liked &&
+    prevProps.post.is_reposted === nextProps.post.is_reposted &&
+    prevProps.post.likes_count === nextProps.post.likes_count &&
+    prevProps.post.comments_count === nextProps.post.comments_count &&
+    prevProps.post.reposts_count === nextProps.post.reposts_count &&
+    prevProps.groupId === nextProps.groupId
+  )
+})
