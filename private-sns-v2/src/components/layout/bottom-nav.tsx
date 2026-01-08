@@ -102,7 +102,7 @@ export function BottomNav() {
                 {/* Badge */}
                 {item.badge && (
                   <div className="absolute -top-2 -right-2">
-                    <Badge className="h-5 w-5 flex items-center justify-center p-0 text-xs bg-blue-500 hover:bg-blue-600 border-0">
+                    <Badge className="h-5 w-5 flex items-center justify-center p-0 text-xs text-white bg-blue-500 hover:bg-blue-600 border-0">
                       {item.badge > 99 ? '99+' : item.badge}
                     </Badge>
                   </div>
