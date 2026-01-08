@@ -11,7 +11,7 @@ type Feedback = Database['public']['Tables']['feedbacks']['Row']
 
 // Admin: Get all users with their activity info
 export function useAdminUsers() {
-  const supabase = createClient()
+  const supabase = createUntypedClient()
 
   return useQuery({
     queryKey: ['admin', 'users'],
@@ -138,7 +138,7 @@ export function useUpdateLastAccess() {
 
 // Admin: Get all feedback/improvement requests
 export function useAdminFeedback() {
-  const supabase = createClient()
+  const supabase = createUntypedClient()
 
   return useQuery({
     queryKey: ['admin', 'feedback'],
