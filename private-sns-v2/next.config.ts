@@ -15,6 +15,10 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Disable Vercel Analytics to prevent 404 errors
+  experimental: {
+    webVitalsAttribution: [],
+  },
 };
 
 export default nextConfig;
