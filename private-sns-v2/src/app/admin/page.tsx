@@ -16,7 +16,8 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  PlayCircle
+  PlayCircle,
+  User
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -226,63 +227,163 @@ export default function AdminPage() {
 
           {/* Users Tab */}
           <TabsContent value="users" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>ユーザー管理</CardTitle>
-                <CardDescription>
-                  ユーザーの権限変更や最終アクセス時刻の確認ができます
-                </CardDescription>
+            <Card className="bg-white rounded-2xl shadow-lg border border-blue-100 hover:shadow-xl transition-all duration-300">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-sky-50 rounded-t-2xl border-b border-blue-100">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-r from-blue-500 to-sky-500 rounded-full">
+                    <Users className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl text-gray-900">ユーザー管理</CardTitle>
+                    <CardDescription className="text-blue-700">
+                      ユーザーの権限管理とアクセス状況を管理できます
+                    </CardDescription>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-6">
                 {usersLoading ? (
-                  <div className="text-center py-8">読み込み中...</div>
+                  <div className="text-center py-12">
+                    <div className="inline-flex items-center gap-2 text-blue-600">
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+                      <span>読み込み中...</span>
+                    </div>
+                  </div>
+                ) : users.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="inline-flex items-center gap-3 text-gray-400">
+                      <Users className="h-8 w-8" />
+                      <div>
+                        <p className="text-lg font-medium">ユーザーが見つかりません</p>
+                        <p className="text-sm">システムに登録されているユーザーがいません</p>
+                      </div>
+                    </div>
+                  </div>
                 ) : (
                   <div className="space-y-4">
-                    {users.map((user: any) => (
-                      <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div className="flex items-center gap-4">
-                          <Avatar className="h-12 w-12">
-                            <AvatarImage src={user.avatar_url} />
-                            <AvatarFallback>
-                              {user.display_name?.[0] || user.username[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <p className="font-semibold">{user.display_name || user.username}</p>
+                    {users.map((user: any, index: number) => (
+                      <div
+                        key={user.id}
+                        className="bg-gradient-to-r from-white to-blue-50/30 rounded-xl p-5 border border-blue-100 hover:shadow-md hover:border-blue-200 transition-all duration-200"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start gap-4 flex-1">
+                            {/* Avatar with Role Indicator */}
+                            <div className="relative flex-shrink-0">
+                              <Avatar className="h-14 w-14 ring-3 ring-blue-100 shadow-sm">
+                                <AvatarImage src={user.avatar_url} />
+                                <AvatarFallback className="bg-gradient-to-r from-blue-400 to-sky-400 text-white font-bold text-lg">
+                                  {user.display_name?.[0] || user.username[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                              {/* Role Badge Overlay */}
                               {user.role === 'admin' && (
-                                <Badge variant="destructive" className="text-xs">管理者</Badge>
+                                <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-r from-orange-400 to-orange-500 rounded-full flex items-center justify-center shadow-sm border-2 border-white">
+                                  <Shield className="h-3 w-3 text-white" />
+                                </div>
                               )}
                             </div>
-                            <p className="text-sm text-gray-500">@{user.username}</p>
-                            <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
-                              <span>最終アクセス: {user.last_access_at ? format(new Date(user.last_access_at), 'yyyy/MM/dd HH:mm', { locale: ja }) : '未記録'}</span>
+
+                            {/* User Info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-3 mb-2">
+                                <h3 className="text-lg font-bold text-gray-900 truncate">
+                                  {user.display_name || user.username}
+                                </h3>
+                                {user.role === 'admin' && (
+                                  <Badge className="bg-gradient-to-r from-orange-400 to-orange-500 text-white border-0 shadow-sm px-3 py-1">
+                                    <Shield className="h-3 w-3 mr-1" />
+                                    管理者
+                                  </Badge>
+                                )}
+                              </div>
+
+                              <p className="text-sm text-gray-600 mb-3 flex items-center gap-1">
+                                <span className="text-gray-400">@</span>
+                                {user.username}
+                              </p>
+
+                              {/* Access Info */}
+                              <div className="bg-white/60 rounded-lg p-3 border border-blue-50">
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Clock className="h-4 w-4 text-blue-500" />
+                                  <span className="text-gray-700 font-medium">最終アクセス:</span>
+                                  <span className={`font-semibold ${user.last_access_at
+                                    ? 'text-green-600'
+                                    : 'text-gray-500'
+                                    }`}>
+                                    {user.last_access_at
+                                      ? format(new Date(user.last_access_at), 'yyyy/MM/dd HH:mm', { locale: ja })
+                                      : '未記録'
+                                    }
+                                  </span>
+                                  {user.last_access_at && (
+                                    <span className="text-xs text-gray-500 ml-2">
+                                      ({format(new Date(user.last_access_at), 'relative', { locale: ja })})
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Select
-                            value={user.role}
-                            onValueChange={(value: 'user' | 'admin') =>
-                              handleRoleChange(user.id, value)
-                            }
-                          >
-                            <SelectTrigger className="w-24">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="user">ユーザー</SelectItem>
-                              <SelectItem value="admin">管理者</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleUpdateLastAccess(user.id)}
-                            disabled={updateLastAccess.isPending}
-                          >
-                            <RefreshCw className="h-4 w-4" />
-                          </Button>
+
+                          {/* Action Buttons */}
+                          <div className="flex flex-col gap-3 ml-4">
+                            {/* Role Management */}
+                            <div className="flex flex-col gap-2">
+                              <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                                権限
+                              </label>
+                              <Select
+                                value={user.role}
+                                onValueChange={(value: 'user' | 'admin') =>
+                                  handleRoleChange(user.id, value)
+                                }
+                              >
+                                <SelectTrigger className={`w-32 ${user.role === 'admin'
+                                  ? 'bg-orange-50 border-orange-200 text-orange-700'
+                                  : 'bg-blue-50 border-blue-200 text-blue-700'
+                                  }`}>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-white border-blue-200">
+                                  <SelectItem value="user" className="hover:bg-blue-50 focus:bg-blue-50">
+                                    <div className="flex items-center gap-2">
+                                      <User className="h-4 w-4 text-blue-500" />
+                                      <span>ユーザー</span>
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="admin" className="hover:bg-orange-50 focus:bg-orange-50">
+                                    <div className="flex items-center gap-2">
+                                      <Shield className="h-4 w-4 text-orange-500" />
+                                      <span>管理者</span>
+                                    </div>
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            {/* Update Last Access */}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleUpdateLastAccess(user.id)}
+                              disabled={updateLastAccess.isPending}
+                              className="bg-white border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 focus:bg-blue-50 focus:border-blue-300 transition-all duration-200"
+                            >
+                              {updateLastAccess.isPending ? (
+                                <div className="flex items-center gap-2">
+                                  <div className="animate-spin rounded-full h-3 w-3 border-2 border-blue-600 border-t-transparent"></div>
+                                  <span className="text-xs">更新中...</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <RefreshCw className="h-3 w-3" />
+                                  <span className="text-xs">アクセス更新</span>
+                                </div>
+                              )}
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -294,49 +395,75 @@ export default function AdminPage() {
 
           {/* Feedback Tab */}
           <TabsContent value="feedback" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>改善要望管理</CardTitle>
-                <CardDescription>
-                  ユーザーの改善要望を確認し、ステータスを管理できます
-                </CardDescription>
+            <Card className="bg-white rounded-2xl shadow-lg border border-blue-100 hover:shadow-xl transition-all duration-300">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-sky-50 rounded-t-2xl border-b border-blue-100">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-r from-blue-500 to-sky-500 rounded-full">
+                    <MessageSquare className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl text-gray-900">改善要望管理</CardTitle>
+                    <CardDescription className="text-blue-700">
+                      ユーザーの改善要望を確認し、ステータスを管理できます
+                    </CardDescription>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-6">
                 {feedbacksLoading ? (
-                  <div className="text-center py-8">読み込み中...</div>
+                  <div className="text-center py-12">
+                    <div className="inline-flex items-center gap-2 text-blue-600">
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+                      <span>読み込み中...</span>
+                    </div>
+                  </div>
                 ) : feedbacks.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    改善要望はありません
+                  <div className="text-center py-12">
+                    <div className="inline-flex items-center gap-3 text-gray-400">
+                      <MessageSquare className="h-8 w-8" />
+                      <div>
+                        <p className="text-lg font-medium">改善要望はありません</p>
+                        <p className="text-sm">新しい改善要望が届くとここに表示されます</p>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {feedbacks.map((feedback: any) => (
-                      <div key={feedback.id} className="border rounded-lg p-4">
-                        <div className="flex items-start justify-between mb-3">
+                    {feedbacks.map((feedback: any, index: number) => (
+                      <div
+                        key={feedback.id}
+                        className="bg-gradient-to-r from-white to-blue-50/30 rounded-xl p-5 border border-blue-100 hover:shadow-md hover:border-blue-200 transition-all duration-200"
+                      >
+                        <div className="flex items-start justify-between mb-4">
                           <div className="flex items-center gap-3">
-                            <Avatar className="h-8 w-8">
-                              <AvatarFallback>U</AvatarFallback>
+                            <Avatar className="h-10 w-10 ring-2 ring-blue-100">
+                              <AvatarFallback className="bg-gradient-to-r from-blue-400 to-sky-400 text-white font-medium">
+                                U
+                              </AvatarFallback>
                             </Avatar>
                             <div>
-                              <p className="font-semibold text-sm">
+                              <p className="font-semibold text-gray-900 text-sm">
                                 ユーザーID: {feedback.user_id.slice(0, 8)}...
                               </p>
-                              <p className="text-xs text-gray-500">
+                              <p className="text-xs text-gray-500 flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
                                 {format(new Date(feedback.created_at), 'yyyy/MM/dd HH:mm', { locale: ja })}
                               </p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Badge className={`text-xs ${getStatusColor(feedback.status)}`}>
+                            <Badge className={`text-xs px-3 py-1 rounded-full ${getStatusColor(feedback.status)} border-0 shadow-sm`}>
                               {getStatusIcon(feedback.status)}
-                              <span className="ml-1">{getStatusText(feedback.status)}</span>
+                              <span className="ml-1 font-medium">{getStatusText(feedback.status)}</span>
                             </Badge>
                           </div>
                         </div>
 
-                        <p className="text-sm text-gray-700 mb-3 whitespace-pre-wrap">
-                          {feedback.content}
-                        </p>
+                        <div className="bg-white/70 rounded-lg p-4 mb-4 border border-blue-50">
+                          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                            {feedback.content}
+                          </p>
+                        </div>
 
                         <div className="flex items-center justify-between">
                           <Select
@@ -345,26 +472,48 @@ export default function AdminPage() {
                               handleFeedbackStatusChange(feedback.id, value)
                             }
                           >
-                            <SelectTrigger className="w-32">
+                            <SelectTrigger className="w-36 bg-white border-blue-200 hover:border-blue-300 focus:border-blue-400">
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="pending">保留中</SelectItem>
-                              <SelectItem value="in_progress">対応中</SelectItem>
-                              <SelectItem value="completed">完了</SelectItem>
-                              <SelectItem value="declined">却下</SelectItem>
+                            <SelectContent className="bg-white border-blue-200">
+                              <SelectItem value="pending" className="hover:bg-yellow-50 focus:bg-yellow-50">
+                                <div className="flex items-center gap-2">
+                                  <AlertCircle className="h-4 w-4 text-yellow-500" />
+                                  <span>保留中</span>
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="in_progress" className="hover:bg-blue-50 focus:bg-blue-50">
+                                <div className="flex items-center gap-2">
+                                  <PlayCircle className="h-4 w-4 text-blue-500" />
+                                  <span>対応中</span>
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="completed" className="hover:bg-green-50 focus:bg-green-50">
+                                <div className="flex items-center gap-2">
+                                  <CheckCircle className="h-4 w-4 text-green-500" />
+                                  <span>完了</span>
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="declined" className="hover:bg-red-50 focus:bg-red-50">
+                                <div className="flex items-center gap-2">
+                                  <XCircle className="h-4 w-4 text-red-500" />
+                                  <span>却下</span>
+                                </div>
+                              </SelectItem>
                             </SelectContent>
                           </Select>
 
                           <Button
-                            variant="destructive"
+                            variant="outline"
                             size="sm"
                             onClick={() => {
                               setSelectedFeedbackId(feedback.id)
                               setShowDeleteDialog(true)
                             }}
+                            className="bg-red-50 border-red-200 text-red-600 hover:bg-red-100 hover:border-red-300 focus:bg-red-100 focus:border-red-300 transition-all duration-200"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            削除
                           </Button>
                         </div>
                       </div>
