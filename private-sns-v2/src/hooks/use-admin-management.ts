@@ -84,13 +84,13 @@ export function useUpdateUserRole() {
   })
 }
 
-// Admin: Update last access time manually
+// Admin: Update all users' last access time manually
 export function useUpdateLastAccess() {
   const queryClient = useQueryClient()
   const supabase = createUntypedClient()
 
   return useMutation({
-    mutationFn: async (userId: string) => {
+    mutationFn: async () => {
       // First check if current user is admin
       const { data: currentUser, error: currentUserError } = await supabase.auth.getUser()
       if (currentUserError || !currentUser.user) {
@@ -107,16 +107,15 @@ export function useUpdateLastAccess() {
         throw new Error('管理者権限が必要です')
       }
 
-      // Update the target user's last access time
+      // Update all users' last access time
       const { data, error } = await supabase
         .from('profiles')
         .update({
           last_access_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
-        .eq('id', userId)
+        .neq('id', currentUser.user.id) // Don't update current admin user
         .select()
-        .single()
 
       if (error) {
         console.error('Database error:', error)
@@ -127,7 +126,7 @@ export function useUpdateLastAccess() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
-      toast.success('最終アクセス時刻を更新しました')
+      toast.success('全ユーザーの最終アクセス時刻を更新しました')
     },
     onError: (error: any) => {
       console.error('Update last access error:', error)

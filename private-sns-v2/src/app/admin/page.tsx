@@ -96,8 +96,8 @@ export default function AdminPage() {
     await updateUserRole.mutateAsync({ userId, role: newRole })
   }
 
-  const handleUpdateLastAccess = async (userId: string) => {
-    await updateLastAccess.mutateAsync(userId)
+  const handleUpdateLastAccess = async () => {
+    await updateLastAccess.mutateAsync()
   }
 
   const handleFeedbackStatusChange = async (feedbackId: string, status: 'pending' | 'in_progress' | 'completed' | 'declined') => {
@@ -238,6 +238,27 @@ export default function AdminPage() {
                 </div>
               </CardHeader>
               <CardContent className="p-6">
+                {/* Global Update Last Access Button */}
+                <div className="mb-6 flex justify-center">
+                  <Button
+                    onClick={handleUpdateLastAccess}
+                    disabled={updateLastAccess.isPending}
+                    className="bg-gradient-to-r from-blue-500 to-sky-500 hover:from-blue-600 hover:to-sky-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 px-8 py-3"
+                  >
+                    {updateLastAccess.isPending ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                        <span>全ユーザーのアクセス時刻を更新中...</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <RefreshCw className="h-4 w-4" />
+                        <span>全ユーザーのアクセス時刻を更新</span>
+                      </div>
+                    )}
+                  </Button>
+                </div>
+
                 {usersLoading ? (
                   <div className="text-center py-12">
                     <div className="inline-flex items-center gap-2 text-blue-600">
@@ -319,62 +340,38 @@ export default function AdminPage() {
                             )}
                           </div>
 
-                          {/* Action Buttons */}
-                          <div className="flex flex-col gap-3">
-                            {/* Role Management */}
-                            <div className="flex flex-col gap-2">
-                              <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-                                権限
-                              </label>
-                              <Select
-                                value={user.role || 'user'}
-                                onValueChange={(value: 'user' | 'admin') =>
-                                  handleRoleChange(user.id, value)
-                                }
-                              >
-                                <SelectTrigger className={`w-full ${user.role === 'admin'
-                                  ? 'bg-orange-50 border-orange-200 text-orange-700'
-                                  : 'bg-blue-50 border-blue-200 text-blue-700'
-                                  }`}>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent className="bg-white border-blue-200">
-                                  <SelectItem value="user" className="hover:bg-blue-50 focus:bg-blue-50">
-                                    <div className="flex items-center gap-2">
-                                      <User className="h-4 w-4 text-blue-500" />
-                                      <span>ユーザー</span>
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="admin" className="hover:bg-orange-50 focus:bg-orange-50">
-                                    <div className="flex items-center gap-2">
-                                      <Shield className="h-4 w-4 text-orange-500" />
-                                      <span>管理者</span>
-                                    </div>
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            {/* Update Last Access */}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleUpdateLastAccess(user.id)}
-                              disabled={updateLastAccess.isPending}
-                              className="w-full bg-white border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 focus:bg-blue-50 focus:border-blue-300 transition-all duration-200"
+                          {/* Role Management */}
+                          <div className="flex flex-col gap-2">
+                            <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                              権限
+                            </label>
+                            <Select
+                              value={user.role || 'user'}
+                              onValueChange={(value: 'user' | 'admin') =>
+                                handleRoleChange(user.id, value)
+                              }
                             >
-                              {updateLastAccess.isPending ? (
-                                <div className="flex items-center justify-center gap-2">
-                                  <div className="animate-spin rounded-full h-3 w-3 border-2 border-blue-600 border-t-transparent"></div>
-                                  <span className="text-xs">更新中...</span>
-                                </div>
-                              ) : (
-                                <div className="flex items-center justify-center gap-2">
-                                  <RefreshCw className="h-3 w-3" />
-                                  <span className="text-xs">アクセス更新</span>
-                                </div>
-                              )}
-                            </Button>
+                              <SelectTrigger className={`w-full ${user.role === 'admin'
+                                ? 'bg-orange-50 border-orange-200 text-orange-700'
+                                : 'bg-blue-50 border-blue-200 text-blue-700'
+                                }`}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="bg-white border-blue-200">
+                                <SelectItem value="user" className="hover:bg-blue-50 focus:bg-blue-50">
+                                  <div className="flex items-center gap-2">
+                                    <User className="h-4 w-4 text-blue-500" />
+                                    <span>ユーザー</span>
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="admin" className="hover:bg-orange-50 focus:bg-orange-50">
+                                  <div className="flex items-center gap-2">
+                                    <Shield className="h-4 w-4 text-orange-500" />
+                                    <span>管理者</span>
+                                  </div>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
                         </div>
 
@@ -440,62 +437,38 @@ export default function AdminPage() {
                             </div>
                           </div>
 
-                          {/* Action Buttons */}
-                          <div className="flex flex-col gap-3 ml-4">
-                            {/* Role Management */}
-                            <div className="flex flex-col gap-2">
-                              <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-                                権限
-                              </label>
-                              <Select
-                                value={user.role || 'user'}
-                                onValueChange={(value: 'user' | 'admin') =>
-                                  handleRoleChange(user.id, value)
-                                }
-                              >
-                                <SelectTrigger className={`w-32 ${user.role === 'admin'
-                                  ? 'bg-orange-50 border-orange-200 text-orange-700'
-                                  : 'bg-blue-50 border-blue-200 text-blue-700'
-                                  }`}>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent className="bg-white border-blue-200">
-                                  <SelectItem value="user" className="hover:bg-blue-50 focus:bg-blue-50">
-                                    <div className="flex items-center gap-2">
-                                      <User className="h-4 w-4 text-blue-500" />
-                                      <span>ユーザー</span>
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="admin" className="hover:bg-orange-50 focus:bg-orange-50">
-                                    <div className="flex items-center gap-2">
-                                      <Shield className="h-4 w-4 text-orange-500" />
-                                      <span>管理者</span>
-                                    </div>
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            {/* Update Last Access */}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleUpdateLastAccess(user.id)}
-                              disabled={updateLastAccess.isPending}
-                              className="bg-white border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 focus:bg-blue-50 focus:border-blue-300 transition-all duration-200"
+                          {/* Role Management */}
+                          <div className="flex flex-col gap-2 ml-4">
+                            <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                              権限
+                            </label>
+                            <Select
+                              value={user.role || 'user'}
+                              onValueChange={(value: 'user' | 'admin') =>
+                                handleRoleChange(user.id, value)
+                              }
                             >
-                              {updateLastAccess.isPending ? (
-                                <div className="flex items-center gap-2">
-                                  <div className="animate-spin rounded-full h-3 w-3 border-2 border-blue-600 border-t-transparent"></div>
-                                  <span className="text-xs">更新中...</span>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-2">
-                                  <RefreshCw className="h-3 w-3" />
-                                  <span className="text-xs">アクセス更新</span>
-                                </div>
-                              )}
-                            </Button>
+                              <SelectTrigger className={`w-32 ${user.role === 'admin'
+                                ? 'bg-orange-50 border-orange-200 text-orange-700'
+                                : 'bg-blue-50 border-blue-200 text-blue-700'
+                                }`}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="bg-white border-blue-200">
+                                <SelectItem value="user" className="hover:bg-blue-50 focus:bg-blue-50">
+                                  <div className="flex items-center gap-2">
+                                    <User className="h-4 w-4 text-blue-500" />
+                                    <span>ユーザー</span>
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="admin" className="hover:bg-orange-50 focus:bg-orange-50">
+                                  <div className="flex items-center gap-2">
+                                    <Shield className="h-4 w-4 text-orange-500" />
+                                    <span>管理者</span>
+                                  </div>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
                         </div>
                       </div>
