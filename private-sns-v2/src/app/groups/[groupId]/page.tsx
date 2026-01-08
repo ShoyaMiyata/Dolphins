@@ -338,6 +338,8 @@ export default function GroupDetailPage() {
                         id: post.id,
                         user_id: post.user_id,
                         content: post.content,
+                        type: null,
+                        original_post_id: null,
                         created_at: post.created_at,
                         updated_at: post.updated_at,
                         profiles: post.profiles,

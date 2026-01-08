@@ -16,8 +16,8 @@ export type PostWithDetails = Post & {
   reposts_count: number
   is_liked: boolean
   is_reposted: boolean
-  type?: string
-  original_post_id?: string
+  type?: string | null
+  original_post_id?: string | null
   original_post?: PostWithDetails
   repost_user?: Profile
 }
