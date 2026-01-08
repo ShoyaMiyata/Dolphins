@@ -15,15 +15,8 @@ export function useAdminUsers() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          posts(count),
-          comments(count),
-          likes(count),
-          followers:follows!follows_following_id_fkey(count),
-          following:follows!follows_follower_id_fkey(count)
-        `)
-        .order('last_access_at', { ascending: false })
+        .select('*')
+        .order('created_at', { ascending: false })
 
       if (error) {
         console.error('Admin users fetch error:', error)
@@ -98,12 +91,10 @@ export function useAdminFeedback() {
   return useQuery({
     queryKey: ['admin', 'feedback'],
     queryFn: async () => {
+      // Simple query - just get feedbacks
       const { data, error } = await supabase
         .from('feedbacks')
-        .select(`
-          *,
-          profiles!feedbacks_user_id_fkey(*)
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
 
       if (error) {
@@ -144,13 +135,13 @@ export function useUpdateFeedbackStatus() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'feedback'] })
-      const statusMessages = {
+      const statusMessages: Record<string, string> = {
         pending: '保留中',
         in_progress: '対応中',
         completed: '完了',
         declined: '却下'
       }
-      toast.success(`改善要望を${statusMessages[variables.status]}に更新しました`)
+      toast.success(`改善要望を${statusMessages[variables.status] || variables.status}に更新しました`)
     },
     onError: (error) => {
       console.error('Update feedback status error:', error)
@@ -190,7 +181,12 @@ export function useAdminStats() {
 
   return useQuery({
     queryKey: ['admin', 'stats'],
-    queryFn: async () => {
+    queryFn: async (): Promise<{
+      totalUsers: number
+      totalPosts: number
+      totalComments: number
+      totalFeedbacks: number
+    }> => {
       // Get various counts
       const [usersResult, postsResult, commentsResult, feedbacksResult] = await Promise.all([
         supabase.from('profiles').select('*', { count: 'exact', head: true }),

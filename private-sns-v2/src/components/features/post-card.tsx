@@ -57,6 +57,7 @@ import {
   useReactions,
   useAddReaction,
   useRemoveReaction,
+  type ReactionGroup,
 } from '@/hooks/use-reactions'
 import {
   useCustomStamps,
@@ -74,12 +75,22 @@ export function PostCard({ post, groupId }: PostCardProps) {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isRepostDialogOpen, setIsRepostDialogOpen] = useState(false)
   const [isReactionPickerOpen, setIsReactionPickerOpen] = useState(false)
+  const [repostComment, setRepostComment] = useState('')
   const [editContent, setEditContent] = useState(post.content || '')
   const [editImages, setEditImages] = useState<File[]>([])
   const [editImagePreviews, setEditImagePreviews] = useState<string[]>([])
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [imageLoaded, setImageLoaded] = useState<{ [key: string]: boolean }>({})
+  const [selectedReaction, setSelectedReaction] = useState<ReactionGroup | null>(null)
+  const [isReactionUsersOpen, setIsReactionUsersOpen] = useState(false)
+
+  // リポストの場合、表示するデータを元の投稿に切り替え
+  const displayPost = post.type === 'repost' && post.original_post ? post.original_post : post
+  const isRepost = post.type === 'repost'
+
+
 
   const { ref, inView } = useInView({
     triggerOnce: true,
@@ -88,7 +99,7 @@ export function PostCard({ post, groupId }: PostCardProps) {
 
   // グループ投稿かどうかで使用するフックを切り替え
   const isGroupPost = !!groupId
-  
+
   const deletePost = useDeletePost()
   const deleteGroupPost = useDeleteGroupPost()
   const updatePost = useUpdatePost()
@@ -137,8 +148,18 @@ export function PostCard({ post, groupId }: PostCardProps) {
     if (post.is_reposted) {
       await unrepost.mutateAsync(post.id)
     } else {
-      await repost.mutateAsync(post.id)
+      setIsRepostDialogOpen(true)
     }
+  }
+
+  // リポスト実行
+  const handleRepostConfirm = async () => {
+    await repost.mutateAsync({
+      postId: post.id,
+      comment: repostComment.trim() || undefined,
+    })
+    setIsRepostDialogOpen(false)
+    setRepostComment('')
   }
 
   // 削除処理
@@ -263,6 +284,16 @@ export function PostCard({ post, groupId }: PostCardProps) {
       >
         <Card className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-200 mb-3 border border-blue-100 hover:border-blue-200">
           <CardContent className="p-4 cursor-pointer" onClick={handlePostClick}>
+            {/* リポストの場合のリポスト情報 */}
+            {post.type === 'repost' && post.original_post && (
+              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
+                <Repeat2 className="h-4 w-4 text-green-500" />
+                <span className="text-sm text-gray-600">
+                  {post.profiles.display_name || post.profiles.username} がリポストしました
+                </span>
+              </div>
+            )}
+
             <div className="flex gap-3">
               {/* アバター */}
               <div
@@ -331,29 +362,40 @@ export function PostCard({ post, groupId }: PostCardProps) {
                   )}
                 </div>
 
+                {/* リポストコメント（リポストの場合のみ） */}
+                {isRepost && post.content && (
+                  <div className="mb-3">
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+                      {post.content}
+                    </p>
+                  </div>
+                )}
+
                 {/* 投稿内容 */}
-                {post.content && (
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-                    {post.content}
-                  </p>
+                {displayPost.content && (
+                  <div className={isRepost ? "p-3 bg-gray-50 rounded-lg" : ""}>
+                    <p className={`text-sm leading-relaxed whitespace-pre-wrap break-words ${isRepost ? "text-gray-700" : ""}`}>
+                      {displayPost.content}
+                    </p>
+                  </div>
                 )}
 
                 {/* 画像ギャラリー */}
-                {post.post_images.length > 0 && (
+                {displayPost.post_images.length > 0 && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.3, delay: 0.1 }}
-                    className={`grid gap-2 mt-3 ${post.post_images.length === 1
+                    className={`grid gap-2 mt-3 ${displayPost.post_images.length === 1
                       ? 'grid-cols-1'
-                      : post.post_images.length === 2
+                      : displayPost.post_images.length === 2
                         ? 'grid-cols-2'
-                        : post.post_images.length === 3
+                        : displayPost.post_images.length === 3
                           ? 'grid-cols-3'
                           : 'grid-cols-2'
                       }`}
                   >
-                    {post.post_images.slice(0, 4).map((image, index) => (
+                    {displayPost.post_images.slice(0, 4).map((image, index) => (
                       <motion.div
                         key={image.id}
                         initial={{ opacity: 0, scale: 0.8 }}
@@ -361,9 +403,9 @@ export function PostCard({ post, groupId }: PostCardProps) {
                         transition={{ duration: 0.3, delay: index * 0.05 }}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        className={`relative overflow-hidden rounded-lg border cursor-pointer ${post.post_images.length === 3 && index === 0
+                        className={`relative overflow-hidden rounded-lg border cursor-pointer ${displayPost.post_images.length === 3 && index === 0
                           ? 'col-span-3'
-                          : post.post_images.length > 3 && index === 3
+                          : displayPost.post_images.length > 3 && index === 3
                             ? 'relative'
                             : ''
                           }`}
@@ -379,7 +421,7 @@ export function PostCard({ post, groupId }: PostCardProps) {
                         <img
                           src={image.image_url}
                           alt={`投稿画像 ${index + 1}`}
-                          className={`w-full object-cover transition-opacity duration-300 ${post.post_images.length === 1
+                          className={`w-full object-cover transition-opacity duration-300 ${displayPost.post_images.length === 1
                             ? 'max-h-[400px]'
                             : 'aspect-square'
                             } ${imageLoaded[image.id] ? 'opacity-100' : 'opacity-0'}`}
@@ -388,13 +430,13 @@ export function PostCard({ post, groupId }: PostCardProps) {
                           }
                           loading="lazy"
                         />
-                        {post.post_images.length > 4 && index === 3 && (
+                        {displayPost.post_images.length > 4 && index === 3 && (
                           <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             className="absolute inset-0 flex items-center justify-center bg-black/50 text-white text-2xl font-bold"
                           >
-                            +{post.post_images.length - 4}
+                            +{displayPost.post_images.length - 4}
                           </motion.div>
                         )}
                       </motion.div>
@@ -578,31 +620,87 @@ export function PostCard({ post, groupId }: PostCardProps) {
                       const isCustomStamp = reaction.emoji.startsWith('http')
 
                       return (
-                        <Button
+                        <Popover
                           key={reaction.emoji}
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleReaction(reaction.emoji)
-                            setIsReactionPickerOpen(false) // ワンタッチで閉じる
+                          open={selectedReaction?.emoji === reaction.emoji && isReactionUsersOpen}
+                          onOpenChange={(open) => {
+                            if (!open) {
+                              setIsReactionUsersOpen(false)
+                              setSelectedReaction(null)
+                            }
                           }}
-                          className={`h-7 px-2 py-1 rounded-full text-sm gap-1 transition-colors ${reaction.hasReacted
-                            ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
                         >
-                          {isCustomStamp ? (
-                            <img
-                              src={reaction.emoji}
-                              alt="カスタムスタンプ"
-                              className="w-4 h-4 object-cover rounded"
-                            />
-                          ) : (
-                            <span className="text-base">{reaction.emoji}</span>
-                          )}
-                          <span className="text-xs font-medium">{reaction.count}</span>
-                        </Button>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                // 同じリアクションが選択されている場合は削除、そうでなければユーザーリストを表示
+                                if (selectedReaction?.emoji === reaction.emoji && isReactionUsersOpen) {
+                                  handleReaction(reaction.emoji)
+                                } else {
+                                  setSelectedReaction(reaction)
+                                  setIsReactionUsersOpen(true)
+                                }
+                              }}
+                              className={`h-7 px-2 py-1 rounded-full text-sm gap-1 transition-colors cursor-pointer ${reaction.hasReacted
+                                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
+                            >
+                              {isCustomStamp ? (
+                                <img
+                                  src={reaction.emoji}
+                                  alt="カスタムスタンプ"
+                                  className="w-4 h-4 object-cover rounded"
+                                />
+                              ) : (
+                                <span className="text-base">{reaction.emoji}</span>
+                              )}
+                              <span className="text-xs font-medium">{reaction.count}</span>
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-64 p-3 bg-white border border-gray-200 shadow-lg rounded-lg" align="start">
+                            <div className="space-y-2">
+                              <h4 className="text-sm font-medium text-gray-900 flex items-center gap-2">
+                                {isCustomStamp ? (
+                                  <img
+                                    src={reaction.emoji}
+                                    alt="カスタムスタンプ"
+                                    className="w-4 h-4 object-cover rounded"
+                                  />
+                                ) : (
+                                  <span className="text-base">{reaction.emoji}</span>
+                                )}
+                                を押した人
+                              </h4>
+                              <div className="max-h-48 overflow-y-auto space-y-1">
+                                {reaction.users.map((user) => (
+                                  <div
+                                    key={user.id}
+                                    onClick={() => {
+                                      router.push(`/profile/${user.username}`)
+                                      setIsReactionUsersOpen(false)
+                                      setSelectedReaction(null)
+                                    }}
+                                    className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                                  >
+                                    <Avatar className="h-6 w-6">
+                                      <AvatarImage src={user.avatar_url || undefined} />
+                                      <AvatarFallback className="text-xs">
+                                        {user.display_name?.[0] || user.username[0]}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <span className="text-sm text-gray-900">
+                                      {user.display_name || user.username}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       )
                     })}
                   </motion.div>
@@ -637,6 +735,48 @@ export function PostCard({ post, groupId }: PostCardProps) {
               className="flex-1 rounded-lg"
             >
               {(isGroupPost ? deleteGroupPost.isPending : deletePost.isPending) ? '削除中...' : '削除'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* リポストダイアログ */}
+      <Dialog open={isRepostDialogOpen} onOpenChange={setIsRepostDialogOpen}>
+        <DialogContent className="max-w-[calc(100vw-2rem)] w-full sm:max-w-md rounded-2xl border border-blue-100 bg-white p-5">
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-lg font-semibold text-blue-900">リポスト</DialogTitle>
+            <DialogDescription className="text-sm text-blue-700">
+              リポストにコメントを追加できます（オプション）
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 mt-4">
+            <Textarea
+              value={repostComment}
+              onChange={(e) => setRepostComment(e.target.value)}
+              placeholder="コメントを追加（任意）"
+              className="min-h-[100px] rounded-lg border-blue-100 resize-none text-blue-900"
+            />
+            <div className="text-sm text-blue-600">
+              {repostComment.length} / 500
+            </div>
+          </div>
+          <DialogFooter className="flex gap-2 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsRepostDialogOpen(false)
+                setRepostComment('')
+              }}
+              className="flex-1 rounded-lg border-blue-100"
+            >
+              キャンセル
+            </Button>
+            <Button
+              onClick={handleRepostConfirm}
+              disabled={repost.isPending || repostComment.length > 500}
+              className="flex-1 rounded-lg bg-green-500 hover:bg-green-600"
+            >
+              {repost.isPending ? 'リポスト中...' : 'リポスト'}
             </Button>
           </DialogFooter>
         </DialogContent>

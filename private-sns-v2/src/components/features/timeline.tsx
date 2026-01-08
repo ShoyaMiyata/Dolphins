@@ -93,9 +93,13 @@ export function Timeline() {
         <p className="text-sm text-muted-foreground mb-4">
           もう一度お試しください
         </p>
-        <Button onClick={() => refetch()} variant="outline">
-          <RefreshCw className="mr-2 h-4 w-4" />
-          再読み込み
+        <Button onClick={() => refetch()} variant="outline" disabled={isFetching}>
+          {isFetching ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <RefreshCw className="mr-2 h-4 w-4" />
+          )}
+          {isFetching ? '読み込み中...' : '再読み込み'}
         </Button>
       </motion.div>
     )

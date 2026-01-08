@@ -44,6 +44,8 @@ export interface Database {
           id: string
           user_id: string
           content: string | null
+          type: string | null
+          original_post_id: string | null
           created_at: string
           updated_at: string
         }
@@ -51,6 +53,8 @@ export interface Database {
           id?: string
           user_id: string
           content?: string | null
+          type?: string | null
+          original_post_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -58,6 +62,8 @@ export interface Database {
           id?: string
           user_id?: string
           content?: string | null
+          type?: string | null
+          original_post_id?: string | null
           created_at?: string
           updated_at?: string
         }

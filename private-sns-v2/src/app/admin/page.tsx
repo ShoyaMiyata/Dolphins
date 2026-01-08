@@ -30,16 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+
 import { useAdmin } from '@/hooks/use-admin'
 import {
   useAdminUsers,
@@ -59,9 +50,13 @@ export default function AdminPage() {
   const [selectedFeedbackId, setSelectedFeedbackId] = useState<string | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
-  const { data: users = [], isLoading: usersLoading } = useAdminUsers()
+  // const { data: users = [], isLoading: usersLoading } = useAdminUsers()
+  const users: any[] = []
+  const usersLoading = false
   const { data: feedbacks = [], isLoading: feedbacksLoading } = useAdminFeedback()
-  const { data: stats } = useAdminStats()
+  // const { data: stats, isLoading: statsLoading } = useAdminStats()
+  const stats = { totalUsers: 0, totalPosts: 0, totalComments: 0, totalFeedbacks: 0 }
+  const statsLoading = false
 
   const updateUserRole = useUpdateUserRole()
   const updateLastAccess = useUpdateLastAccess()
@@ -254,9 +249,6 @@ export default function AdminPage() {
                             </div>
                             <p className="text-sm text-gray-500">@{user.username}</p>
                             <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
-                              <span>投稿: {user.posts || 0}</span>
-                              <span>コメント: {user.comments || 0}</span>
-                              <span>フォロワー: {user.followers || 0}</span>
                               <span>最終アクセス: {user.last_access_at ? format(new Date(user.last_access_at), 'yyyy/MM/dd HH:mm', { locale: ja }) : '未記録'}</span>
                             </div>
                           </div>
@@ -264,9 +256,11 @@ export default function AdminPage() {
                         <div className="flex items-center gap-2">
                           <Select
                             value={user.role}
-                            onValueChange={(value: 'user' | 'admin') => handleRoleChange(user.id, value)}
+                            onValueChange={(value: 'user' | 'admin') =>
+                              handleRoleChange(user.id, value)
+                            }
                           >
-                            <SelectTrigger className="w-32">
+                            <SelectTrigger className="w-24">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -314,14 +308,11 @@ export default function AdminPage() {
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
-                              <AvatarImage src={feedback.profiles?.avatar_url} />
-                              <AvatarFallback>
-                                {feedback.profiles?.display_name?.[0] || feedback.profiles?.username[0]}
-                              </AvatarFallback>
+                              <AvatarFallback>U</AvatarFallback>
                             </Avatar>
                             <div>
                               <p className="font-semibold text-sm">
-                                {feedback.profiles?.display_name || feedback.profiles?.username}
+                                ユーザーID: {feedback.user_id.slice(0, 8)}...
                               </p>
                               <p className="text-xs text-gray-500">
                                 {format(new Date(feedback.created_at), 'yyyy/MM/dd HH:mm', { locale: ja })}
@@ -347,7 +338,7 @@ export default function AdminPage() {
                               handleFeedbackStatusChange(feedback.id, value)
                             }
                           >
-                            <SelectTrigger className="w-40">
+                            <SelectTrigger className="w-32">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -378,23 +369,23 @@ export default function AdminPage() {
           </TabsContent>
         </Tabs>
 
-        {/* Delete Feedback Dialog */}
-        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>改善要望を削除しますか？</AlertDialogTitle>
-              <AlertDialogDescription>
-                この操作は取り消せません。改善要望が完全に削除されます。
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>キャンセル</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteFeedback} className="bg-red-500 hover:bg-red-600">
-                削除
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        {/* Delete Feedback Dialog - Simplified */}
+        {showDeleteDialog && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full">
+              <h3 className="text-lg font-semibold mb-2">改善要望を削除しますか？</h3>
+              <p className="text-gray-600 mb-4">この操作は取り消せません。</p>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+                  キャンセル
+                </Button>
+                <Button variant="destructive" onClick={handleDeleteFeedback}>
+                  削除
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -273,11 +273,12 @@ export function useSearchPosts(query: string) {
               .single()
 
             const { data: repostData } = await supabase
-              .from('reposts')
+              .from('posts')
               .select('id')
-              .eq('post_id', post.id)
               .eq('user_id', currentUserId)
-              .single()
+              .eq('type', 'repost')
+              .eq('original_post_id', post.id)
+              .maybeSingle()
 
             isLiked = !!likeData
             isReposted = !!repostData

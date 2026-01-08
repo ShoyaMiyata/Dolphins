@@ -64,6 +64,7 @@ import {
   useReactions,
   useAddReaction,
   useRemoveReaction,
+  type ReactionGroup,
 } from '@/hooks/use-reactions'
 import {
   useCommentLikes,
@@ -91,6 +92,8 @@ export default function PostDetailPage() {
   const [editingCommentContent, setEditingCommentContent] = useState('')
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [imageLoaded, setImageLoaded] = useState<{ [key: string]: boolean }>({})
+  const [selectedReaction, setSelectedReaction] = useState<ReactionGroup | null>(null)
+  const [isReactionUsersOpen, setIsReactionUsersOpen] = useState(false)
 
   const { data: post, isLoading: isPostLoading, error: postError } = usePost(postId)
   const { data: comments = [], isLoading: isCommentsLoading } = useComments(postId)
@@ -147,7 +150,7 @@ export default function PostDetailPage() {
     if (post.is_reposted) {
       await unrepost.mutateAsync(post.id)
     } else {
-      await repost.mutateAsync(post.id)
+      await repost.mutateAsync({ postId: post.id })
     }
   }
 
@@ -284,11 +287,10 @@ export default function PostDetailPage() {
           handleLike()
         }}
         disabled={likeComment.isPending || unlikeComment.isPending}
-        className={`h-7 gap-1 text-xs px-2 py-1 rounded-full transition-colors ${
-          likeData?.isLiked
-            ? 'text-red-500 hover:text-red-600 bg-red-50'
-            : 'text-gray-500 hover:text-red-500 hover:bg-red-50'
-        }`}
+        className={`h-7 gap-1 text-xs px-2 py-1 rounded-full transition-colors ${likeData?.isLiked
+          ? 'text-red-500 hover:text-red-600 bg-red-50'
+          : 'text-gray-500 hover:text-red-500 hover:bg-red-50'
+          }`}
       >
         <Heart
           className={`h-3 w-3 ${likeData?.isLiked ? 'fill-current' : ''}`}
@@ -572,30 +574,87 @@ export default function PostDetailPage() {
                       const isCustomStamp = reaction.emoji.startsWith('http')
 
                       return (
-                        <Button
+                        <Popover
                           key={reaction.emoji}
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            handleReaction(reaction.emoji)
-                            setIsReactionPickerOpen(false) // ワンタッチで閉じる
+                          open={selectedReaction?.emoji === reaction.emoji && isReactionUsersOpen}
+                          onOpenChange={(open) => {
+                            if (!open) {
+                              setIsReactionUsersOpen(false)
+                              setSelectedReaction(null)
+                            }
                           }}
-                          className={`h-7 px-2 py-1 rounded-full text-sm gap-1 ${reaction.hasReacted
-                            ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
                         >
-                          {isCustomStamp ? (
-                            <img
-                              src={reaction.emoji}
-                              alt="カスタムスタンプ"
-                              className="w-4 h-4 object-cover rounded"
-                            />
-                          ) : (
-                            <span className="text-base">{reaction.emoji}</span>
-                          )}
-                          <span className="text-xs font-medium">{reaction.count}</span>
-                        </Button>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                // 同じリアクションが選択されている場合は削除、そうでなければユーザーリストを表示
+                                if (selectedReaction?.emoji === reaction.emoji && isReactionUsersOpen) {
+                                  handleReaction(reaction.emoji)
+                                } else {
+                                  setSelectedReaction(reaction)
+                                  setIsReactionUsersOpen(true)
+                                }
+                              }}
+                              className={`h-7 px-2 py-1 rounded-full text-sm gap-1 transition-colors cursor-pointer ${reaction.hasReacted
+                                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
+                            >
+                              {isCustomStamp ? (
+                                <img
+                                  src={reaction.emoji}
+                                  alt="カスタムスタンプ"
+                                  className="w-4 h-4 object-cover rounded"
+                                />
+                              ) : (
+                                <span className="text-base">{reaction.emoji}</span>
+                              )}
+                              <span className="text-xs font-medium">{reaction.count}</span>
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-64 p-3 bg-white border border-gray-200 shadow-lg rounded-lg" align="start">
+                            <div className="space-y-2">
+                              <h4 className="text-sm font-medium text-gray-900 flex items-center gap-2">
+                                {isCustomStamp ? (
+                                  <img
+                                    src={reaction.emoji}
+                                    alt="カスタムスタンプ"
+                                    className="w-4 h-4 object-cover rounded"
+                                  />
+                                ) : (
+                                  <span className="text-base">{reaction.emoji}</span>
+                                )}
+                                を押した人
+                              </h4>
+                              <div className="max-h-48 overflow-y-auto space-y-1">
+                                {reaction.users.map((user) => (
+                                  <div
+                                    key={user.id}
+                                    onClick={() => {
+                                      router.push(`/profile/${user.username}`)
+                                      setIsReactionUsersOpen(false)
+                                      setSelectedReaction(null)
+                                    }}
+                                    className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                                  >
+                                    <Avatar className="h-6 w-6">
+                                      <AvatarImage src={user.avatar_url || undefined} />
+                                      <AvatarFallback className="text-xs">
+                                        {user.display_name?.[0] || user.username[0]}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <span className="text-sm text-gray-900">
+                                      {user.display_name || user.username}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       )
                     })}
                   </div>

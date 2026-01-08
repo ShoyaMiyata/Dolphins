@@ -52,6 +52,7 @@ export function AppHeader({ groupName }: AppHeaderProps = {}) {
   const [groupImagePreview, setGroupImagePreview] = useState<string | null>(null)
   const [joinType, setJoinType] = useState<'free' | 'approval'>('free')
   const [visibilityType, setVisibilityType] = useState<'public' | 'private'>('public')
+  const [isReloading, setIsReloading] = useState(false)
 
   const user = useAuthStore((state) => state.user)
   const reset = useAuthStore((state) => state.reset)
@@ -123,6 +124,13 @@ export function AppHeader({ groupName }: AppHeaderProps = {}) {
 
     console.log('ログインページに遷移')
     window.location.href = '/login'
+  }
+
+  const handleReload = () => {
+    setIsReloading(true)
+    setTimeout(() => {
+      window.location.reload()
+    }, 500)
   }
 
   return (
@@ -290,11 +298,12 @@ export function AppHeader({ groupName }: AppHeaderProps = {}) {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => window.location.reload()}
+            onClick={handleReload}
+            disabled={isReloading}
             className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
             title="リロード"
           >
-            <RotateCcw className="h-6 w-6" />
+            <RotateCcw className={`h-6 w-6 ${isReloading ? 'animate-spin' : ''}`} />
           </Button>
         </div>
       </div>

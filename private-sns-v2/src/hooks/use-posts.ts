@@ -16,6 +16,10 @@ export type PostWithDetails = Post & {
   reposts_count: number
   is_liked: boolean
   is_reposted: boolean
+  type?: string
+  original_post_id?: string
+  original_post?: PostWithDetails
+  repost_user?: Profile
 }
 
 export interface CreatePostData {
@@ -89,18 +93,43 @@ export function usePosts() {
       console.log('Current user ID:', currentUserId)
 
       console.log('Fetching posts...')
+      // 通常の投稿とリポストを統合して取得
       const { data, error, count } = await supabase
         .from('posts')
         .select(`
           *,
+          type,
+          original_post_id,
           profiles!posts_user_id_fkey(*),
           post_images(*),
           likes(count),
-          comments(count),
-          reposts(count)
+          comments(count)
         `, { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(start, end)
+
+      // リポストの場合、original_postを取得
+      if (data) {
+        for (const post of data as any[]) {
+          if (post.type === 'repost' && post.original_post_id) {
+            const { data: originalPost } = await supabase
+              .from('posts')
+              .select(`
+                *,
+                profiles!posts_user_id_fkey(*),
+                post_images(*),
+                likes(count),
+                comments(count)
+              `)
+              .eq('id', post.original_post_id)
+              .single()
+
+            if (originalPost) {
+              post.original_post = originalPost
+            }
+          }
+        }
+      }
 
       console.log('Posts query result:', { data, error, count })
       if (error) {
@@ -124,28 +153,51 @@ export function usePosts() {
 
         userLikes = new Set((likesData || []).map((like: any) => like.post_id))
 
-        // 一括でリポスト状態を取得
+        // 一括でリポスト状態を取得（postsテーブルから）
         const { data: repostsData } = await supabase
-          .from('reposts')
-          .select('post_id')
+          .from('posts')
+          .select('original_post_id')
           .eq('user_id', currentUserId)
-          .in('post_id', postIds)
+          .eq('type', 'repost')
+          .in('original_post_id', postIds)
 
-        userReposts = new Set((repostsData || []).map((repost: any) => repost.post_id))
+        userReposts = new Set((repostsData || []).map((repost: any) => repost.original_post_id))
       }
 
-      const postsWithDetails: PostWithDetails[] = (data || []).map((post: any) => ({
-        ...post,
-        profiles: Array.isArray(post.profiles) ? post.profiles[0] : post.profiles,
-        post_images: Array.isArray(post.post_images)
-          ? post.post_images.sort((a: any, b: any) => a.order_index - b.order_index)
-          : [],
-        likes_count: Array.isArray(post.likes) ? post.likes[0]?.count || 0 : 0,
-        comments_count: Array.isArray(post.comments) ? post.comments[0]?.count || 0 : 0,
-        reposts_count: Array.isArray(post.reposts) ? post.reposts[0]?.count || 0 : 0,
-        is_liked: userLikes.has(post.id),
-        is_reposted: userReposts.has(post.id),
-      }))
+      const postsWithDetails: PostWithDetails[] = (data || []).map((post: any) => {
+        let originalPost: PostWithDetails | undefined
+        if (post.original_post) {
+          const orig = Array.isArray(post.original_post) ? post.original_post[0] : post.original_post
+          if (orig) {
+            originalPost = {
+              ...orig,
+              profiles: Array.isArray(orig.profiles) ? orig.profiles[0] : orig.profiles,
+              post_images: Array.isArray(orig.post_images)
+                ? orig.post_images.sort((a: any, b: any) => a.order_index - b.order_index)
+                : [],
+              likes_count: Array.isArray(orig.likes) ? orig.likes[0]?.count || 0 : 0,
+              comments_count: Array.isArray(orig.comments) ? orig.comments[0]?.count || 0 : 0,
+              reposts_count: Array.isArray(orig.reposts) ? orig.reposts[0]?.count || 0 : 0,
+              is_liked: userLikes.has(orig.id),
+              is_reposted: userReposts.has(orig.id),
+            }
+          }
+        }
+
+        return {
+          ...post,
+          profiles: Array.isArray(post.profiles) ? post.profiles[0] : post.profiles,
+          post_images: Array.isArray(post.post_images)
+            ? post.post_images.sort((a: any, b: any) => a.order_index - b.order_index)
+            : [],
+          likes_count: Array.isArray(post.likes) ? post.likes[0]?.count || 0 : 0,
+          comments_count: Array.isArray(post.comments) ? post.comments[0]?.count || 0 : 0,
+          reposts_count: Array.isArray(post.reposts) ? post.reposts[0]?.count || 0 : 0,
+          is_liked: userLikes.has(post.id),
+          is_reposted: userReposts.has(post.id),
+          original_post: originalPost,
+        }
+      })
 
       return {
         posts: postsWithDetails,
@@ -387,7 +439,7 @@ export function useRepost() {
   const supabase = createClient()
 
   return useMutation({
-    mutationFn: async (postId: string) => {
+    mutationFn: async ({ postId, comment }: { postId: string; comment?: string }) => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         throw new Error('ログインが必要です')
@@ -395,9 +447,28 @@ export function useRepost() {
 
       const userId = user.id
 
+      // 既にリポスト済みか確認
+      const { data: existingRepost } = await supabase
+        .from('posts')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('type', 'repost')
+        .eq('original_post_id', postId)
+        .maybeSingle()
+
+      if (existingRepost) {
+        throw new Error('既にリポストしています')
+      }
+
+      // リポスト投稿を作成
       const { error } = await supabase
-        .from('reposts')
-        .insert({ post_id: postId, user_id: userId } as any)
+        .from('posts')
+        .insert({
+          user_id: userId,
+          content: comment || null,
+          type: 'repost',
+          original_post_id: postId,
+        } as any)
 
       if (error) throw error
     },
@@ -407,7 +478,7 @@ export function useRepost() {
     },
     onError: (error) => {
       console.error('リポストエラー:', error)
-      toast.error('リポストに失敗しました')
+      toast.error(error.message || 'リポストに失敗しました')
     },
   })
 }
@@ -426,11 +497,13 @@ export function useUnrepost() {
 
       const userId = user.id
 
+      // リポスト投稿を削除
       const { error } = await supabase
-        .from('reposts')
+        .from('posts')
         .delete()
-        .eq('post_id', postId)
         .eq('user_id', userId)
+        .eq('type', 'repost')
+        .eq('original_post_id', postId)
 
       if (error) throw error
     },
@@ -464,8 +537,7 @@ export function usePost(postId: string | null) {
           profiles!posts_user_id_fkey(*),
           post_images(*),
           likes(count),
-          comments(count),
-          reposts(count)
+          comments(count)
         `)
         .eq('id', postId)
         .single()
@@ -480,24 +552,26 @@ export function usePost(postId: string | null) {
       let isReposted = false
 
       if (currentUserId) {
-        // 2つのクエリを並列実行
-        const [likeResult, repostResult] = await Promise.all([
-          supabase
-            .from('likes')
-            .select('id')
-            .eq('post_id', (data as any).id)
-            .eq('user_id', currentUserId)
-            .maybeSingle(),
-          supabase
-            .from('reposts')
-            .select('id')
-            .eq('post_id', (data as any).id)
-            .eq('user_id', currentUserId)
-            .maybeSingle()
-        ])
+        // いいね状態を取得
+        const { data: likeResult } = await supabase
+          .from('likes')
+          .select('id')
+          .eq('post_id', (data as any).id)
+          .eq('user_id', currentUserId)
+          .maybeSingle()
 
-        isLiked = !!likeResult.data
-        isReposted = !!repostResult.data
+        isLiked = !!likeResult
+
+        // リポスト状態を取得（postsテーブルから）
+        const { data: repostResult } = await supabase
+          .from('posts')
+          .select('id')
+          .eq('user_id', currentUserId)
+          .eq('type', 'repost')
+          .eq('original_post_id', (data as any).id)
+          .maybeSingle()
+
+        isReposted = !!repostResult
       }
 
       const postWithDetails: PostWithDetails = {
@@ -547,8 +621,7 @@ export function useUserPosts(userId: string | null) {
           profiles!posts_user_id_fkey(*),
           post_images(*),
           likes(count),
-          comments(count),
-          reposts(count)
+          comments(count)
         `, { count: 'exact' })
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
@@ -572,14 +645,15 @@ export function useUserPosts(userId: string | null) {
 
         userLikes = new Set((likesData || []).map((like: any) => like.post_id))
 
-        // 一括でリポスト状態を取得
+        // 一括でリポスト状態を取得（postsテーブルから）
         const { data: repostsData } = await supabase
-          .from('reposts')
-          .select('post_id')
+          .from('posts')
+          .select('original_post_id')
           .eq('user_id', currentUserId)
-          .in('post_id', postIds)
+          .eq('type', 'repost')
+          .in('original_post_id', postIds)
 
-        userReposts = new Set((repostsData || []).map((repost: any) => repost.post_id))
+        userReposts = new Set((repostsData || []).map((repost: any) => repost.original_post_id))
       }
 
       const postsWithDetails: PostWithDetails[] = (data || []).map((post: any) => ({

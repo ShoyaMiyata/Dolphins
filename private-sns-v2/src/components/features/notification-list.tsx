@@ -31,7 +31,7 @@ export function NotificationList() {
 
     // Navigate to the related post or profile
     if (notification.related_post_id) {
-      router.push(`/posts/${notification.related_post_id}`)
+      router.push(`/home/${notification.related_post_id}`)
     } else if (notification.type === 'follow') {
       router.push(`/profile/${notification.related_user.username}`)
     }
