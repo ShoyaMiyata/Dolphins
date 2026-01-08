@@ -60,9 +60,7 @@ export default function AdminPage() {
 
   const { data: users = [], isLoading: usersLoading } = useAdminUsers()
   const { data: feedbacks = [], isLoading: feedbacksLoading } = useAdminFeedback()
-  // const { data: stats, isLoading: statsLoading } = useAdminStats()
-  const stats = { totalUsers: 0, totalPosts: 0, totalComments: 0, totalFeedbacks: 0 }
-  const statsLoading = false
+  const { data: stats, isLoading: statsLoading } = useAdminStats()
 
   const updateUserRole = useUpdateUserRole()
   const updateLastAccess = useUpdateLastAccess()
@@ -264,14 +262,131 @@ export default function AdminPage() {
                         key={user.id}
                         className="bg-gradient-to-r from-white to-blue-50/30 rounded-xl p-5 border border-blue-100 hover:shadow-md hover:border-blue-200 transition-all duration-200"
                       >
-                        <div className="flex items-start justify-between">
+                        {/* Mobile Layout */}
+                        <div className="block md:hidden space-y-4">
+                          {/* User Info Row */}
+                          <div className="flex items-start gap-3">
+                            {/* Avatar */}
+                            <div className="relative flex-shrink-0">
+                              <Avatar className="h-12 w-12 ring-2 ring-blue-100 shadow-sm">
+                                <AvatarImage src={user.avatar_url} />
+                                <AvatarFallback className="bg-gradient-to-r from-blue-400 to-sky-400 text-white font-bold text-base">
+                                  {user.display_name?.[0] || user.username[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                              {user.role === 'admin' && (
+                                <div className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-orange-400 to-orange-500 rounded-full flex items-center justify-center shadow-sm border-2 border-white">
+                                  <Shield className="h-2.5 w-2.5 text-white" />
+                                </div>
+                              )}
+                            </div>
+
+                            {/* User Info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                <h3 className="text-base font-bold text-gray-900 truncate">
+                                  {user.display_name || user.username}
+                                </h3>
+                                {user.role === 'admin' && (
+                                  <Badge className="bg-gradient-to-r from-orange-400 to-orange-500 text-white border-0 shadow-sm px-2 py-0.5 text-xs">
+                                    <Shield className="h-2.5 w-2.5 mr-1" />
+                                    管理者
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-600 mb-2">
+                                @{user.username}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Access Info */}
+                          <div className="bg-white/60 rounded-lg p-3 border border-blue-50">
+                            <div className="flex items-center gap-2 text-sm">
+                              <Clock className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                              <span className="text-gray-700 font-medium">最終アクセス:</span>
+                              <span className={`font-semibold truncate ${user.last_access_at ? 'text-green-600' : 'text-gray-500'}`}>
+                                {user.last_access_at
+                                  ? format(new Date(user.last_access_at), 'yyyy/MM/dd HH:mm', { locale: ja })
+                                  : '未記録'
+                                }
+                              </span>
+                            </div>
+                            {user.last_access_at && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                ({format(new Date(user.last_access_at), 'relative', { locale: ja })})
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex flex-col gap-3">
+                            {/* Role Management */}
+                            <div className="flex flex-col gap-2">
+                              <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                                権限
+                              </label>
+                              <Select
+                                value={user.role || 'user'}
+                                onValueChange={(value: 'user' | 'admin') =>
+                                  handleRoleChange(user.id, value)
+                                }
+                              >
+                                <SelectTrigger className={`w-full ${user.role === 'admin'
+                                  ? 'bg-orange-50 border-orange-200 text-orange-700'
+                                  : 'bg-blue-50 border-blue-200 text-blue-700'
+                                  }`}>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-white border-blue-200">
+                                  <SelectItem value="user" className="hover:bg-blue-50 focus:bg-blue-50">
+                                    <div className="flex items-center gap-2">
+                                      <User className="h-4 w-4 text-blue-500" />
+                                      <span>ユーザー</span>
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="admin" className="hover:bg-orange-50 focus:bg-orange-50">
+                                    <div className="flex items-center gap-2">
+                                      <Shield className="h-4 w-4 text-orange-500" />
+                                      <span>管理者</span>
+                                    </div>
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            {/* Update Last Access */}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleUpdateLastAccess(user.id)}
+                              disabled={updateLastAccess.isPending}
+                              className="w-full bg-white border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 focus:bg-blue-50 focus:border-blue-300 transition-all duration-200"
+                            >
+                              {updateLastAccess.isPending ? (
+                                <div className="flex items-center justify-center gap-2">
+                                  <div className="animate-spin rounded-full h-3 w-3 border-2 border-blue-600 border-t-transparent"></div>
+                                  <span className="text-xs">更新中...</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-center gap-2">
+                                  <RefreshCw className="h-3 w-3" />
+                                  <span className="text-xs">アクセス更新</span>
+                                </div>
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Desktop Layout */}
+                        <div className="hidden md:flex items-start justify-between">
                           <div className="flex items-start gap-4 flex-1">
                             {/* Avatar with Role Indicator */}
                             <div className="relative flex-shrink-0">
                               <Avatar className="h-14 w-14 ring-3 ring-blue-100 shadow-sm">
                                 <AvatarImage src={user.avatar_url} />
                                 <AvatarFallback className="bg-gradient-to-r from-blue-400 to-sky-400 text-white font-bold text-lg">
-                                  {user.display_name?.[0] || user.username[0]}
+                                  {(user.display_name || user.username || '').charAt(0).toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
                               {/* Role Badge Overlay */}
@@ -333,7 +448,7 @@ export default function AdminPage() {
                                 権限
                               </label>
                               <Select
-                                value={user.role}
+                                value={user.role || 'user'}
                                 onValueChange={(value: 'user' | 'admin') =>
                                   handleRoleChange(user.id, value)
                                 }
