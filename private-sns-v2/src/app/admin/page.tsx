@@ -58,9 +58,7 @@ export default function AdminPage() {
   const [selectedFeedbackId, setSelectedFeedbackId] = useState<string | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
-  // const { data: users = [], isLoading: usersLoading } = useAdminUsers()
-  const users: any[] = []
-  const usersLoading = false
+  const { data: users = [], isLoading: usersLoading } = useAdminUsers()
   const { data: feedbacks = [], isLoading: feedbacksLoading } = useAdminFeedback()
   // const { data: stats, isLoading: statsLoading } = useAdminStats()
   const stats = { totalUsers: 0, totalPosts: 0, totalComments: 0, totalFeedbacks: 0 }
