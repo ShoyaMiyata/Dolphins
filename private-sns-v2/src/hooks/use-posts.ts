@@ -71,7 +71,7 @@ async function uploadImage(file: File, userId: string): Promise<string> {
   return publicUrl
 }
 
-// 投稿一覧取得（無限スクロール対応）
+// 投稿一覧取得（無限スクロール対応）- リポストを含む
 export function usePosts() {
   const supabase = createClient()
 
@@ -137,19 +137,62 @@ export function usePosts() {
         throw error
       }
 
+      // リポストされた投稿を取得
+      let repostedPosts: any[] = []
+      if (currentUserId) {
+        const { data: repostsData, error: repostsError } = await supabase
+          .from('reposts')
+          .select(`
+            id,
+            created_at,
+            posts!reposts_post_id_fkey(
+              *,
+              profiles!posts_user_id_fkey(*),
+              post_images(*),
+              likes(count),
+              comments(count),
+              reposts(count)
+            )
+          `)
+          .eq('user_id', currentUserId)
+          .order('created_at', { ascending: false })
+          .range(start, end)
+
+        if (repostsError) {
+          console.error('Reposts query error:', repostsError)
+        } else {
+          repostedPosts = (repostsData || []).map((repost: any) => ({
+            ...repost.posts,
+            repost_id: repost.id,
+            repost_created_at: repost.created_at,
+            is_reposted_post: true, // リポストされた投稿であることを示すフラグ
+            profiles: Array.isArray(repost.posts.profiles) ? repost.posts.profiles[0] : repost.posts.profiles,
+            post_images: Array.isArray(repost.posts.post_images)
+              ? repost.posts.post_images.sort((a: any, b: any) => a.order_index - b.order_index)
+              : [],
+            likes_count: Array.isArray(repost.posts.likes) ? repost.posts.likes[0]?.count || 0 : 0,
+            comments_count: Array.isArray(repost.posts.comments) ? repost.posts.comments[0]?.count || 0 : 0,
+            reposts_count: Array.isArray(repost.posts.reposts) ? repost.posts.reposts[0]?.count || 0 : 0,
+          }))
+        }
+      }
+
       // いいね・リポスト状態を一括取得（N+1問題を回避）
       let userLikes: Set<string> = new Set()
       let userReposts: Set<string> = new Set()
 
-      if (currentUserId && data && data.length > 0) {
-        const postIds = data.map((post: any) => post.id)
+      const allPostIds = [
+        ...(data || []).map((post: any) => post.id),
+        ...repostedPosts.map((post: any) => post.id)
+      ].filter((id, index, arr) => arr.indexOf(id) === index) // 重複を除去
 
+      if (currentUserId && allPostIds.length > 0) {
         // 一括でいいね状態を取得
         const { data: likesData } = await supabase
           .from('likes')
           .select('post_id')
           .eq('user_id', currentUserId)
-          .in('post_id', postIds)
+          .in('post_id', allPostIds)
 
         userLikes = new Set((likesData || []).map((like: any) => like.post_id))
 
@@ -158,51 +201,48 @@ export function usePosts() {
           .from('posts')
           .select('original_post_id')
           .eq('user_id', currentUserId)
-          .eq('type', 'repost')
-          .in('original_post_id', postIds)
+          .in('post_id', allPostIds)
 
         userReposts = new Set((repostsData || []).map((repost: any) => repost.original_post_id))
       }
 
-      const postsWithDetails: PostWithDetails[] = (data || []).map((post: any) => {
-        let originalPost: PostWithDetails | undefined
-        if (post.original_post) {
-          const orig = Array.isArray(post.original_post) ? post.original_post[0] : post.original_post
-          if (orig) {
-            originalPost = {
-              ...orig,
-              profiles: Array.isArray(orig.profiles) ? orig.profiles[0] : orig.profiles,
-              post_images: Array.isArray(orig.post_images)
-                ? orig.post_images.sort((a: any, b: any) => a.order_index - b.order_index)
-                : [],
-              likes_count: Array.isArray(orig.likes) ? orig.likes[0]?.count || 0 : 0,
-              comments_count: Array.isArray(orig.comments) ? orig.comments[0]?.count || 0 : 0,
-              reposts_count: Array.isArray(orig.reposts) ? orig.reposts[0]?.count || 0 : 0,
-              is_liked: userLikes.has(orig.id),
-              is_reposted: userReposts.has(orig.id),
-            }
-          }
-        }
+      // 自分の投稿とリポストを統合してソート
+      const ownPostsWithDetails: PostWithDetails[] = (data || []).map((post: any) => ({
+        ...post,
+        profiles: Array.isArray(post.profiles) ? post.profiles[0] : post.profiles,
+        post_images: Array.isArray(post.post_images)
+          ? post.post_images.sort((a: any, b: any) => a.order_index - b.order_index)
+          : [],
+        likes_count: Array.isArray(post.likes) ? post.likes[0]?.count || 0 : 0,
+        comments_count: Array.isArray(post.comments) ? post.comments[0]?.count || 0 : 0,
+        reposts_count: Array.isArray(post.reposts) ? post.reposts[0]?.count || 0 : 0,
+        is_liked: userLikes.has(post.id),
+        is_reposted: userReposts.has(post.id),
+      }))
 
-        return {
+      const allPosts = [
+        ...ownPostsWithDetails,
+        ...repostedPosts.map((post: any) => ({
           ...post,
-          profiles: Array.isArray(post.profiles) ? post.profiles[0] : post.profiles,
-          post_images: Array.isArray(post.post_images)
-            ? post.post_images.sort((a: any, b: any) => a.order_index - b.order_index)
-            : [],
-          likes_count: Array.isArray(post.likes) ? post.likes[0]?.count || 0 : 0,
-          comments_count: Array.isArray(post.comments) ? post.comments[0]?.count || 0 : 0,
-          reposts_count: Array.isArray(post.reposts) ? post.reposts[0]?.count || 0 : 0,
           is_liked: userLikes.has(post.id),
           is_reposted: userReposts.has(post.id),
-          original_post: originalPost,
-        }
+        }))
+      ]
+
+      // 作成日時でソート（リポストの場合はリポスト日時を使用）
+      allPosts.sort((a: any, b: any) => {
+        const aTime = a.is_reposted_post ? new Date(a.repost_created_at) : new Date(a.created_at)
+        const bTime = b.is_reposted_post ? new Date(b.repost_created_at) : new Date(b.created_at)
+        return bTime.getTime() - aTime.getTime()
       })
 
+      // ページネーション用に制限
+      const paginatedPosts = allPosts.slice(start, end + 1)
+
       return {
-        posts: postsWithDetails,
-        nextPage: data && data.length === POSTS_PER_PAGE ? pageParam + 1 : undefined,
-        totalCount: count || 0,
+        posts: paginatedPosts,
+        nextPage: allPosts.length > end + 1 ? pageParam + 1 : undefined,
+        totalCount: allPosts.length,
       }
     },
     getNextPageParam: (lastPage) => lastPage.nextPage,

@@ -30,7 +30,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { useAdmin } from '@/hooks/use-admin'
 import {
   useAdminUsers,
@@ -369,23 +376,25 @@ export default function AdminPage() {
           </TabsContent>
         </Tabs>
 
-        {/* Delete Feedback Dialog - Simplified */}
-        {showDeleteDialog && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full">
-              <h3 className="text-lg font-semibold mb-2">改善要望を削除しますか？</h3>
-              <p className="text-gray-600 mb-4">この操作は取り消せません。</p>
-              <div className="flex gap-2 justify-end">
-                <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-                  キャンセル
-                </Button>
-                <Button variant="destructive" onClick={handleDeleteFeedback}>
-                  削除
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Delete Feedback Dialog */}
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>改善要望を削除しますか？</DialogTitle>
+              <DialogDescription>
+                この操作は取り消せません。改善要望が完全に削除されます。
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+                キャンセル
+              </Button>
+              <Button onClick={handleDeleteFeedback} className="bg-red-500 hover:bg-red-600">
+                削除
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )
