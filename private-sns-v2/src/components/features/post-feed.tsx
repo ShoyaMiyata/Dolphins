@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import { useInView } from 'react-intersection-observer'
 import { usePosts } from '@/hooks/use-posts'
-import { PostCard } from './post-card'
+import PostCard from './post-card'
 import { PostSkeleton } from './post-skeleton'
 import { Loader2 } from 'lucide-react'
 
