@@ -38,6 +38,23 @@ export function useUpdateUserRole() {
 
   return useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: 'user' | 'admin' }) => {
+      // First check if current user is admin
+      const { data: currentUser, error: currentUserError } = await supabase.auth.getUser()
+      if (currentUserError || !currentUser.user) {
+        throw new Error('認証エラー')
+      }
+
+      const { data: currentProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', currentUser.user.id)
+        .single()
+
+      if (profileError || currentProfile?.role !== 'admin') {
+        throw new Error('管理者権限が必要です')
+      }
+
+      // Update the target user's role
       const { data, error } = await supabase
         .from('profiles')
         .update({
@@ -48,16 +65,21 @@ export function useUpdateUserRole() {
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Database error:', error)
+        throw error
+      }
+
       return data
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
       toast.success('ユーザーの権限を更新しました')
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Update user role error:', error)
-      toast.error('権限の更新に失敗しました')
+      const message = error?.message || '権限の更新に失敗しました'
+      toast.error(message)
     },
   })
 }
@@ -69,23 +91,48 @@ export function useUpdateLastAccess() {
 
   return useMutation({
     mutationFn: async (userId: string) => {
+      // First check if current user is admin
+      const { data: currentUser, error: currentUserError } = await supabase.auth.getUser()
+      if (currentUserError || !currentUser.user) {
+        throw new Error('認証エラー')
+      }
+
+      const { data: currentProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', currentUser.user.id)
+        .single()
+
+      if (profileError || currentProfile?.role !== 'admin') {
+        throw new Error('管理者権限が必要です')
+      }
+
+      // Update the target user's last access time
       const { data, error } = await supabase
         .from('profiles')
-        .update({ last_access_at: new Date().toISOString() })
+        .update({
+          last_access_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
         .eq('id', userId)
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Database error:', error)
+        throw error
+      }
+
       return data
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
       toast.success('最終アクセス時刻を更新しました')
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Update last access error:', error)
-      toast.error('最終アクセス時刻の更新に失敗しました')
+      const message = error?.message || '最終アクセス時刻の更新に失敗しました'
+      toast.error(message)
     },
   })
 }
