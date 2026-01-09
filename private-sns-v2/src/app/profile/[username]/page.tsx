@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Loader2 } from 'lucide-react'
 import { useEffect } from 'react'
 import { useInView } from 'react-intersection-observer'
-import { BottomNav } from '@/components/layout/bottom-nav'
+import { AppHeader } from '@/components/layout/app-header'
 
 export default function ProfilePage() {
   const params = useParams()
@@ -39,11 +39,7 @@ export default function ProfilePage() {
   if (isLoadingProfile) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-        <header className="sticky top-0 z-10 border-b border-blue-100 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 md:hidden shadow-sm">
-          <div className="container max-w-md mx-auto px-4 py-3">
-            <h1 className="text-xl font-bold text-blue-900">プロフィール</h1>
-          </div>
-        </header>
+        <AppHeader groupName="プロフィール" />
         <main className="container max-w-md mx-auto pb-4">
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
@@ -57,11 +53,7 @@ export default function ProfilePage() {
   if (profileError || !profile) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-        <header className="sticky top-0 z-10 border-b border-blue-100 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 md:hidden shadow-sm">
-          <div className="container max-w-md mx-auto px-4 py-3">
-            <h1 className="text-xl font-bold text-blue-900">プロフィール</h1>
-          </div>
-        </header>
+        <AppHeader groupName="プロフィール" />
         <main className="container max-w-md mx-auto pb-4">
           <div className="flex flex-col items-center justify-center py-12 space-y-4">
             <h2 className="text-2xl font-bold text-blue-900">ユーザーが見つかりません</h2>
@@ -76,12 +68,8 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-      {/* Header - visible on mobile, hidden on desktop */}
-      <header className="sticky top-0 z-10 border-b border-blue-100 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 md:hidden shadow-sm">
-        <div className="container max-w-md mx-auto px-4 py-3">
-          <h1 className="text-xl font-bold text-blue-900">プロフィール</h1>
-        </div>
-      </header>
+      {/* Header */}
+      <AppHeader groupName="プロフィール" />
 
       {/* Main Content */}
       <main className="container max-w-md mx-auto pb-32 px-4">
