@@ -11,6 +11,7 @@ import { Loader2 } from 'lucide-react'
 import { useEffect } from 'react'
 import { useInView } from 'react-intersection-observer'
 import { AppHeader } from '@/components/layout/app-header'
+import { BottomNav } from '@/components/layout/bottom-nav'
 
 export default function ProfilePage() {
   const params = useParams()
