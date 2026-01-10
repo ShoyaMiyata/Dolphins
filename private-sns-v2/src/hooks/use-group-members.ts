@@ -482,7 +482,7 @@ export function useInviteUserToGroup() {
           user_id: userId,
           type: 'group_invite',
           related_user_id: currentUser.id,
-          related_post_id: null, // グループIDではなくnullを設定（postsテーブルを参照しない）
+          related_post_id: groupId, // グループIDを保存（通知クリック時の遷移用）
           message: 'グループに招待されました'
         })
         .select()
