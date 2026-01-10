@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuthStore } from '@/stores/auth-store'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
+import { useAdmin } from '@/hooks/use-admin'
 import type { Database } from '@/types/database.types'
 
 type Feedback = {
@@ -34,6 +35,7 @@ export default function FeedbackPage() {
   const [isLoading, setIsLoading] = useState(true)
   const user = useAuthStore((state) => state.user)
   const supabase = createClient()
+  const { isAdmin } = useAdmin()
 
   // フィードバック一覧を取得
   const fetchFeedbacks = async () => {
@@ -274,44 +276,46 @@ export default function FeedbackPage() {
             </Card>
           ) : (
             <div className="space-y-4">
-              {feedbacks.map((feedback, index) => (
-                <motion.div
-                  key={feedback.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                >
-                  <Card className="border-blue-100 hover:shadow-md transition-shadow">
-                    <CardContent className="pt-6">
-                      <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0">
-                          <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                            <User className="h-5 w-5 text-blue-600" />
-                          </div>
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2 mb-2">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-semibold text-sm">
-                                {feedback.profiles?.full_name || '匿名ユーザー'}
-                              </span>
-                              {getStatusBadge(feedback.status)}
+              {feedbacks
+                .filter(feedback => isAdmin || feedback.status !== 'completed')
+                .map((feedback, index) => (
+                  <motion.div
+                    key={feedback.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <Card className="border-blue-100 hover:shadow-md transition-shadow">
+                      <CardContent className="pt-6">
+                        <div className="flex items-start gap-3">
+                          <div className="flex-shrink-0">
+                            <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                              <User className="h-5 w-5 text-blue-600" />
                             </div>
-                            <span className="text-xs text-muted-foreground whitespace-nowrap">
-                              {formatDate(feedback.created_at)}
-                            </span>
                           </div>
 
-                          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-                            {feedback.content}
-                          </p>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-semibold text-sm">
+                                  {feedback.profiles?.full_name || '匿名ユーザー'}
+                                </span>
+                                {getStatusBadge(feedback.status)}
+                              </div>
+                              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                {formatDate(feedback.created_at)}
+                              </span>
+                            </div>
+
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+                              {feedback.content}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
             </div>
           )}
         </div>
