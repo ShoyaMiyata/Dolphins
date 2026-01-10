@@ -69,14 +69,13 @@ BEGIN
   END IF;
 
   -- Notify other unique previous commenters with 'comment_reply' type
-  IF previous_commenter_count > 0 THEN
-    RAISE WARNING 'TRIGGER: Creating comment_reply notifications';
-    INSERT INTO public.notifications (user_id, type, related_user_id, related_post_id)
-    SELECT DISTINCT c.user_id, 'comment_reply', NEW.user_id, NEW.post_id
-    FROM public.comments c
-    WHERE c.post_id = NEW.post_id
-      AND c.user_id != NEW.user_id
-      AND c.user_id != post_owner_id;
+  -- Exclude only the current commenter (post owner can also receive notifications)
+  -- Simplified query for debugging
+  INSERT INTO public.notifications (user_id, type, related_user_id, related_post_id)
+  SELECT DISTINCT c.user_id, 'comment_reply', NEW.user_id, NEW.post_id
+  FROM public.comments c
+  WHERE c.post_id = NEW.post_id
+    AND c.user_id != NEW.user_id;
 
     GET DIAGNOSTICS previous_commenter_count = ROW_COUNT;
     RAISE WARNING 'TRIGGER: Created % comment_reply notifications', previous_commenter_count;
