@@ -452,3 +452,33 @@ export function useUserProfileByUsername(username: string | null) {
     error,
   }
 }
+/**
+ * Hook to track and update the user's last access time
+ */
+export function useTrackLastAccess() {
+  const user = useAuthStore(selectUser)
+  const isAuthenticated = useAuthStore(selectIsAuthenticated)
+
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id) return
+
+    const trackAccess = async () => {
+      try {
+        const supabase = createClient()
+        await supabase
+          .from('profiles')
+          // @ts-expect-error - Supabase type inference issue
+          .update({
+            last_access_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.id)
+      } catch (err) {
+        // Silent error for tracking
+        console.error('Failed to track last access:', err)
+      }
+    }
+
+    trackAccess()
+  }, [isAuthenticated, user?.id])
+}
