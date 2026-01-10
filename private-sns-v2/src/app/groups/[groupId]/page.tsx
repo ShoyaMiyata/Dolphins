@@ -73,8 +73,10 @@ export default function GroupDetailPage() {
   })
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null)
   const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null)
+  const [coverImageToDelete, setCoverImageToDelete] = useState(false)
   const [iconImageFile, setIconImageFile] = useState<File | null>(null)
   const [iconImagePreview, setIconImagePreview] = useState<string | null>(null)
+  const [iconImageToDelete, setIconImageToDelete] = useState(false)
   const coverImageInputRef = useState<HTMLInputElement | null>(null)[0]
 
   // 現在のユーザーの役割を取得
@@ -149,16 +151,43 @@ export default function GroupDetailPage() {
                   {group.description && (
                     <p className="text-sm text-gray-600 mt-1 line-clamp-2">{group.description}</p>
                   )}
-                  <div className="flex items-center gap-3 mt-2 text-xs text-blue-600">
-                    <div className="flex items-center gap-1">
-                      <Users className="h-3 w-3" />
-                      <span>{members?.length || 0}人</span>
+                  <div className="flex items-center justify-between mt-2">
+                    <div className="flex items-center gap-3 text-xs text-blue-600">
+                      <div className="flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        <span>{members?.length || 0}人</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Badge variant="outline" className="text-xs px-2 py-0 border-blue-200 text-blue-600">
+                          {group.visibility_type === 'public' ? 'パブリック' : 'プライベート'}
+                        </Badge>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Badge variant="outline" className="text-xs px-2 py-0 border-blue-200 text-blue-600">
-                        {group.visibility_type === 'public' ? 'パブリック' : 'プライベート'}
-                      </Badge>
-                    </div>
+                    {isMember && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSettingsForm({
+                            name: group.name,
+                            description: group.description || '',
+                            visibility_type: group.visibility_type,
+                            join_type: group.join_type,
+                          })
+                          setCoverImagePreview(group.cover_image_url || null)
+                          setCoverImageFile(null)
+                          setCoverImageToDelete(false)
+                          setIconImagePreview(group.image_url || null)
+                          setIconImageFile(null)
+                          setIconImageToDelete(false)
+                          setSettingsDialogOpen(true)
+                        }}
+                        className="text-xs h-7 px-3"
+                      >
+                        <Settings className="h-3 w-3 mr-1" />
+                        設定
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -525,7 +554,7 @@ export default function GroupDetailPage() {
                   >
                     アイコンを変更
                   </Button>
-                  {iconImagePreview && (
+                  {(iconImagePreview || group.image_url) && (
                     <Button
                       type="button"
                       variant="outline"
@@ -533,20 +562,7 @@ export default function GroupDetailPage() {
                       onClick={() => {
                         setIconImagePreview(null)
                         setIconImageFile(null)
-                      }}
-                      className="text-sm text-red-600"
-                    >
-                      削除
-                    </Button>
-                  )}
-                  {group.image_url && !iconImagePreview && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setIconImagePreview('')
-                        setIconImageFile(null)
+                        setIconImageToDelete(true)
                       }}
                       className="text-sm text-red-600"
                     >
@@ -608,7 +624,7 @@ export default function GroupDetailPage() {
                 >
                   カバー画像を変更
                 </Button>
-                {coverImagePreview && (
+                {(coverImagePreview || group.cover_image_url) && (
                   <Button
                     type="button"
                     variant="outline"
@@ -616,6 +632,7 @@ export default function GroupDetailPage() {
                     onClick={() => {
                       setCoverImagePreview(null)
                       setCoverImageFile(null)
+                      setCoverImageToDelete(true)
                     }}
                     className="text-sm text-red-600"
                   >
@@ -734,12 +751,18 @@ export default function GroupDetailPage() {
                 if (settingsForm.visibility_type !== group.visibility_type) updates.visibility_type = settingsForm.visibility_type
                 if (settingsForm.join_type !== group.join_type) updates.join_type = settingsForm.join_type
 
-                // 画像削除の場合も更新を実行
-                const hasImageChanges = coverImageFile !== null || iconImageFile !== null || coverImageFile === null || iconImageFile === null
+                // 画像処理
+                if (coverImageToDelete) updates.coverImage = null
+                else if (coverImageFile) updates.coverImage = coverImageFile
 
-                if (Object.keys(updates).length > 0 || hasImageChanges) {
+                if (iconImageToDelete) updates.image = null
+                else if (iconImageFile) updates.image = iconImageFile
+
+                const hasChanges = Object.keys(updates).length > 0 || coverImageToDelete || iconImageToDelete
+
+                if (hasChanges) {
                   updateGroup.mutate(
-                    { groupId, ...updates, coverImage: coverImageFile, image: iconImageFile },
+                    { groupId, ...updates },
                     {
                       onSuccess: () => {
                         setSettingsDialogOpen(false)
