@@ -284,7 +284,9 @@ export function AppHeader({ groupName, icon: Icon }: AppHeaderProps) {
           <div className="flex-1 flex items-center justify-center">
             {groupName ? (
               <div className="flex items-center gap-2">
-                {Icon ? (
+                {groupName === 'ホーム' ? (
+                  <HomeIcon className="h-5 w-5 text-blue-600" />
+                ) : Icon ? (
                   <Icon className="h-5 w-5 text-blue-600" />
                 ) : (
                   <Users className="h-5 w-5 text-blue-600" />
