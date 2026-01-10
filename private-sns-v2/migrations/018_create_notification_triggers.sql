@@ -110,6 +110,27 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- Function to create notification for group invites
+CREATE OR REPLACE FUNCTION public.create_group_invite_notification()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Only create notification when user is invited (not when joining themselves)
+  -- and only for active members
+  IF NEW.user_id != auth.uid() AND NEW.is_active = true THEN
+    INSERT INTO public.notifications (user_id, type, related_user_id, related_post_id, message)
+    VALUES (
+      NEW.user_id,
+      'group_invite',
+      auth.uid(),
+      NEW.group_id,
+      'グループに招待されました'
+    );
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Create triggers
 DROP TRIGGER IF EXISTS on_like_created ON likes;
 CREATE TRIGGER on_like_created
@@ -135,3 +156,8 @@ DROP TRIGGER IF EXISTS on_follow_created ON follows;
 CREATE TRIGGER on_follow_created
   AFTER INSERT ON follows
   FOR EACH ROW EXECUTE FUNCTION public.create_follow_notification();
+
+DROP TRIGGER IF EXISTS on_group_member_invited ON group_members;
+CREATE TRIGGER on_group_member_invited
+  AFTER INSERT ON group_members
+  FOR EACH ROW EXECUTE FUNCTION public.create_group_invite_notification();
