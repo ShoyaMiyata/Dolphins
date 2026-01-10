@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { useGroup, useUpdateGroup } from '@/hooks/use-groups'
+import { useGroup, useUpdateGroup, useDeleteGroup } from '@/hooks/use-groups'
 import { useGroupPosts } from '@/hooks/use-group-posts'
 import { useGroupMembers, useApproveJoinRequest, useRejectJoinRequest, useUpdateMemberRole, useRemoveGroupMember, useJoinGroup, useLeaveGroup, useInviteUserToGroup, useSearchUsersForInvite } from '@/hooks/use-group-members'
 import { useGroupJoinRequests } from '@/hooks/use-group-members'
@@ -58,12 +58,14 @@ export default function GroupDetailPage() {
   const inviteUser = useInviteUserToGroup()
   const searchUsers = useSearchUsersForInvite()
   const updateGroup = useUpdateGroup()
+  const deleteGroup = useDeleteGroup()
 
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('posts')
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false)
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false)
   const [removeMemberDialogOpen, setRemoveMemberDialogOpen] = useState(false)
+  const [deleteGroupDialogOpen, setDeleteGroupDialogOpen] = useState(false)
   const [memberToRemove, setMemberToRemove] = useState<{ id: string; name: string; userId: string; groupId: string } | null>(null)
   const [settingsForm, setSettingsForm] = useState({
     name: '',
@@ -164,29 +166,33 @@ export default function GroupDetailPage() {
                       </div>
                     </div>
                     {isMember && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSettingsForm({
-                            name: group.name,
-                            description: group.description || '',
-                            visibility_type: group.visibility_type,
-                            join_type: group.join_type,
-                          })
-                          setCoverImagePreview(group.cover_image_url || null)
-                          setCoverImageFile(null)
-                          setCoverImageToDelete(false)
-                          setIconImagePreview(group.image_url || null)
-                          setIconImageFile(null)
-                          setIconImageToDelete(false)
-                          setSettingsDialogOpen(true)
-                        }}
-                        className="text-xs h-7 px-3"
-                      >
-                        <Settings className="h-3 w-3 mr-1" />
-                        設定
-                      </Button>
+                      <div className="relative">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSettingsForm({
+                              name: group.name,
+                              description: group.description || '',
+                              visibility_type: group.visibility_type,
+                              join_type: group.join_type,
+                            })
+                            setCoverImagePreview(group.cover_image_url || null)
+                            setCoverImageFile(null)
+                            setCoverImageToDelete(false)
+                            setIconImagePreview(group.image_url || null)
+                            setIconImageFile(null)
+                            setIconImageToDelete(false)
+                            setSettingsDialogOpen(true)
+                          }}
+                          className="text-xs h-8 px-4 bg-gradient-to-r from-blue-50 to-sky-50 hover:from-blue-100 hover:to-sky-100 text-blue-700 border border-blue-200 hover:border-blue-300 rounded-full shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2"
+                        >
+                          <div className="p-1 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full">
+                            <Settings className="h-3 w-3 text-white" />
+                          </div>
+                          <span className="font-medium">設定</span>
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -734,6 +740,24 @@ export default function GroupDetailPage() {
             </div>
           </div>
 
+          {/* Delete Group Button (Owner Only) */}
+          {isOwner && (
+            <div className="pt-4 border-t">
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => setDeleteGroupDialogOpen(true)}
+                className="w-full bg-red-600 hover:bg-red-700 text-white flex items-center gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                グループを削除
+              </Button>
+              <p className="text-xs text-red-500 mt-2 text-center">
+                この操作は取り消すことができません
+              </p>
+            </div>
+          )}
+
           <div className="flex gap-2 pt-4 border-t flex-shrink-0">
             <Button
               variant="outline"
@@ -838,6 +862,61 @@ export default function GroupDetailPage() {
                 <div className="flex items-center justify-center gap-2">
                   <Trash2 className="h-4 w-4" />
                   <span>除外する</span>
+                </div>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Group Confirmation Dialog */}
+      <Dialog open={deleteGroupDialogOpen} onOpenChange={setDeleteGroupDialogOpen}>
+        <DialogContent className="max-w-[calc(100vw-2rem)] w-full sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              グループを削除
+            </DialogTitle>
+            <DialogDescription className="text-left">
+              <span className="font-medium text-gray-900">{group.name}</span> を削除しますか？
+              <br />
+              この操作は取り消すことができません。
+              <br />
+              すべての投稿、メンバー情報、関連データが削除されます。
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="flex gap-2 sm:justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteGroupDialogOpen(false)}
+              className="flex-1 sm:flex-none"
+            >
+              キャンセル
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                deleteGroup.mutate(groupId, {
+                  onSuccess: () => {
+                    setDeleteGroupDialogOpen(false)
+                    // グループ削除後にホーム画面に遷移
+                    router.push('/home')
+                  }
+                })
+              }}
+              disabled={deleteGroup.isPending}
+              className="flex-1 sm:flex-none bg-red-600 hover:bg-red-700"
+            >
+              {deleteGroup.isPending ? (
+                <div className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>削除中...</span>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center gap-2">
+                  <Trash2 className="h-4 w-4" />
+                  <span>削除する</span>
                 </div>
               )}
             </Button>
