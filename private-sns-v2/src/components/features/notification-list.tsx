@@ -150,7 +150,7 @@ export function NotificationList() {
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation()
-                        // Navigate to group using related_group_id
+                        // Navigate to group using related_group_id (preferred) or related_post_id (fallback)
                         const groupId = (notification as any).related_group_id || notification.related_post_id
                         router.push(`/groups/${groupId}`)
                       }}

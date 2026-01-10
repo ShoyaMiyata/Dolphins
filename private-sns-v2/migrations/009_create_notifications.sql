@@ -4,7 +4,8 @@ CREATE TABLE IF NOT EXISTS notifications (
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   type TEXT NOT NULL CHECK (type IN ('like', 'comment', 'repost', 'reaction', 'follow', 'group_invite')),
   related_user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  related_post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
+  related_post_id UUID REFERENCES posts(id) ON DELETE CASCADE, -- Nullable for group notifications
+  related_group_id UUID REFERENCES groups(id) ON DELETE CASCADE, -- For group-related notifications
   message TEXT,
   is_read BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT now(),
