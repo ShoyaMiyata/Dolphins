@@ -453,7 +453,7 @@ export function useInviteUserToGroup() {
         .eq('group_id', groupId)
         .eq('user_id', userId)
         .eq('is_active', true)
-        .single()
+        .maybeSingle()
 
       if (existingActiveMember) {
         throw new Error('このユーザーは既にメンバーです')
