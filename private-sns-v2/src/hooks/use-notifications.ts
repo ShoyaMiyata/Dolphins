@@ -27,11 +27,15 @@ type Notification = Database['public']['Tables']['notifications']['Row'] & {
 export function useNotifications() {
   const supabase = createClient()
   const user = useAuthStore((state) => state.user)
+  const queryClient = useQueryClient()
 
   return useQuery({
     queryKey: ['notifications', user?.id],
     queryFn: async () => {
       if (!user?.id) throw new Error('認証が必要です')
+
+      // 通知を取得する前にグループ一覧を更新（招待されたグループを表示するため）
+      queryClient.invalidateQueries({ queryKey: ['groups'] })
 
       const { data, error } = await supabase
         .from('notifications')
