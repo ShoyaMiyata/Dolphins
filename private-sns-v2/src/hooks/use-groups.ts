@@ -178,6 +178,15 @@ export function useGroups() {
           const isMember = !!membership
           const isOwner = (membership as any)?.role === 'owner'
 
+          // デバッグ情報
+          console.log(`Group ${group.name} (${group.id}):`, {
+            userId: user.id,
+            isMember,
+            isOwner,
+            visibility: group.visibility_type,
+            membershipsCount: memberships?.length || 0
+          })
+
           return {
             ...group,
             profiles: ownerProfile,
@@ -187,6 +196,8 @@ export function useGroups() {
           }
         })
       )
+
+      console.log('Final groups for user', user.id, ':', groupsWithDetails.map(g => ({ id: g.id, name: g.name, isMember: g.is_member, visibility: g.visibility_type })))
 
       return groupsWithDetails as GroupWithDetails[]
     },
