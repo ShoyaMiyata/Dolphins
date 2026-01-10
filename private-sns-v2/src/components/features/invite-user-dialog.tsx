@@ -90,13 +90,7 @@ export function InviteUserDialog({
     if (successCount > 0) {
       setSelectedUsers(new Set())
       onOpenChange(false)
-      toast.success(`${successCount}人のユーザーを${groupName}に招待しました${errorCount > 0 ? ` (${errorCount}件失敗)` : ''}`, {
-        description: '招待されたユーザーはグループ一覧で確認できます',
-        action: {
-          label: 'グループ一覧を見る',
-          onClick: () => window.location.href = '/groups',
-        },
-      })
+      toast.success(`${successCount}人のユーザーを${groupName}に招待しました${errorCount > 0 ? ` (${errorCount}件失敗)` : ''}`)
     } else {
       toast.error('招待に失敗しました')
     }
