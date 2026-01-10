@@ -110,24 +110,10 @@ export function useGroups() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return []
 
-      // ユーザーがアクティブなメンバーであるグループのみを取得
+      // ステップ1: ユーザーのアクティブなメンバーシップを取得
       const { data: memberships, error: membershipError } = await supabase
         .from('group_members')
-        .select(`
-          role,
-          groups (
-            id,
-            name,
-            description,
-            image_url,
-            cover_image_url,
-            visibility_type,
-            join_type,
-            owner_id,
-            created_at,
-            updated_at
-          )
-        `)
+        .select('group_id, role')
         .eq('user_id', user.id)
         .eq('is_active', true)
 
@@ -136,7 +122,27 @@ export function useGroups() {
         throw membershipError
       }
 
-      // パブリックグループも取得（メンバーシップに関係なく）
+      console.log('Memberships for user', user.id, ':', memberships)
+
+      // ステップ2: メンバーであるグループの情報を取得
+      const memberGroupIds = (memberships || []).map(m => (m as any).group_id)
+      let memberGroups: any[] = []
+
+      if (memberGroupIds.length > 0) {
+        const { data: memberGroupsData, error: memberGroupsError } = await supabase
+          .from('groups')
+          .select('*')
+          .in('id', memberGroupIds)
+
+        if (memberGroupsError) {
+          console.error('メンバーグループ取得エラー:', memberGroupsError)
+          throw memberGroupsError
+        }
+
+        memberGroups = memberGroupsData || []
+      }
+
+      // ステップ3: パブリックグループを取得
       const { data: publicGroups, error: publicError } = await supabase
         .from('groups')
         .select('*')
@@ -148,14 +154,15 @@ export function useGroups() {
         throw publicError
       }
 
-      // メンバーであるグループとパブリックグループをマージ（重複除去）
-      const memberGroups = (memberships || []).map((m: any) => m.groups).filter(Boolean)
+      // ステップ4: 全てのグループをマージ（重複除去）
       const allGroups = [...memberGroups, ...(publicGroups || [])]
-
-      // 重複を除去
       const uniqueGroups = allGroups.filter((group, index, self) =>
         index === self.findIndex(g => g.id === group.id)
       )
+
+      console.log('Member groups:', memberGroups)
+      console.log('Public groups:', publicGroups)
+      console.log('All unique groups:', uniqueGroups)
 
       // 各グループの詳細情報を追加
       const groupsWithDetails = await Promise.all(
