@@ -46,10 +46,6 @@ export function useNotifications() {
           related_post:posts!related_post_id(
             id,
             content
-          ),
-          related_group:groups!related_post_id(
-            id,
-            name
           )
         `)
         .eq('user_id', user.id)
@@ -58,7 +54,27 @@ export function useNotifications() {
 
       if (error) throw error
 
-      return (data || []) as Notification[]
+      // group_inviteタイプの通知の場合、related_post_idにグループIDが格納されているので
+      // 別途グループ情報を取得
+      const notificationsWithGroups = await Promise.all(
+        (data || []).map(async (notification: any) => {
+          if (notification.type === 'group_invite' && notification.related_post_id) {
+            const { data: groupData } = await supabase
+              .from('groups')
+              .select('id, name')
+              .eq('id', notification.related_post_id)
+              .single()
+
+            return {
+              ...notification,
+              related_group: groupData || null
+            }
+          }
+          return notification
+        })
+      )
+
+      return notificationsWithGroups as Notification[]
     },
     enabled: !!user?.id,
   })
