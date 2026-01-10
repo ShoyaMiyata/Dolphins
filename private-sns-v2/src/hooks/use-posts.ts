@@ -104,24 +104,30 @@ export function usePosts() {
 
       const posts = data || []
 
-      // リポストの場合、original_postを取得
-      for (const post of posts as any[]) {
-        if (post.type === 'repost' && post.original_post_id) {
-          const { data: originalPost } = await supabase
-            .from('posts')
-            .select(`
-              *,
-              profiles!posts_user_id_fkey(*),
-              post_images(*),
-              likes(count),
-              comments(count)
-            `)
-            .eq('id', post.original_post_id)
-            .single()
+      // リポストの場合、original_postを一括取得（N+1問題を回避）
+      const originalPostIds = posts
+        .filter((post: any) => post.type === 'repost' && post.original_post_id)
+        .map((post: any) => post.original_post_id)
 
-          if (originalPost) {
-            post.original_post = originalPost
-          }
+      if (originalPostIds.length > 0) {
+        const { data: originalPostsData } = await supabase
+          .from('posts')
+          .select(`
+            *,
+            profiles!posts_user_id_fkey(*),
+            post_images(*),
+            likes(count),
+            comments(count)
+          `)
+          .in('id', originalPostIds)
+
+        if (originalPostsData) {
+          const originalPostsMap = new Map(originalPostsData.map((p: any) => [p.id, p]))
+          posts.forEach((post: any) => {
+            if (post.type === 'repost' && post.original_post_id) {
+              post.original_post = originalPostsMap.get(post.original_post_id)
+            }
+          })
         }
       }
 
