@@ -173,6 +173,8 @@ export function getNotificationText(notification: Notification): string {
       return `${displayName}さんがあなたの投稿にいいねしました`
     case 'comment':
       return `${displayName}さんがあなたの投稿にコメントしました`
+    case 'comment_reply':
+      return `${displayName}さんがあなたがコメントした投稿に新しいコメントを追加しました`
     case 'repost':
       return `${displayName}さんがあなたの投稿をリポストしました`
     case 'reaction':

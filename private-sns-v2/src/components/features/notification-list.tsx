@@ -172,6 +172,7 @@ function NotificationIcon({ type }: { type: string }) {
         </div>
       )
     case 'comment':
+    case 'comment_reply':
       return (
         <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center shrink-0">
           <MessageCircle className={cn(iconClass, 'text-blue-500')} />
