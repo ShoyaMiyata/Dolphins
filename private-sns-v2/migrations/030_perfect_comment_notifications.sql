@@ -78,21 +78,13 @@ BEGIN
 
   -- Notify other unique previous commenters with 'comment_reply' type
   -- Exclude the current commenter and the post owner (already notified above)
+  -- Simplified query for debugging
   INSERT INTO public.notifications (user_id, type, related_user_id, related_post_id)
   SELECT DISTINCT c.user_id, 'comment_reply', NEW.user_id, NEW.post_id
   FROM public.comments c
   WHERE c.post_id = NEW.post_id
     AND c.user_id != NEW.user_id
-    AND c.user_id != post_owner_id
-    -- Check if notification already exists to avoid duplicates
-    AND NOT EXISTS (
-      SELECT 1 FROM notifications n
-      WHERE n.user_id = c.user_id
-        AND n.type = 'comment_reply'
-        AND n.related_user_id = NEW.user_id
-        AND n.related_post_id = NEW.post_id
-        AND n.created_at > NOW() - INTERVAL '1 minute'
-    );
+    AND c.user_id != post_owner_id;
 
   GET DIAGNOSTICS previous_commenter_count = ROW_COUNT;
   RAISE WARNING 'Created % comment_reply notifications', previous_commenter_count;
@@ -105,3 +97,4 @@ EXCEPTION
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+EXCEPTION
