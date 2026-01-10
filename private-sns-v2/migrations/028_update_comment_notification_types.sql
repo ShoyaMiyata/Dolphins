@@ -1,7 +1,26 @@
 -- Update notification types to distinguish between owner and participant comment notifications
 -- First, update the check constraint to allow new types
-ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notification_type;
-ALTER TABLE notifications ADD CONSTRAINT notification_type CHECK (type IN ('like', 'comment', 'comment_reply', 'repost', 'reaction', 'follow'));
+-- Drop the constraint with the correct name (PostgreSQL auto-generates names)
+DO $$
+DECLARE
+    constraint_name TEXT;
+BEGIN
+    -- Find the constraint name for the type check
+    SELECT con.conname INTO constraint_name
+    FROM pg_constraint con
+    JOIN pg_class rel ON rel.oid = con.conrelid
+    JOIN pg_attribute att ON att.attrelid = con.conrelid AND att.attnum = ANY(con.conkey)
+    WHERE rel.relname = 'notifications'
+      AND att.attname = 'type'
+      AND con.contype = 'c';
+
+    IF constraint_name IS NOT NULL THEN
+        EXECUTE 'ALTER TABLE notifications DROP CONSTRAINT ' || constraint_name;
+    END IF;
+END $$;
+
+-- Add the new constraint allowing 'comment_reply' type
+ALTER TABLE notifications ADD CONSTRAINT notification_type_check CHECK (type IN ('like', 'comment', 'comment_reply', 'repost', 'reaction', 'follow'));
 
 -- Update the comment notification function to use different types with better error handling
 CREATE OR REPLACE FUNCTION public.create_comment_notification()
