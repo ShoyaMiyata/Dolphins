@@ -474,7 +474,9 @@ export function useInviteUserToGroup() {
       if (!data) throw new Error('ユーザーの招待に失敗しました')
 
       // 招待成功後に通知を作成
-      const { error: notificationError } = await (supabase as any)
+      console.log('通知作成開始:', { userId, groupId, currentUserId: currentUser.id })
+
+      const { data: notificationData, error: notificationError } = await (supabase as any)
         .from('notifications')
         .insert({
           user_id: userId,
@@ -483,12 +485,15 @@ export function useInviteUserToGroup() {
           related_post_id: groupId,
           message: 'グループに招待されました'
         })
+        .select()
+
+      console.log('通知作成結果:', { notificationData, notificationError })
 
       if (notificationError) {
         console.error('通知作成エラー:', notificationError)
         // 通知作成失敗でも招待自体は成功として扱う
       } else {
-        console.log('招待通知を作成しました')
+        console.log('招待通知を作成しました:', notificationData)
       }
 
       return userId
