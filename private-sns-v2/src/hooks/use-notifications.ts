@@ -34,9 +34,6 @@ export function useNotifications() {
     queryFn: async () => {
       if (!user?.id) throw new Error('認証が必要です')
 
-      // 通知を取得する前にグループ一覧を更新（招待されたグループを表示するため）
-      queryClient.invalidateQueries({ queryKey: ['groups'] })
-
       const { data, error } = await supabase
         .from('notifications')
         .select(`

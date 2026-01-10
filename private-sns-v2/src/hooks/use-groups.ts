@@ -166,6 +166,7 @@ export function useGroups() {
 
       return filteredGroups as GroupWithDetails[]
     },
+    refetchInterval: 30000, // 30秒ごとに更新して招待されたグループを表示
   })
 }
 
