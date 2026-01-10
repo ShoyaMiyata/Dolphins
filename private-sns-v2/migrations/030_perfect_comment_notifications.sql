@@ -77,11 +77,8 @@ BEGIN
   WHERE c.post_id = NEW.post_id
     AND c.user_id != NEW.user_id;
 
-    GET DIAGNOSTICS previous_commenter_count = ROW_COUNT;
-    RAISE WARNING 'TRIGGER: Created % comment_reply notifications', previous_commenter_count;
-  ELSE
-    RAISE WARNING 'TRIGGER: No previous commenters to notify';
-  END IF;
+  GET DIAGNOSTICS previous_commenter_count = ROW_COUNT;
+  RAISE WARNING 'TRIGGER: Created % comment_reply notifications', previous_commenter_count;
 
   RAISE WARNING 'TRIGGER END: create_comment_notification completed';
   RETURN NEW;
