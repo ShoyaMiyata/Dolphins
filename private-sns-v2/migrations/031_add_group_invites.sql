@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS group_invites (
   message TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE(group_id, invited_user_id)
+  -- UNIQUE制約を削除して再招待を可能にする
 );
 
 -- Add indexes
