@@ -1,3 +1,5 @@
+'use client'
+
 import { NotificationList } from '@/components/features/notification-list'
 import { BottomNav } from '@/components/layout/bottom-nav'
 import { AppHeader } from '@/components/layout/app-header'
