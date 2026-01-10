@@ -28,6 +28,7 @@ CREATE INDEX IF NOT EXISTS idx_group_invites_created_at ON group_invites(created
 ALTER TABLE group_invites ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for group_invites
+DROP POLICY IF EXISTS "Group members can view invites for their group" ON group_invites;
 CREATE POLICY "Group members can view invites for their group" ON group_invites
   FOR SELECT USING (
     EXISTS (
@@ -37,9 +38,11 @@ CREATE POLICY "Group members can view invites for their group" ON group_invites
     )
   );
 
+DROP POLICY IF EXISTS "Invited users can view their own invites" ON group_invites;
 CREATE POLICY "Invited users can view their own invites" ON group_invites
   FOR SELECT USING (auth.uid() = invited_user_id);
 
+DROP POLICY IF EXISTS "Group owners and admins can create invites" ON group_invites;
 CREATE POLICY "Group owners and admins can create invites" ON group_invites
   FOR INSERT WITH CHECK (
     auth.uid() = invited_by_user_id AND
@@ -57,10 +60,12 @@ CREATE POLICY "Group owners and admins can create invites" ON group_invites
     )
   );
 
+DROP POLICY IF EXISTS "Invited users can update their invite status" ON group_invites;
 CREATE POLICY "Invited users can update their invite status" ON group_invites
   FOR UPDATE USING (auth.uid() = invited_user_id)
   WITH CHECK (auth.uid() = invited_user_id);
 
+DROP POLICY IF EXISTS "Group owners and admins can update invites" ON group_invites;
 CREATE POLICY "Group owners and admins can update invites" ON group_invites
   FOR UPDATE USING (
     EXISTS (
