@@ -11,7 +11,6 @@ import {
   TrendingUp,
   Shield,
   Clock,
-  RefreshCw,
   Trash2,
   CheckCircle,
   XCircle,
@@ -63,7 +62,6 @@ export default function AdminPage() {
   const { data: stats, isLoading: statsLoading } = useAdminStats()
 
   const updateUserRole = useUpdateUserRole()
-  const updateLastAccess = useUpdateLastAccess()
   const updateFeedbackStatus = useUpdateFeedbackStatus()
   const deleteFeedback = useDeleteFeedback()
 
@@ -96,9 +94,6 @@ export default function AdminPage() {
     await updateUserRole.mutateAsync({ userId, role: newRole })
   }
 
-  const handleUpdateLastAccess = async () => {
-    await updateLastAccess.mutateAsync()
-  }
 
   const handleFeedbackStatusChange = async (feedbackId: string, status: 'pending' | 'in_progress' | 'completed' | 'declined') => {
     await updateFeedbackStatus.mutateAsync({ feedbackId, status })
