@@ -259,13 +259,27 @@ export function useApproveJoinRequest() {
       const { data: { user: currentUser } } = await supabase.auth.getUser()
       if (!currentUser) throw new Error('認証が必要です')
 
-      // リクエストを承認済みに更新（approved_by_user_idを設定）
+      // リクエストを承認済みに更新（approved_by_user_idカラムが存在しない場合は設定しない）
+      const updateData: any = { status: 'approved' }
+      try {
+        // approved_by_user_idカラムが存在するかチェック
+        const { error: testError } = await (supabase as any)
+          .from('group_join_requests')
+          .select('approved_by_user_id')
+          .limit(1)
+
+        if (!testError) {
+          // カラムが存在する場合のみ設定
+          updateData.approved_by_user_id = currentUser.id
+        }
+      } catch (error) {
+        // カラムが存在しない場合は何もしない
+        console.log('approved_by_user_id column not available yet')
+      }
+
       const { error: updateError } = await (supabase as any)
         .from('group_join_requests')
-        .update({
-          status: 'approved',
-          approved_by_user_id: currentUser.id
-        })
+        .update(updateData)
         .eq('id', requestId)
 
       if (updateError) throw updateError
