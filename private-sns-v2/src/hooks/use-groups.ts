@@ -110,20 +110,56 @@ export function useGroups() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return []
 
-      // グループを取得
-      const { data: groups, error } = await supabase
-        .from('groups')
-        .select('*')
-        .order('created_at', { ascending: false })
+      // ユーザーがアクティブなメンバーであるグループのみを取得
+      const { data: memberships, error: membershipError } = await supabase
+        .from('group_members')
+        .select(`
+          role,
+          groups (
+            id,
+            name,
+            description,
+            image_url,
+            cover_image_url,
+            visibility_type,
+            join_type,
+            owner_id,
+            created_at,
+            updated_at
+          )
+        `)
+        .eq('user_id', user.id)
+        .eq('is_active', true)
 
-      if (error) {
-        console.error('グループ取得エラー:', error)
-        throw error
+      if (membershipError) {
+        console.error('メンバーシップ取得エラー:', membershipError)
+        throw membershipError
       }
 
-      // 各グループのメンバー数とメンバーシップを取得
+      // パブリックグループも取得（メンバーシップに関係なく）
+      const { data: publicGroups, error: publicError } = await supabase
+        .from('groups')
+        .select('*')
+        .eq('visibility_type', 'public')
+        .order('created_at', { ascending: false })
+
+      if (publicError) {
+        console.error('パブリックグループ取得エラー:', publicError)
+        throw publicError
+      }
+
+      // メンバーであるグループとパブリックグループをマージ（重複除去）
+      const memberGroups = (memberships || []).map((m: any) => m.groups).filter(Boolean)
+      const allGroups = [...memberGroups, ...(publicGroups || [])]
+
+      // 重複を除去
+      const uniqueGroups = allGroups.filter((group, index, self) =>
+        index === self.findIndex(g => g.id === group.id)
+      )
+
+      // 各グループの詳細情報を追加
       const groupsWithDetails = await Promise.all(
-        (groups || []).map(async (group: any) => {
+        uniqueGroups.map(async (group: any) => {
           // オーナーのプロフィールを取得
           const { data: ownerProfile } = await supabase
             .from('profiles')
@@ -137,15 +173,8 @@ export function useGroups() {
             .select('*', { count: 'exact', head: true })
             .eq('group_id', group.id)
 
-          // 自分がアクティブなメンバーかどうかを確認
-          const { data: membership } = await supabase
-            .from('group_members')
-            .select('role')
-            .eq('group_id', group.id)
-            .eq('user_id', user.id)
-            .eq('is_active', true)  // アクティブなメンバーのみ考慮
-            .maybeSingle() as any
-
+          // 自分のメンバーシップを取得
+          const membership = (memberships || []).find((m: any) => m.groups?.id === group.id)
           const isMember = !!membership
           const isOwner = (membership as any)?.role === 'owner'
 
@@ -159,14 +188,8 @@ export function useGroups() {
         })
       )
 
-      // プライベートグループはメンバーのみ表示
-      const filteredGroups = groupsWithDetails.filter((group: any) => {
-        return group.visibility_type === 'public' || group.is_member || group.is_owner
-      })
-
-      return filteredGroups as GroupWithDetails[]
+      return groupsWithDetails as GroupWithDetails[]
     },
-    refetchInterval: 30000, // 30秒ごとに更新して招待されたグループを表示
   })
 }
 
