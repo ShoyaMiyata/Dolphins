@@ -137,12 +137,13 @@ export function useGroups() {
             .select('*', { count: 'exact', head: true })
             .eq('group_id', group.id)
 
-          // 自分がメンバーかどうかを確認
+          // 自分がアクティブなメンバーかどうかを確認
           const { data: membership } = await supabase
             .from('group_members')
             .select('role')
             .eq('group_id', group.id)
             .eq('user_id', user.id)
+            .eq('is_active', true)  // アクティブなメンバーのみ考慮
             .maybeSingle() as any
 
           const isMember = !!membership
@@ -204,12 +205,13 @@ export function useGroup(groupId: string | null) {
         .select('*', { count: 'exact', head: true })
         .eq('group_id', groupId)
 
-      // 自分がメンバーかどうかを確認
+      // 自分がアクティブなメンバーかどうかを確認
       const { data: membership } = await supabase
         .from('group_members')
         .select('role')
         .eq('group_id', groupId)
         .eq('user_id', user.id)
+        .eq('is_active', true)  // アクティブなメンバーのみ考慮
         .maybeSingle() as any
 
       return {
