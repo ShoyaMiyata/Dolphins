@@ -72,20 +72,27 @@ export function InviteUserDialog({
       return
     }
 
-    try {
-      // 選択されたユーザーを順番に招待
-      const invitePromises = Array.from(selectedUsers).map(userId =>
-        inviteUser.mutateAsync({ groupId, userId })
-      )
+    let successCount = 0
+    let errorCount = 0
 
-      await Promise.all(invitePromises)
+    // 選択されたユーザーを順番に招待
+    for (const userId of selectedUsers) {
+      try {
+        await inviteUser.mutateAsync({ groupId, userId })
+        successCount++
+      } catch (error) {
+        console.error('ユーザー招待エラー:', error)
+        errorCount++
+      }
+    }
 
-      const selectedCount = selectedUsers.size
+    // 結果を表示
+    if (successCount > 0) {
       setSelectedUsers(new Set())
       onOpenChange(false)
-      toast.success(`${selectedCount}人のユーザーを${groupName}に招待しました`)
-    } catch (error) {
-      // エラーは個別の招待で処理されるので、ここでは何もしない
+      toast.success(`${successCount}人のユーザーを${groupName}に招待しました${errorCount > 0 ? ` (${errorCount}件失敗)` : ''}`)
+    } else {
+      toast.error('招待に失敗しました')
     }
   }
 
