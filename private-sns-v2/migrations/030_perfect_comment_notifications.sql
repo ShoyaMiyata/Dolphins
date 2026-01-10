@@ -2,22 +2,24 @@
 -- Ensures notifications work correctly with proper type differentiation
 
 -- First, ensure the constraint allows both 'comment' and 'comment_reply'
+-- Drop all existing type check constraints
 DO $$
 DECLARE
-    constraint_name TEXT;
+    constraint_record RECORD;
 BEGIN
-    -- Find and drop existing constraint
-    SELECT con.conname INTO constraint_name
-    FROM pg_constraint con
-    JOIN pg_class rel ON rel.oid = con.conrelid
-    JOIN pg_attribute att ON att.attrelid = con.conrelid AND att.attnum = ANY(con.conkey)
-    WHERE rel.relname = 'notifications'
-      AND att.attname = 'type'
-      AND con.contype = 'c';
-
-    IF constraint_name IS NOT NULL THEN
-        EXECUTE 'ALTER TABLE notifications DROP CONSTRAINT ' || constraint_name;
-    END IF;
+    -- Find and drop all type check constraints for notifications table
+    FOR constraint_record IN
+        SELECT con.conname as constraint_name
+        FROM pg_constraint con
+        JOIN pg_class rel ON rel.oid = con.conrelid
+        JOIN pg_attribute att ON att.attrelid = con.conrelid AND att.attnum = ANY(con.conkey)
+        WHERE rel.relname = 'notifications'
+          AND att.attname = 'type'
+          AND con.contype = 'c'
+    LOOP
+        EXECUTE 'ALTER TABLE notifications DROP CONSTRAINT ' || constraint_record.constraint_name;
+        RAISE NOTICE 'Dropped constraint: %', constraint_record.constraint_name;
+    END LOOP;
 END $$;
 
 -- Add the constraint allowing both comment types
