@@ -323,18 +323,20 @@ export default function AdminPage() {
 
                           {/* Access Info */}
                           <div className="bg-white/60 rounded-lg p-3 border border-blue-50">
-                            <div className="flex items-center gap-2 text-sm">
-                              <Clock className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                              <span className="text-gray-700 font-medium">最終アクセス:</span>
-                              <span className={`font-semibold truncate ${user.last_access_at ? 'text-green-600' : 'text-gray-500'}`}>
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2 text-xs text-gray-500 mb-1">
+                                <Clock className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
+                                <span className="font-medium">最終アクセス</span>
+                              </div>
+                              <div className={`text-sm font-semibold ${user.last_access_at ? 'text-green-600' : 'text-gray-500'}`}>
                                 {user.last_access_at
                                   ? format(new Date(user.last_access_at), 'yyyy/MM/dd HH:mm', { locale: ja })
                                   : '未記録'
                                 }
-                              </span>
+                              </div>
                             </div>
                             {user.last_access_at && (
-                              <div className="text-xs text-gray-500 mt-1">
+                              <div className="text-xs text-gray-500 mt-1 pl-0">
                                 ({formatDistanceToNow(new Date(user.last_access_at), { addSuffix: true, locale: ja })})
                               </div>
                             )}
