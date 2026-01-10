@@ -477,6 +477,7 @@ export function useInviteUserToGroup() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['group-members', variables.groupId] })
+      queryClient.invalidateQueries({ queryKey: ['all-users-for-invite', variables.groupId] })
       queryClient.invalidateQueries({ queryKey: ['group', variables.groupId] })
       queryClient.invalidateQueries({ queryKey: ['groups'] })
       toast.success('ユーザーをグループに招待しました')
