@@ -1,12 +1,13 @@
 import { PostForm } from '@/components/features/post-form'
 import { Timeline } from '@/components/features/timeline'
 import { AppHeader } from '@/components/layout/app-header'
+import { Home as HomeIcon } from 'lucide-react'
 
 export default function HomePage() {
   return (
     <div className="bg-background">
       {/* Header */}
-      <AppHeader />
+      <AppHeader groupName="ホーム" icon={HomeIcon} />
 
       {/* Main Content */}
       <main className="container max-w-md mx-auto pb-32 px-4">
