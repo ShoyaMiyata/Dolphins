@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from 'react'
 import { useInView } from 'react-intersection-observer'
-import { useVirtualizer } from '@tanstack/react-virtual'
 import { motion } from 'framer-motion'
 import { Loader2, RefreshCw } from 'lucide-react'
 import { usePosts } from '@/hooks/use-posts'
@@ -26,7 +25,6 @@ export function Timeline() {
     threshold: 0,
   })
 
-  const parentRef = useRef<HTMLDivElement>(null)
 
   // デバッグログ
   console.log('Timeline Debug:', {
@@ -47,13 +45,6 @@ export function Timeline() {
   // データを平坦化
   const posts = data?.pages.flatMap((page) => page.posts) || []
 
-  // バーチャルスクロールの設定
-  const rowVirtualizer = useVirtualizer({
-    count: posts.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 200, // 各投稿の推定高さ（px）
-    overscan: 5, // 画面外にレンダリングする要素数
-  })
 
   // ローディング状態
   if (isLoading) {

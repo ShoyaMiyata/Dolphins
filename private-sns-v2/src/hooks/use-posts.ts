@@ -71,35 +71,24 @@ async function uploadImage(file: File, userId: string): Promise<string> {
   return publicUrl
 }
 
-// 投稿一覧取得（無限スクロール対応）- リポストを含む
+// 投稿一覧取得（無限スクロール対応）
 export function usePosts() {
   const supabase = createClient()
 
   return useInfiniteQuery({
     queryKey: ['posts'],
     queryFn: async ({ pageParam = 0 }) => {
-      console.log('usePosts queryFn called with pageParam:', pageParam)
       const start = pageParam * POSTS_PER_PAGE
       const end = start + POSTS_PER_PAGE - 1
 
-      console.log('Getting user...')
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-
-      if (userError) {
-        console.error('User error:', userError)
-        // ユーザーが取得できなくてもクエリは続行（公開投稿を表示するため）
-      }
+      const { data: { user } } = await supabase.auth.getUser()
       const currentUserId = user?.id
-      console.log('Current user ID:', currentUserId)
 
-      console.log('Fetching posts...')
-      // 通常の投稿とリポストを統合して取得
+      // 投稿とリポストを統合されたpostsテーブルから取得
       const { data, error, count } = await supabase
         .from('posts')
         .select(`
           *,
-          type,
-          original_post_id,
           profiles!posts_user_id_fkey(*),
           post_images(*),
           likes(count),
@@ -108,72 +97,31 @@ export function usePosts() {
         .order('created_at', { ascending: false })
         .range(start, end)
 
-      // リポストの場合、original_postを取得
-      if (data) {
-        for (const post of data as any[]) {
-          if (post.type === 'repost' && post.original_post_id) {
-            const { data: originalPost } = await supabase
-              .from('posts')
-              .select(`
-                *,
-                profiles!posts_user_id_fkey(*),
-                post_images(*),
-                likes(count),
-                comments(count)
-              `)
-              .eq('id', post.original_post_id)
-              .single()
-
-            if (originalPost) {
-              post.original_post = originalPost
-            }
-          }
-        }
-      }
-
-      console.log('Posts query result:', { data, error, count })
       if (error) {
         console.error('Posts query error:', error)
         throw error
       }
 
-      // リポストされた投稿を取得
-      let repostedPosts: any[] = []
-      if (currentUserId) {
-        const { data: repostsData, error: repostsError } = await supabase
-          .from('reposts')
-          .select(`
-            id,
-            created_at,
-            posts!reposts_post_id_fkey(
+      const posts = data || []
+
+      // リポストの場合、original_postを取得
+      for (const post of posts as any[]) {
+        if (post.type === 'repost' && post.original_post_id) {
+          const { data: originalPost } = await supabase
+            .from('posts')
+            .select(`
               *,
               profiles!posts_user_id_fkey(*),
               post_images(*),
               likes(count),
-              comments(count),
-              reposts(count)
-            )
-          `)
-          .eq('user_id', currentUserId)
-          .order('created_at', { ascending: false })
-          .range(start, end)
+              comments(count)
+            `)
+            .eq('id', post.original_post_id)
+            .single()
 
-        if (repostsError) {
-          console.error('Reposts query error:', repostsError)
-        } else {
-          repostedPosts = (repostsData || []).map((repost: any) => ({
-            ...repost.posts,
-            repost_id: repost.id,
-            repost_created_at: repost.created_at,
-            is_reposted_post: true, // リポストされた投稿であることを示すフラグ
-            profiles: Array.isArray(repost.posts.profiles) ? repost.posts.profiles[0] : repost.posts.profiles,
-            post_images: Array.isArray(repost.posts.post_images)
-              ? repost.posts.post_images.sort((a: any, b: any) => a.order_index - b.order_index)
-              : [],
-            likes_count: Array.isArray(repost.posts.likes) ? repost.posts.likes[0]?.count || 0 : 0,
-            comments_count: Array.isArray(repost.posts.comments) ? repost.posts.comments[0]?.count || 0 : 0,
-            reposts_count: Array.isArray(repost.posts.reposts) ? repost.posts.reposts[0]?.count || 0 : 0,
-          }))
+          if (originalPost) {
+            post.original_post = originalPost
+          }
         }
       }
 
@@ -181,10 +129,7 @@ export function usePosts() {
       let userLikes: Set<string> = new Set()
       let userReposts: Set<string> = new Set()
 
-      const allPostIds = [
-        ...(data || []).map((post: any) => post.id),
-        ...repostedPosts.map((post: any) => post.id)
-      ].filter((id, index, arr) => arr.indexOf(id) === index) // 重複を除去
+      const allPostIds = posts.map((post: any) => post.id)
 
       if (currentUserId && allPostIds.length > 0) {
         // 一括でいいね状態を取得
@@ -196,18 +141,18 @@ export function usePosts() {
 
         userLikes = new Set((likesData || []).map((like: any) => like.post_id))
 
-        // 一括でリポスト状態を取得（postsテーブルから）
+        // 一括でリポスト状態を取得（postsテーブル内のリポストをチェック）
         const { data: repostsData } = await supabase
           .from('posts')
           .select('original_post_id')
           .eq('user_id', currentUserId)
-          .in('post_id', allPostIds)
+          .eq('type', 'repost')
+          .in('original_post_id', allPostIds)
 
         userReposts = new Set((repostsData || []).map((repost: any) => repost.original_post_id))
       }
 
-      // 自分の投稿とリポストを統合してソート
-      const ownPostsWithDetails: PostWithDetails[] = (data || []).map((post: any) => ({
+      const postsWithDetails: PostWithDetails[] = posts.map((post: any) => ({
         ...post,
         profiles: Array.isArray(post.profiles) ? post.profiles[0] : post.profiles,
         post_images: Array.isArray(post.post_images)
@@ -220,29 +165,10 @@ export function usePosts() {
         is_reposted: userReposts.has(post.id),
       }))
 
-      const allPosts = [
-        ...ownPostsWithDetails,
-        ...repostedPosts.map((post: any) => ({
-          ...post,
-          is_liked: userLikes.has(post.id),
-          is_reposted: userReposts.has(post.id),
-        }))
-      ]
-
-      // 作成日時でソート（リポストの場合はリポスト日時を使用）
-      allPosts.sort((a: any, b: any) => {
-        const aTime = a.is_reposted_post ? new Date(a.repost_created_at) : new Date(a.created_at)
-        const bTime = b.is_reposted_post ? new Date(b.repost_created_at) : new Date(b.created_at)
-        return bTime.getTime() - aTime.getTime()
-      })
-
-      // ページネーション用に制限
-      const paginatedPosts = allPosts.slice(start, end + 1)
-
       return {
-        posts: paginatedPosts,
-        nextPage: allPosts.length > end + 1 ? pageParam + 1 : undefined,
-        totalCount: allPosts.length,
+        posts: postsWithDetails,
+        nextPage: posts.length === POSTS_PER_PAGE ? pageParam + 1 : undefined,
+        totalCount: count || 0,
       }
     },
     getNextPageParam: (lastPage) => lastPage.nextPage,
