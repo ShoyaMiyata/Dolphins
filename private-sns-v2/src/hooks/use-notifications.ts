@@ -208,6 +208,10 @@ export function getNotificationText(notification: Notification): string {
       return `${displayName}さんがあなたをフォローしました`
     case 'group_invite':
       return notification.message || `${displayName}さんからグループへの招待が届きました`
+    case 'group_join_approved':
+      return notification.message || `${displayName}さんがあなたの参加リクエストを承認しました`
+    case 'group_join_rejected':
+      return notification.message || `${displayName}さんがあなたの参加リクエストを拒否しました`
     default:
       return '新しい通知があります'
   }

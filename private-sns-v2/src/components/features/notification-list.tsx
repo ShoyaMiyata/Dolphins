@@ -30,8 +30,8 @@ export function NotificationList() {
     }
 
     // Navigate based on notification type
-    if (notification.type === 'group_invite') {
-      // Group invite notifications use related_group_id
+    if (notification.type === 'group_invite' || notification.type === 'group_join_approved' || notification.type === 'group_join_rejected') {
+      // Group related notifications use related_group_id
       const groupId = notification.related_group_id
       if (groupId) {
         router.push(`/groups/${groupId}`)
@@ -226,6 +226,18 @@ function NotificationIcon({ type }: { type: string }) {
       return (
         <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center shrink-0">
           <Users className={cn(iconClass, 'text-indigo-500')} />
+        </div>
+      )
+    case 'group_join_approved':
+      return (
+        <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center shrink-0">
+          <Check className={cn(iconClass, 'text-green-500')} />
+        </div>
+      )
+    case 'group_join_rejected':
+      return (
+        <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-950 flex items-center justify-center shrink-0">
+          <X className={cn(iconClass, 'text-red-500')} />
         </div>
       )
     default:

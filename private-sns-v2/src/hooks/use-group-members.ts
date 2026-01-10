@@ -255,10 +255,17 @@ export function useApproveJoinRequest() {
 
   return useMutation({
     mutationFn: async ({ requestId, groupId, userId }: { requestId: string; groupId: string; userId: string }) => {
-      // リクエストを承認済みに更新
+      // 現在のユーザーを取得
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      if (!currentUser) throw new Error('認証が必要です')
+
+      // リクエストを承認済みに更新（approved_by_user_idを設定）
       const { error: updateError } = await (supabase as any)
         .from('group_join_requests')
-        .update({ status: 'approved' })
+        .update({
+          status: 'approved',
+          approved_by_user_id: currentUser.id
+        })
         .eq('id', requestId)
 
       if (updateError) throw updateError
@@ -459,13 +466,15 @@ export function useInviteUserToGroup() {
         throw new Error('このユーザーは既にメンバーです')
       }
 
-      console.log('reactivate_member関数実行:', { group_id: groupId, user_id: userId })
+      console.log('reactivate_member関数実行:', { group_id: groupId, user_id: userId, inviter_id: currentUser.id })
 
       // reactivate_member関数を使用して招待（新規または再招待）
+      // p_inviter_idを渡すことで、関数内で通知が作成される
       const { data, error } = await (supabase as any)
         .rpc('reactivate_member', {
           p_group_id: groupId,
-          p_user_id: userId
+          p_user_id: userId,
+          p_inviter_id: currentUser.id
         })
 
       console.log('招待結果:', { data, error })
@@ -473,7 +482,7 @@ export function useInviteUserToGroup() {
       if (error) throw error
       if (!data) throw new Error('ユーザーの招待に失敗しました')
 
-      // 通知はデータベーストリガーで自動作成される
+      // 通知はreactivate_member関数内で作成される
       return userId
     },
     onSuccess: (_, variables) => {

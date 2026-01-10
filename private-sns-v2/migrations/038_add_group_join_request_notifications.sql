@@ -1,6 +1,9 @@
 -- Add notifications for group join request approval/rejection
 -- Automatically notify users when their join requests are approved or rejected
 
+-- Add approved_by_user_id column to group_join_requests table
+ALTER TABLE group_join_requests ADD COLUMN IF NOT EXISTS approved_by_user_id UUID REFERENCES profiles(id);
+
 -- Add 'group_join_approved' and 'group_join_rejected' to notification types
 DO $$
 DECLARE
