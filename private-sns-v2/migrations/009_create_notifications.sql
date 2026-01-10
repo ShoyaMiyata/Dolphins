@@ -2,9 +2,10 @@
 CREATE TABLE IF NOT EXISTS notifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  type TEXT NOT NULL CHECK (type IN ('like', 'comment', 'repost', 'reaction', 'follow')),
+  type TEXT NOT NULL CHECK (type IN ('like', 'comment', 'repost', 'reaction', 'follow', 'group_invite')),
   related_user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   related_post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
+  message TEXT,
   is_read BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
