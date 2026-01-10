@@ -23,19 +23,23 @@ END $$;
 -- Add the constraint allowing both comment types
 ALTER TABLE notifications ADD CONSTRAINT notification_type_check CHECK (type IN ('like', 'comment', 'comment_reply', 'repost', 'reaction', 'follow'));
 
--- Create the perfect comment notification function
+-- Create the perfect comment notification function with debug logging
 CREATE OR REPLACE FUNCTION public.create_comment_notification()
 RETURNS TRIGGER AS $$
 DECLARE
   post_owner_id UUID;
+  previous_commenter_count INTEGER;
 BEGIN
   -- Get post owner
   SELECT user_id INTO post_owner_id FROM posts WHERE id = NEW.post_id;
 
   -- Safety check: ensure post owner exists
   IF post_owner_id IS NULL THEN
+    RAISE WARNING 'Post owner not found for post_id: %', NEW.post_id;
     RETURN NEW;
   END IF;
+
+  RAISE WARNING 'Creating notifications for comment: user_id=%, post_id=%, post_owner=%', NEW.user_id, NEW.post_id, post_owner_id;
 
   -- Notify post owner with 'comment' type (if not the commenter)
   IF NEW.user_id != post_owner_id THEN
@@ -55,8 +59,22 @@ BEGIN
         NEW.user_id,
         NEW.post_id
       );
+      RAISE WARNING 'Created comment notification for post owner: %', post_owner_id;
+    ELSE
+      RAISE WARNING 'Skipped duplicate comment notification for post owner: %', post_owner_id;
     END IF;
+  ELSE
+    RAISE WARNING 'Skipped notification to post owner (self-comment): %', post_owner_id;
   END IF;
+
+  -- Count previous commenters for debugging
+  SELECT COUNT(DISTINCT c.user_id) INTO previous_commenter_count
+  FROM public.comments c
+  WHERE c.post_id = NEW.post_id
+    AND c.user_id != NEW.user_id
+    AND c.user_id != post_owner_id;
+
+  RAISE WARNING 'Found % previous commenters for post_id: %', previous_commenter_count, NEW.post_id;
 
   -- Notify other unique previous commenters with 'comment_reply' type
   -- Exclude the current commenter and the post owner (already notified above)
@@ -75,6 +93,9 @@ BEGIN
         AND n.related_post_id = NEW.post_id
         AND n.created_at > NOW() - INTERVAL '1 minute'
     );
+
+  GET DIAGNOSTICS previous_commenter_count = ROW_COUNT;
+  RAISE WARNING 'Created % comment_reply notifications', previous_commenter_count;
 
   RETURN NEW;
 EXCEPTION
