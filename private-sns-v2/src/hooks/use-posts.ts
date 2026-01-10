@@ -117,7 +117,8 @@ export function usePosts() {
             profiles!posts_user_id_fkey(*),
             post_images(*),
             likes(count),
-            comments(count)
+            comments(count),
+            reposts:posts!original_post_id(count)
           `)
           .in('id', originalPostIds)
 
