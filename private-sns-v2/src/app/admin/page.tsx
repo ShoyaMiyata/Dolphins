@@ -38,6 +38,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import { useAdmin } from '@/hooks/use-admin'
 import {
   useAdminUsers,
@@ -56,6 +58,7 @@ export default function AdminPage() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [selectedFeedbackId, setSelectedFeedbackId] = useState<string | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [hideCompletedFeedbacks, setHideCompletedFeedbacks] = useState(true)
 
   const { data: users = [], isLoading: usersLoading } = useAdminUsers()
   const { data: feedbacks = [], isLoading: feedbacksLoading } = useAdminFeedback()
@@ -491,99 +494,119 @@ export default function AdminPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {feedbacks.map((feedback: any, index: number) => (
-                      <div
-                        key={feedback.id}
-                        className="bg-gradient-to-r from-white to-blue-50/30 rounded-xl p-5 border border-blue-100 hover:shadow-md hover:border-blue-200 transition-all duration-200"
-                      >
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10 ring-2 ring-blue-100">
-                              <AvatarFallback className="bg-gradient-to-r from-blue-400 to-sky-400 text-white font-medium">
-                                U
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-semibold text-gray-900 text-sm">
-                                ユーザーID: {feedback.user_id.slice(0, 8)}...
-                              </p>
-                              <p className="text-xs text-gray-500 flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {format(new Date(feedback.created_at), 'yyyy/MM/dd HH:mm', { locale: ja })}
+                  <div className="space-y-6">
+                    {/* Filter Controls */}
+                    <div className="flex items-center justify-between bg-white rounded-xl p-4 border border-blue-100">
+                      <div className="flex items-center gap-3">
+                        <Label htmlFor="hide-completed" className="text-sm font-medium text-gray-700">
+                          完了した改善要望を非表示
+                        </Label>
+                        <Switch
+                          id="hide-completed"
+                          checked={hideCompletedFeedbacks}
+                          onCheckedChange={setHideCompletedFeedbacks}
+                        />
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {feedbacks.filter((f: any) => !hideCompletedFeedbacks || f.status !== 'completed').length} 件表示中
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      {feedbacks
+                        .filter((feedback: any) => !hideCompletedFeedbacks || feedback.status !== 'completed')
+                        .map((feedback: any, index: number) => (
+                          <div
+                            key={feedback.id}
+                            className="bg-gradient-to-r from-white to-blue-50/30 rounded-xl p-5 border border-blue-100 hover:shadow-md hover:border-blue-200 transition-all duration-200"
+                          >
+                            <div className="flex items-start justify-between mb-4">
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-10 w-10 ring-2 ring-blue-100">
+                                  <AvatarFallback className="bg-gradient-to-r from-blue-400 to-sky-400 text-white font-medium">
+                                    U
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="font-semibold text-gray-900 text-sm">
+                                    ユーザーID: {feedback.user_id.slice(0, 8)}...
+                                  </p>
+                                  <p className="text-xs text-gray-500 flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    {format(new Date(feedback.created_at), 'yyyy/MM/dd HH:mm', { locale: ja })}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge className={`text-xs px-3 py-1 rounded-full ${getStatusColor(feedback.status)} border-0 shadow-sm`}>
+                                  {getStatusIcon(feedback.status)}
+                                  <span className="ml-1 font-medium">{getStatusText(feedback.status)}</span>
+                                </Badge>
+                              </div>
+                            </div>
+
+                            <div className="bg-white/70 rounded-lg p-4 mb-4 border border-blue-50">
+                              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                                {feedback.content}
                               </p>
                             </div>
+
+                            <div className="flex items-center justify-between">
+                              <Select
+                                value={feedback.status}
+                                onValueChange={(value: 'pending' | 'in_progress' | 'completed' | 'declined') =>
+                                  handleFeedbackStatusChange(feedback.id, value)
+                                }
+                              >
+                                <SelectTrigger className="w-36 bg-white border-blue-200 hover:border-blue-300 focus:border-blue-400">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-white border-blue-200">
+                                  <SelectItem value="pending" className="hover:bg-yellow-50 focus:bg-yellow-50">
+                                    <div className="flex items-center gap-2">
+                                      <AlertCircle className="h-4 w-4 text-yellow-500" />
+                                      <span>保留中</span>
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="in_progress" className="hover:bg-blue-50 focus:bg-blue-50">
+                                    <div className="flex items-center gap-2">
+                                      <PlayCircle className="h-4 w-4 text-blue-500" />
+                                      <span>対応中</span>
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="completed" className="hover:bg-green-50 focus:bg-green-50">
+                                    <div className="flex items-center gap-2">
+                                      <CheckCircle className="h-4 w-4 text-green-500" />
+                                      <span>完了</span>
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="declined" className="hover:bg-red-50 focus:bg-red-50">
+                                    <div className="flex items-center gap-2">
+                                      <XCircle className="h-4 w-4 text-red-500" />
+                                      <span>却下</span>
+                                    </div>
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedFeedbackId(feedback.id)
+                                  setShowDeleteDialog(true)
+                                }}
+                                className="bg-red-50 border-red-200 text-red-600 hover:bg-red-100 hover:border-red-300 focus:bg-red-100 focus:border-red-300 transition-all duration-200"
+                              >
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                削除
+                              </Button>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Badge className={`text-xs px-3 py-1 rounded-full ${getStatusColor(feedback.status)} border-0 shadow-sm`}>
-                              {getStatusIcon(feedback.status)}
-                              <span className="ml-1 font-medium">{getStatusText(feedback.status)}</span>
-                            </Badge>
-                          </div>
-                        </div>
-
-                        <div className="bg-white/70 rounded-lg p-4 mb-4 border border-blue-50">
-                          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-                            {feedback.content}
-                          </p>
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <Select
-                            value={feedback.status}
-                            onValueChange={(value: 'pending' | 'in_progress' | 'completed' | 'declined') =>
-                              handleFeedbackStatusChange(feedback.id, value)
-                            }
-                          >
-                            <SelectTrigger className="w-36 bg-white border-blue-200 hover:border-blue-300 focus:border-blue-400">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white border-blue-200">
-                              <SelectItem value="pending" className="hover:bg-yellow-50 focus:bg-yellow-50">
-                                <div className="flex items-center gap-2">
-                                  <AlertCircle className="h-4 w-4 text-yellow-500" />
-                                  <span>保留中</span>
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="in_progress" className="hover:bg-blue-50 focus:bg-blue-50">
-                                <div className="flex items-center gap-2">
-                                  <PlayCircle className="h-4 w-4 text-blue-500" />
-                                  <span>対応中</span>
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="completed" className="hover:bg-green-50 focus:bg-green-50">
-                                <div className="flex items-center gap-2">
-                                  <CheckCircle className="h-4 w-4 text-green-500" />
-                                  <span>完了</span>
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="declined" className="hover:bg-red-50 focus:bg-red-50">
-                                <div className="flex items-center gap-2">
-                                  <XCircle className="h-4 w-4 text-red-500" />
-                                  <span>却下</span>
-                                </div>
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedFeedbackId(feedback.id)
-                              setShowDeleteDialog(true)
-                            }}
-                            className="bg-red-50 border-red-200 text-red-600 hover:bg-red-100 hover:border-red-300 focus:bg-red-100 focus:border-red-300 transition-all duration-200"
-                          >
-                            <Trash2 className="h-4 w-4 mr-1" />
-                            削除
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                        ))}
+                    </div>
                 )}
-              </CardContent>
+                  </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
