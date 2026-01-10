@@ -30,42 +30,19 @@ DECLARE
   post_owner_id UUID;
   previous_commenter_count INTEGER;
 BEGIN
+  -- Log trigger execution
+  RAISE WARNING 'TRIGGER STARTED: create_comment_notification for comment_id=%, user_id=%, post_id=%', NEW.id, NEW.user_id, NEW.post_id;
+
   -- Get post owner
   SELECT user_id INTO post_owner_id FROM posts WHERE id = NEW.post_id;
 
   -- Safety check: ensure post owner exists
   IF post_owner_id IS NULL THEN
-    RAISE WARNING 'Post owner not found for post_id: %', NEW.post_id;
+    RAISE WARNING 'TRIGGER END: Post owner not found for post_id: %', NEW.post_id;
     RETURN NEW;
   END IF;
 
-  RAISE WARNING 'Creating notifications for comment: user_id=%, post_id=%, post_owner=%', NEW.user_id, NEW.post_id, post_owner_id;
-
-  -- Notify post owner with 'comment' type (if not the commenter)
-  IF NEW.user_id != post_owner_id THEN
-    -- Check if notification already exists to avoid duplicates
-    IF NOT EXISTS (
-      SELECT 1 FROM notifications
-      WHERE user_id = post_owner_id
-        AND type = 'comment'
-        AND related_user_id = NEW.user_id
-        AND related_post_id = NEW.post_id
-        AND created_at > NOW() - INTERVAL '1 minute'
-    ) THEN
-      INSERT INTO public.notifications (user_id, type, related_user_id, related_post_id)
-      VALUES (
-        post_owner_id,
-        'comment',
-        NEW.user_id,
-        NEW.post_id
-      );
-      RAISE WARNING 'Created comment notification for post owner: %', post_owner_id;
-    ELSE
-      RAISE WARNING 'Skipped duplicate comment notification for post owner: %', post_owner_id;
-    END IF;
-  ELSE
-    RAISE WARNING 'Skipped notification to post owner (self-comment): %', post_owner_id;
-  END IF;
+  RAISE WARNING 'TRIGGER: post_owner_id=%', post_owner_id;
 
   -- Count previous commenters for debugging
   SELECT COUNT(DISTINCT c.user_id) INTO previous_commenter_count
@@ -74,26 +51,45 @@ BEGIN
     AND c.user_id != NEW.user_id
     AND c.user_id != post_owner_id;
 
-  RAISE WARNING 'Found % previous commenters for post_id: %', previous_commenter_count, NEW.post_id;
+  RAISE WARNING 'TRIGGER: Found % previous commenters', previous_commenter_count;
+
+  -- Notify post owner with 'comment' type (if not the commenter)
+  IF NEW.user_id != post_owner_id THEN
+    RAISE WARNING 'TRIGGER: Creating comment notification for post owner';
+    INSERT INTO public.notifications (user_id, type, related_user_id, related_post_id)
+    VALUES (
+      post_owner_id,
+      'comment',
+      NEW.user_id,
+      NEW.post_id
+    );
+    RAISE WARNING 'TRIGGER: Created comment notification for post owner';
+  ELSE
+    RAISE WARNING 'TRIGGER: Skipped notification to post owner (self-comment)';
+  END IF;
 
   -- Notify other unique previous commenters with 'comment_reply' type
-  -- Exclude the current commenter and the post owner (already notified above)
-  -- Simplified query for debugging
-  INSERT INTO public.notifications (user_id, type, related_user_id, related_post_id)
-  SELECT DISTINCT c.user_id, 'comment_reply', NEW.user_id, NEW.post_id
-  FROM public.comments c
-  WHERE c.post_id = NEW.post_id
-    AND c.user_id != NEW.user_id
-    AND c.user_id != post_owner_id;
+  IF previous_commenter_count > 0 THEN
+    RAISE WARNING 'TRIGGER: Creating comment_reply notifications';
+    INSERT INTO public.notifications (user_id, type, related_user_id, related_post_id)
+    SELECT DISTINCT c.user_id, 'comment_reply', NEW.user_id, NEW.post_id
+    FROM public.comments c
+    WHERE c.post_id = NEW.post_id
+      AND c.user_id != NEW.user_id
+      AND c.user_id != post_owner_id;
 
-  GET DIAGNOSTICS previous_commenter_count = ROW_COUNT;
-  RAISE WARNING 'Created % comment_reply notifications', previous_commenter_count;
+    GET DIAGNOSTICS previous_commenter_count = ROW_COUNT;
+    RAISE WARNING 'TRIGGER: Created % comment_reply notifications', previous_commenter_count;
+  ELSE
+    RAISE WARNING 'TRIGGER: No previous commenters to notify';
+  END IF;
 
+  RAISE WARNING 'TRIGGER END: create_comment_notification completed';
   RETURN NEW;
 EXCEPTION
   WHEN OTHERS THEN
     -- Log the error but don't fail the comment creation
-    RAISE WARNING 'Failed to create comment notifications: %', SQLERRM;
+    RAISE WARNING 'TRIGGER ERROR: Failed to create comment notifications: %', SQLERRM;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
