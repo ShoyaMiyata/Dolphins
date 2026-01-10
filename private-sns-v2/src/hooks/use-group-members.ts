@@ -505,11 +505,12 @@ export function useGetAllUsersForInvite(groupId: string | null) {
     queryFn: async () => {
       if (!groupId) return []
 
-      // 既にグループメンバーであるユーザーを除外
+      // 既にアクティブなグループメンバーであるユーザーを除外
       const { data: members } = await supabase
         .from('group_members')
         .select('user_id')
         .eq('group_id', groupId)
+        .eq('is_active', true)
 
       const memberIds = (members || []).map((m: any) => m.user_id)
 
@@ -540,11 +541,12 @@ export function useSearchUsersForInvite() {
     mutationFn: async ({ query, groupId }: { query: string; groupId: string }) => {
       if (!query.trim()) return []
 
-      // 既にグループメンバーであるユーザーを除外
+      // 既にアクティブなグループメンバーであるユーザーを除外
       const { data: members } = await supabase
         .from('group_members')
         .select('user_id')
         .eq('group_id', groupId)
+        .eq('is_active', true)
 
       const memberIds = (members || []).map((m: any) => m.user_id)
 
