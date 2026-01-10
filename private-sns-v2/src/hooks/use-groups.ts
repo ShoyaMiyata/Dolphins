@@ -136,7 +136,7 @@ export function useGroups() {
             .from('groups')
             .select('*')
             .eq('id', groupId)
-            .single()
+            .maybeSingle()  // single() から maybeSingle() に変更
 
           if (error) {
             console.error(`グループ ${groupId} 取得エラー:`, error)
