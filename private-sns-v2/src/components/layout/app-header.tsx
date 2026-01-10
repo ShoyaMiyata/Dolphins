@@ -280,29 +280,16 @@ export function AppHeader({ groupName, icon: Icon }: AppHeaderProps) {
             </SheetContent>
           </Sheet>
 
-          {/* Logo or Group Name */}
+          {/* Logo */}
           <div className="flex-1 flex items-center justify-center">
-            {groupName ? (
-              <div className="flex items-center gap-2">
-                {groupName === 'ホーム' ? (
-                  <HomeIcon className="h-5 w-5 text-blue-600" />
-                ) : Icon ? (
-                  <Icon className="h-5 w-5 text-blue-600" />
-                ) : (
-                  <Users className="h-5 w-5 text-blue-600" />
-                )}
-                <h1 className="text-lg font-bold text-gray-900">{groupName}</h1>
-              </div>
-            ) : (
-              <Image
-                src="/images/logo-text.png"
-                alt="Dolphins B.B.C."
-                width={160}
-                height={50}
-                className="h-12 w-auto object-contain logo-blue-filter"
-                priority
-              />
-            )}
+            <Image
+              src="/images/logo-text.png"
+              alt="Dolphins B.B.C."
+              width={160}
+              height={50}
+              className="h-12 w-auto object-contain logo-blue-filter"
+              priority
+            />
           </div>
 
           {/* Reload Button */}
