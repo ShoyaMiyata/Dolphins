@@ -112,6 +112,8 @@ export function useCreateComment() {
 
   return useMutation({
     mutationFn: async ({ postId, content, images }: CreateCommentData) => {
+      console.log('コメント作成開始:', { postId, content, hasImages: !!images?.length })
+
       // 認証チェック
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
@@ -131,26 +133,41 @@ export function useCreateComment() {
         .select()
         .single()
 
-      if (commentError) throw commentError
+      if (commentError) {
+        console.error('コメントINSERTエラー:', commentError)
+        throw new Error(`コメントの作成に失敗しました: ${commentError.message}`)
+      }
+
+      console.log('コメント作成成功:', comment)
 
       // 画像がある場合はアップロード
       if (images && images.length > 0) {
-        const imageUrls = await Promise.all(
-          images.map(async (image) => uploadImage(image, userId))
-        )
+        try {
+          const imageUrls = await Promise.all(
+            images.map(async (image) => uploadImage(image, userId))
+          )
 
-        // comment_imagesに保存
-        const commentImages = imageUrls.map((url, index) => ({
-          comment_id: (comment as any).id,
-          image_url: url,
-          order_index: index,
-        }))
+          // comment_imagesに保存
+          const commentImages = imageUrls.map((url, index) => ({
+            comment_id: (comment as any).id,
+            image_url: url,
+            order_index: index,
+          }))
 
-        const { error: imagesError } = await supabase
-          .from('comment_images')
-          .insert(commentImages as any)
+          const { error: imagesError } = await supabase
+            .from('comment_images')
+            .insert(commentImages as any)
 
-        if (imagesError) throw imagesError
+          if (imagesError) {
+            console.error('コメント画像INSERTエラー:', imagesError)
+            // 画像アップロード失敗でもコメントは成功として扱う
+            console.warn('画像アップロードに失敗しましたが、コメントは作成されました')
+          }
+        } catch (imageError) {
+          console.error('画像アップロードエラー:', imageError)
+          // 画像アップロード失敗でもコメントは成功として扱う
+          console.warn('画像アップロードに失敗しましたが、コメントは作成されました')
+        }
       }
 
       return comment
@@ -164,7 +181,8 @@ export function useCreateComment() {
     },
     onError: (error) => {
       console.error('コメント投稿エラー:', error)
-      toast.error('コメントの投稿に失敗しました')
+      const errorMessage = error instanceof Error ? error.message : 'コメントの投稿に失敗しました'
+      toast.error(errorMessage)
     },
   })
 }
