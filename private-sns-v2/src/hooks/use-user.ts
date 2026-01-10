@@ -1,8 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/types/database.types'
 
-type Profile = Database['public']['Tables']['profiles']['Row']
+export type Profile = Database['public']['Tables']['profiles']['Row'] & {
+  follower_count?: [{ count: number }] | number
+  following_count?: [{ count: number }] | number
+}
+
 import {
   useAuthStore,
   selectUser,
@@ -351,106 +356,70 @@ export function useUser() {
  * Hook to fetch a specific user's profile by ID
  */
 export function useUserProfile(userId: string | null) {
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const supabase = createClient()
 
-  useEffect(() => {
-    if (!userId) {
-      setProfile(null)
-      setIsLoading(false)
-      return
-    }
+  return useQuery<Profile | null, Error>({
+    queryKey: ['profile', userId],
+    queryFn: async () => {
+      if (!userId) return null
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          *,
+          follower_count:follows!follows_following_id_fkey(count),
+          following_count:follows!follows_follower_id_fkey(count)
+        `)
+        .eq('id', userId)
+        .single()
 
-    const fetchProfile = async () => {
-      setIsLoading(true)
-      setError(null)
+      if (error) throw error
+      if (!data) return null
 
-      try {
-        const supabase = createClient()
-
-        const { data, error: fetchError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single()
-
-        if (fetchError) {
-          setError(fetchError.message)
-          setProfile(null)
-        } else {
-          setProfile(data)
-        }
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'プロフィールの取得に失敗しました'
-        setError(errorMessage)
-        setProfile(null)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchProfile()
-  }, [userId])
-
-  return {
-    profile,
-    isLoading,
-    error,
-  }
+      const profileData = data as any
+      // カウントデータを正規化
+      return {
+        ...profileData,
+        follower_count: Array.isArray(profileData.follower_count) ? profileData.follower_count[0]?.count || 0 : 0,
+        following_count: Array.isArray(profileData.following_count) ? profileData.following_count[0]?.count || 0 : 0,
+      } as Profile
+    },
+    enabled: !!userId,
+  })
 }
 
 /**
  * Hook to fetch a user's profile by username
  */
 export function useUserProfileByUsername(username: string | null) {
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const supabase = createClient()
 
-  useEffect(() => {
-    if (!username) {
-      setProfile(null)
-      setIsLoading(false)
-      return
-    }
+  return useQuery<Profile | null, Error>({
+    queryKey: ['profileByUsername', username],
+    queryFn: async () => {
+      if (!username) return null
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          *,
+          follower_count:follows!follows_following_id_fkey(count),
+          following_count:follows!follows_follower_id_fkey(count)
+        `)
+        .eq('username', username)
+        .single()
 
-    const fetchProfile = async () => {
-      setIsLoading(true)
-      setError(null)
+      if (error) throw error
+      if (!data) return null
 
-      try {
-        const supabase = createClient()
-
-        const { data, error: fetchError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('username', username)
-          .single()
-
-        if (fetchError) {
-          setError(fetchError.message)
-          setProfile(null)
-        } else {
-          setProfile(data)
-        }
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'プロフィールの取得に失敗しました'
-        setError(errorMessage)
-        setProfile(null)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchProfile()
-  }, [username])
-
-  return {
-    profile,
-    isLoading,
-    error,
-  }
+      const profileData = data as any
+      // カウントデータを正規化
+      return {
+        ...profileData,
+        follower_count: Array.isArray(profileData.follower_count) ? profileData.follower_count[0]?.count || 0 : 0,
+        following_count: Array.isArray(profileData.following_count) ? profileData.following_count[0]?.count || 0 : 0,
+      } as Profile
+    },
+    enabled: !!username,
+  })
 }
 /**
  * Hook to track and update the user's last access time

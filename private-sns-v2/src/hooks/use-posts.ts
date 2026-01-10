@@ -567,13 +567,14 @@ export function usePost(postId: string | null) {
 }
 
 // 特定のユーザーの投稿一覧を取得
-export function useUserPosts(userId: string | null) {
+export function useUserPosts(params: { userId?: string | null; username?: string | null }) {
+  const { userId, username } = params
   const supabase = createClient()
 
   return useInfiniteQuery({
-    queryKey: ['userPosts', userId],
+    queryKey: ['userPosts', { userId, username }],
     queryFn: async ({ pageParam = 0 }) => {
-      if (!userId) {
+      if (!userId && !username) {
         return {
           posts: [],
           nextPage: undefined,
@@ -587,49 +588,87 @@ export function useUserPosts(userId: string | null) {
       const { data: { user } } = await supabase.auth.getUser()
       const currentUserId = user?.id
 
-      const { data, error, count } = await supabase
+      let query = supabase
         .from('posts')
         .select(`
           *,
-          profiles!posts_user_id_fkey(*),
+          profiles!posts_user_id_fkey!inner(*),
           post_images(*),
           likes(count),
-          comments(count)
+          comments(count),
+          reposts:posts!original_post_id(count)
         `, { count: 'exact' })
-        .eq('user_id', userId)
+
+      if (userId) {
+        query = query.eq('user_id', userId)
+      } else if (username) {
+        query = query.eq('profiles.username', username)
+      }
+
+      const { data, error, count } = await query
         .order('created_at', { ascending: false })
         .range(start, end)
 
       if (error) throw error
 
+      const posts = data || []
+
+      // リポストの場合、original_postを一括取得（N+1問題を回避）
+      const originalPostIds = posts
+        .filter((post: any) => post.type === 'repost' && post.original_post_id)
+        .map((post: any) => post.original_post_id)
+
+      if (originalPostIds.length > 0) {
+        const { data: originalPostsData } = await supabase
+          .from('posts')
+          .select(`
+            *,
+            profiles!posts_user_id_fkey(*),
+            post_images(*),
+            likes(count),
+            comments(count),
+            reposts:posts!original_post_id(count)
+          `)
+          .in('id', originalPostIds)
+
+        if (originalPostsData) {
+          const originalPostsMap = new Map(originalPostsData.map((p: any) => [p.id, p]))
+          posts.forEach((post: any) => {
+            if (post.type === 'repost' && post.original_post_id) {
+              post.original_post = originalPostsMap.get(post.original_post_id)
+            }
+          })
+        }
+      }
+
       // いいね・リポスト状態を一括取得（N+1問題を回避）
       let userLikes: Set<string> = new Set()
       let userReposts: Set<string> = new Set()
 
-      if (currentUserId && data && data.length > 0) {
-        const postIds = data.map((post: any) => post.id)
+      const allPostIds = posts.map((post: any) => post.id)
 
+      if (currentUserId && allPostIds.length > 0) {
         // 一括でいいね状態を取得
         const { data: likesData } = await supabase
           .from('likes')
           .select('post_id')
           .eq('user_id', currentUserId)
-          .in('post_id', postIds)
+          .in('post_id', allPostIds)
 
         userLikes = new Set((likesData || []).map((like: any) => like.post_id))
 
-        // 一括でリポスト状態を取得（postsテーブルから）
+        // 一括でリポスト状態を取得（postsテーブル内のリポストをチェック）
         const { data: repostsData } = await supabase
           .from('posts')
           .select('original_post_id')
           .eq('user_id', currentUserId)
           .eq('type', 'repost')
-          .in('original_post_id', postIds)
+          .in('original_post_id', allPostIds)
 
         userReposts = new Set((repostsData || []).map((repost: any) => repost.original_post_id))
       }
 
-      const postsWithDetails: PostWithDetails[] = (data || []).map((post: any) => ({
+      const postsWithDetails: PostWithDetails[] = posts.map((post: any) => ({
         ...post,
         profiles: Array.isArray(post.profiles) ? post.profiles[0] : post.profiles,
         post_images: Array.isArray(post.post_images)
@@ -644,12 +683,12 @@ export function useUserPosts(userId: string | null) {
 
       return {
         posts: postsWithDetails,
-        nextPage: data && data.length === POSTS_PER_PAGE ? pageParam + 1 : undefined,
+        nextPage: posts.length === POSTS_PER_PAGE ? pageParam + 1 : undefined,
         totalCount: count || 0,
       }
     },
     getNextPageParam: (lastPage) => lastPage.nextPage,
     initialPageParam: 0,
-    enabled: !!userId,
+    enabled: !!userId || !!username,
   })
 }

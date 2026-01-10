@@ -154,7 +154,7 @@ export default function HangoutsPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <AppHeader />
+      <AppHeader groupName="誘い" icon={Users} />
 
       {/* Main Content */}
       <main className="max-w-md mx-auto px-4 py-4 pb-32">

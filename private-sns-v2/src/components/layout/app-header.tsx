@@ -4,7 +4,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Menu, X, Home as HomeIcon, LogOut, ExternalLink, MessageSquare, Users, Plus, ChevronDown, ChevronRight, Globe, Lock, RotateCcw, Shield } from 'lucide-react'
+import { Menu, X, Home as HomeIcon, LogOut, ExternalLink, MessageSquare, Users, Plus, ChevronDown, ChevronRight, Globe, Lock, RotateCcw, Shield, User, type LucideIcon } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -42,9 +42,10 @@ import { Image as ImageIcon } from 'lucide-react'
 
 interface AppHeaderProps {
   groupName?: string
+  icon?: LucideIcon
 }
 
-export function AppHeader({ groupName }: AppHeaderProps = {}) {
+export function AppHeader({ groupName, icon: Icon }: AppHeaderProps) {
   const [open, setOpen] = useState(false)
   const [groupsExpanded, setGroupsExpanded] = useState(false)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
@@ -284,7 +285,11 @@ export function AppHeader({ groupName }: AppHeaderProps = {}) {
           <div className="flex-1 flex items-center justify-center">
             {groupName ? (
               <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-blue-600" />
+                {Icon ? (
+                  <Icon className="h-5 w-5 text-blue-600" />
+                ) : (
+                  <Users className="h-5 w-5 text-blue-600" />
+                )}
                 <h1 className="text-lg font-bold text-gray-900">{groupName}</h1>
               </div>
             ) : (

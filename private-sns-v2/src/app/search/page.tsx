@@ -28,7 +28,7 @@ export default function SearchPage() {
   return (
     <div className="min-h-screen bg-background pb-32">
       {/* Header */}
-      <AppHeader />
+      <AppHeader groupName="検索" icon={SearchIcon} />
 
       {/* Content */}
       <main className="max-w-md mx-auto px-4 py-4">

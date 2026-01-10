@@ -200,14 +200,14 @@ export default function FeedbackPage() {
 
   return (
     <div className="bg-background min-h-screen">
-      <AppHeader />
+      <AppHeader groupName="改善要望" icon={MessageSquare} />
 
       <main className="container max-w-md mx-auto px-4 py-6">
         <Card className="border-blue-100">
           <CardHeader>
             <div className="flex items-center gap-2">
               <MessageSquare className="h-6 w-6 text-blue-600" />
-              <CardTitle className="text-2xl">改善要望</CardTitle>
+              <CardTitle className="text-2xl">改善要望を送信</CardTitle>
             </div>
             <CardDescription className="text-base mt-2">
               アプリの改善点や新機能のご要望をお聞かせください

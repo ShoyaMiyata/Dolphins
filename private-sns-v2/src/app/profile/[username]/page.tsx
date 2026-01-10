@@ -7,7 +7,7 @@ import { ProfileHeader } from '@/components/features/profile-header'
 import PostCard from '@/components/features/post-card'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Loader2 } from 'lucide-react'
+import { Loader2, User } from 'lucide-react'
 import { useEffect } from 'react'
 import { useInView } from 'react-intersection-observer'
 import { AppHeader } from '@/components/layout/app-header'
@@ -17,7 +17,7 @@ export default function ProfilePage() {
   const params = useParams()
   const username = params?.username as string
 
-  const { profile, isLoading: isLoadingProfile, error: profileError } = useUserProfileByUsername(username)
+  const { data: profile, isLoading: isLoadingProfile, error: profileError } = useUserProfileByUsername(username)
   const {
     data: postsData,
     isLoading: isLoadingPosts,
@@ -25,7 +25,7 @@ export default function ProfilePage() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useUserPosts(profile?.id || null)
+  } = useUserPosts({ username })
 
   const { ref, inView } = useInView()
 
@@ -40,7 +40,7 @@ export default function ProfilePage() {
   if (isLoadingProfile) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-        <AppHeader groupName="プロフィール" />
+        <AppHeader groupName="プロフィール" icon={User} />
         <main className="container max-w-md mx-auto pb-4">
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
@@ -54,7 +54,7 @@ export default function ProfilePage() {
   if (profileError || !profile) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-        <AppHeader groupName="プロフィール" />
+        <AppHeader groupName="プロフィール" icon={User} />
         <main className="container max-w-md mx-auto pb-4">
           <div className="flex flex-col items-center justify-center py-12 space-y-4">
             <h2 className="text-2xl font-bold text-blue-900">ユーザーが見つかりません</h2>
@@ -70,7 +70,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       {/* Header */}
-      <AppHeader groupName="プロフィール" />
+      <AppHeader groupName="プロフィール" icon={User} />
 
       {/* Main Content */}
       <main className="container max-w-md mx-auto pb-32 px-4">

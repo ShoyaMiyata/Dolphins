@@ -14,11 +14,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useFollow, useUnfollow, useIsFollowing, useFollowerCount, useFollowingCount } from '@/hooks/use-follows'
-import { useUser } from '@/hooks/use-user'
+import { useUser, type Profile } from '@/hooks/use-user'
 import { FollowListDialog } from './follow-list-dialog'
-import type { Database } from '@/types/database.types'
-
-type Profile = Database['public']['Tables']['profiles']['Row']
 import { Calendar, Edit, Camera, Loader2, X } from 'lucide-react'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
@@ -48,8 +45,8 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
   }, [])
 
   const { data: isFollowing, isLoading: isFollowingLoading } = useIsFollowing(profile.id)
-  const { data: followerCount = 0 } = useFollowerCount(profile.id)
-  const { data: followingCount = 0 } = useFollowingCount(profile.id)
+  const { data: followerCount = (typeof profile.follower_count === 'number' ? profile.follower_count : 0) } = useFollowerCount(profile.id)
+  const { data: followingCount = (typeof profile.following_count === 'number' ? profile.following_count : 0) } = useFollowingCount(profile.id)
 
   const follow = useFollow()
   const unfollow = useUnfollow()
@@ -239,11 +236,10 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
                     size="sm"
                     onClick={handleFollowToggle}
                     disabled={isFollowingLoading || follow.isPending || unfollow.isPending}
-                    className={`min-w-[100px] rounded-full ${
-                      isFollowing
-                        ? 'border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800 hover:border-blue-300'
-                        : 'bg-blue-500 hover:bg-blue-600 text-white'
-                    }`}
+                    className={`min-w-[100px] rounded-full ${isFollowing
+                      ? 'border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800 hover:border-blue-300'
+                      : 'bg-blue-500 hover:bg-blue-600 text-white'
+                      }`}
                   >
                     {follow.isPending || unfollow.isPending
                       ? '処理中...'
@@ -260,9 +256,8 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
               <div>
                 <div className="flex items-center gap-2">
                   <h1
-                    className={`text-xl font-bold text-blue-900 ${
-                      isOwnProfile ? 'cursor-pointer hover:text-blue-700 transition-colors' : ''
-                    }`}
+                    className={`text-xl font-bold text-blue-900 ${isOwnProfile ? 'cursor-pointer hover:text-blue-700 transition-colors' : ''
+                      }`}
                     onClick={handleNameClick}
                   >
                     {profile.display_name || profile.username}
@@ -277,102 +272,102 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
                 <p className="text-sm text-blue-600">@{profile.username}</p>
               </div>
 
-            {profile.bio && (
-              <p className="text-sm whitespace-pre-wrap break-words text-gray-700">
-                {profile.bio}
-              </p>
-            )}
-
-            <div className="flex items-center gap-4 text-sm text-blue-600">
-              {joinedDate && (
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4 text-blue-500" />
-                  <span>{joinedDate}に登録</span>
-                </div>
+              {profile.bio && (
+                <p className="text-sm whitespace-pre-wrap break-words text-gray-700">
+                  {profile.bio}
+                </p>
               )}
-            </div>
 
-            {/* フォロー・フォロワー数 */}
-            <div className="flex items-center gap-4 text-sm">
-              <button 
-                className="hover:underline transition-colors"
-                onClick={() => {
-                  setFollowListTab('following')
-                  setIsFollowListOpen(true)
-                }}
-              >
-                <span className="font-bold text-blue-900">{followingCount}</span>
-                <span className="text-blue-600 ml-1">フォロー中</span>
-              </button>
-              <button 
-                className="hover:underline transition-colors"
-                onClick={() => {
-                  setFollowListTab('followers')
-                  setIsFollowListOpen(true)
-                }}
-              >
-                <span className="font-bold text-blue-900">{followerCount}</span>
-                <span className="text-blue-600 ml-1">フォロワー</span>
-              </button>
+              <div className="flex items-center gap-4 text-sm text-blue-600">
+                {joinedDate && (
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-4 w-4 text-blue-500" />
+                    <span>{joinedDate}に登録</span>
+                  </div>
+                )}
+              </div>
+
+              {/* フォロー・フォロワー数 */}
+              <div className="flex items-center gap-4 text-sm">
+                <button
+                  className="hover:underline transition-colors"
+                  onClick={() => {
+                    setFollowListTab('following')
+                    setIsFollowListOpen(true)
+                  }}
+                >
+                  <span className="font-bold text-blue-900">{followingCount}</span>
+                  <span className="text-blue-600 ml-1">フォロー中</span>
+                </button>
+                <button
+                  className="hover:underline transition-colors"
+                  onClick={() => {
+                    setFollowListTab('followers')
+                    setIsFollowListOpen(true)
+                  }}
+                >
+                  <span className="font-bold text-blue-900">{followerCount}</span>
+                  <span className="text-blue-600 ml-1">フォロワー</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
 
-    {/* フォロー・フォロワー一覧ダイアログ */}
-    <FollowListDialog
-      userId={profile.id}
-      open={isFollowListOpen}
-      onOpenChange={setIsFollowListOpen}
-      defaultTab={followListTab}
-    />
+      {/* フォロー・フォロワー一覧ダイアログ */}
+      <FollowListDialog
+        userId={profile.id}
+        open={isFollowListOpen}
+        onOpenChange={setIsFollowListOpen}
+        defaultTab={followListTab}
+      />
 
-    {/* 名前変更ダイアログ */}
-    <Dialog open={isNameDialogOpen} onOpenChange={setIsNameDialogOpen}>
-      <DialogContent className="max-w-[calc(100vw-2rem)] w-full sm:max-w-md rounded-2xl border border-blue-100 bg-white p-5">
-        <DialogHeader>
-          <DialogTitle className="text-lg font-semibold text-blue-900">表示名を変更</DialogTitle>
-          <DialogDescription className="text-sm text-blue-600">
-            あなたのプロフィールに表示される名前を変更できます
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 mt-4">
-          <Input
-            placeholder="表示名を入力"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            maxLength={50}
-            className="border-blue-100 focus:border-blue-300 focus:ring-blue-200"
-          />
-          <p className="text-sm text-blue-600">{displayName.length} / 50</p>
-        </div>
-        <DialogFooter className="flex gap-2 mt-4">
-          <Button
-            variant="outline"
-            onClick={() => setIsNameDialogOpen(false)}
-            disabled={isUpdating}
-            className="flex-1 rounded-lg border-blue-100"
-          >
-            キャンセル
-          </Button>
-          <Button
-            onClick={handleNameUpdate}
-            disabled={isUpdating || displayName.length > 50}
-            className="flex-1 rounded-lg bg-blue-500 hover:bg-blue-600 text-white"
-          >
-            {isUpdating ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                更新中...
-              </>
-            ) : (
-              '保存'
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  </>
+      {/* 名前変更ダイアログ */}
+      <Dialog open={isNameDialogOpen} onOpenChange={setIsNameDialogOpen}>
+        <DialogContent className="max-w-[calc(100vw-2rem)] w-full sm:max-w-md rounded-2xl border border-blue-100 bg-white p-5">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold text-blue-900">表示名を変更</DialogTitle>
+            <DialogDescription className="text-sm text-blue-600">
+              あなたのプロフィールに表示される名前を変更できます
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <Input
+              placeholder="表示名を入力"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              maxLength={50}
+              className="border-blue-100 focus:border-blue-300 focus:ring-blue-200"
+            />
+            <p className="text-sm text-blue-600">{displayName.length} / 50</p>
+          </div>
+          <DialogFooter className="flex gap-2 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setIsNameDialogOpen(false)}
+              disabled={isUpdating}
+              className="flex-1 rounded-lg border-blue-100"
+            >
+              キャンセル
+            </Button>
+            <Button
+              onClick={handleNameUpdate}
+              disabled={isUpdating || displayName.length > 50}
+              className="flex-1 rounded-lg bg-blue-500 hover:bg-blue-600 text-white"
+            >
+              {isUpdating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  更新中...
+                </>
+              ) : (
+                '保存'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
