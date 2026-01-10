@@ -29,8 +29,11 @@ export function NotificationList() {
       markAsRead.mutate(notification.id)
     }
 
-    // Navigate to the related post or profile
-    if (notification.related_post_id) {
+    // Navigate based on notification type
+    if (notification.type === 'group_invite') {
+      // Group invite notifications always go to group page
+      router.push(`/groups/${notification.related_post_id}`)
+    } else if (notification.related_post_id) {
       router.push(`/home/${notification.related_post_id}`)
     } else if (notification.type === 'follow') {
       router.push(`/profile/${notification.related_user.username}`)
