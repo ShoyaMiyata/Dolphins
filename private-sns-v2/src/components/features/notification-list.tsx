@@ -140,35 +140,20 @@ export function NotificationList() {
                   })}
                 </p>
 
-                {/* Group invite actions */}
+                {/* Group invite info */}
                 {notification.type === 'group_invite' && (
                   <div className="flex gap-2 mt-2">
                     <Button
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation()
-                        // Accept group invite and navigate to group
+                        // Navigate to group
                         router.push(`/groups/${notification.related_post_id}`)
                       }}
-                      className="bg-green-600 hover:bg-green-700 text-white text-xs h-7 px-3"
+                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-7 px-3"
                     >
-                      <Check className="h-3 w-3 mr-1" />
-                      参加
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        // Decline group invite - just mark as read
-                        if (!notification.is_read) {
-                          markAsRead.mutate(notification.id)
-                        }
-                      }}
-                      className="text-xs h-7 px-3 border-red-200 text-red-600 hover:bg-red-50"
-                    >
-                      <X className="h-3 w-3 mr-1" />
-                      辞退
+                      <Users className="h-3 w-3 mr-1" />
+                      グループを見る
                     </Button>
                   </div>
                 )}
