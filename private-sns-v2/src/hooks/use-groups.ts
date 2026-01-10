@@ -126,20 +126,28 @@ export function useGroups() {
 
       // ステップ2: メンバーであるグループの情報を取得
       const memberGroupIds = (memberships || []).map(m => (m as any).group_id)
+      console.log('Member group IDs:', memberGroupIds)
       let memberGroups: any[] = []
 
       if (memberGroupIds.length > 0) {
-        const { data: memberGroupsData, error: memberGroupsError } = await supabase
-          .from('groups')
-          .select('*')
-          .in('id', memberGroupIds)
+        // 個別にクエリを実行して確実に取得
+        const memberGroupsPromises = memberGroupIds.map(async (groupId) => {
+          const { data, error } = await supabase
+            .from('groups')
+            .select('*')
+            .eq('id', groupId)
+            .single()
 
-        if (memberGroupsError) {
-          console.error('メンバーグループ取得エラー:', memberGroupsError)
-          throw memberGroupsError
-        }
+          if (error) {
+            console.error(`グループ ${groupId} 取得エラー:`, error)
+            return null
+          }
+          return data
+        })
 
-        memberGroups = memberGroupsData || []
+        const memberGroupsResults = await Promise.all(memberGroupsPromises)
+        memberGroups = memberGroupsResults.filter(Boolean) as any[]
+        console.log('Member groups results:', memberGroups)
       }
 
       // ステップ3: パブリックグループを取得
