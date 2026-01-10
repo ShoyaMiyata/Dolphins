@@ -233,26 +233,6 @@ export default function AdminPage() {
                 </div>
               </CardHeader>
               <CardContent className="p-6">
-                {/* Global Update Last Access Button */}
-                <div className="mb-6 flex justify-center">
-                  <Button
-                    onClick={handleUpdateLastAccess}
-                    disabled={updateLastAccess.isPending}
-                    className="bg-gradient-to-r from-blue-500 to-sky-500 hover:from-blue-600 hover:to-sky-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 px-8 py-3"
-                  >
-                    {updateLastAccess.isPending ? (
-                      <div className="flex items-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                        <span>全ユーザーのアクセス時刻を更新中...</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <RefreshCw className="h-4 w-4" />
-                        <span>全ユーザーのアクセス時刻を更新</span>
-                      </div>
-                    )}
-                  </Button>
-                </div>
 
                 {usersLoading ? (
                   <div className="text-center py-12">
