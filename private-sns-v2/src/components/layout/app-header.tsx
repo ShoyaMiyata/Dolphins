@@ -52,6 +52,8 @@ export function AppHeader({ groupName, icon: Icon }: AppHeaderProps) {
   const [groupDescription, setGroupDescription] = useState('')
   const [groupImage, setGroupImage] = useState<File | null>(null)
   const [groupImagePreview, setGroupImagePreview] = useState<string | null>(null)
+  const [coverImage, setCoverImage] = useState<File | null>(null)
+  const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null)
   const [joinType, setJoinType] = useState<'free' | 'approval'>('free')
   const [visibilityType, setVisibilityType] = useState<'public' | 'private'>('public')
   const [isReloading, setIsReloading] = useState(false)
@@ -68,23 +70,50 @@ export function AppHeader({ groupName, icon: Icon }: AppHeaderProps) {
   // 自動アクセス時刻更新
   useTrackLastAccess()
 
-  // 画像選択処理
+  // アイコン画像選択処理
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    if (file.size > 5 * 1024 * 1024) {
+      alert('ファイルサイズは5MB以下にしてください')
+      return
+    }
 
     setGroupImage(file)
     const preview = URL.createObjectURL(file)
     setGroupImagePreview(preview)
   }
 
-  // 画像削除処理
+  // カバー画像選択処理
+  const handleCoverImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 10 * 1024 * 1024) {
+      alert('ファイルサイズは10MB以下にしてください')
+      return
+    }
+
+    setCoverImage(file)
+    const preview = URL.createObjectURL(file)
+    setCoverImagePreview(preview)
+  }
+
+  // アイコン画像削除処理
   const handleImageRemove = () => {
     if (groupImagePreview) {
       URL.revokeObjectURL(groupImagePreview)
     }
     setGroupImage(null)
     setGroupImagePreview(null)
+  }
+
+  // カバー画像削除処理
+  const handleCoverImageRemove = () => {
+    if (coverImagePreview) {
+      URL.revokeObjectURL(coverImagePreview)
+    }
+    setCoverImage(null)
+    setCoverImagePreview(null)
   }
 
   // グループ作成処理
@@ -95,6 +124,7 @@ export function AppHeader({ groupName, icon: Icon }: AppHeaderProps) {
       name: newGroupName,
       description: groupDescription || undefined,
       image: groupImage || undefined,
+      coverImage: coverImage || undefined,
       joinType,
       visibilityType,
     })
@@ -104,6 +134,7 @@ export function AppHeader({ groupName, icon: Icon }: AppHeaderProps) {
     setNewGroupName('')
     setGroupDescription('')
     handleImageRemove()
+    handleCoverImageRemove()
     setJoinType('free')
     setVisibilityType('public')
   }
@@ -308,50 +339,130 @@ export function AppHeader({ groupName, icon: Icon }: AppHeaderProps) {
 
       {/* グループ作成ダイアログ */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="max-w-[calc(100vw-2rem)] w-full sm:max-w-md rounded-2xl">
-          <DialogHeader>
-            <DialogTitle>グループを作成</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="max-w-[calc(100vw-2rem)] w-full sm:max-w-lg max-h-[calc(100vh-8rem)] flex flex-col bg-gradient-to-br from-white via-blue-50 to-white border-0 shadow-2xl rounded-3xl overflow-hidden">
+          <DialogHeader className="flex-shrink-0 bg-gradient-to-r from-blue-600 to-sky-600 text-white p-6 pb-4 rounded-t-3xl">
+            <DialogTitle className="text-xl font-bold text-center flex items-center justify-center gap-2">
+              <div className="p-2 bg-white/20 rounded-full">
+                <Plus className="h-6 w-6 text-white" />
+              </div>
+              グループを作成
+            </DialogTitle>
+            <DialogDescription className="text-blue-100 text-center mt-2">
               新しいグループを作成して、メンバーと交流しましょう
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
-            {/* グループ画像 */}
-            <div className="space-y-2">
-              <Label>グループ画像</Label>
-              {groupImagePreview ? (
-                <div className="relative w-32 h-32">
-                  <img
-                    src={groupImagePreview}
-                    alt="プレビュー"
-                    className="w-full h-full rounded-lg object-cover"
-                  />
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
-                    onClick={handleImageRemove}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+          <div className="space-y-6 py-6 overflow-y-auto flex-1 px-6">
+            {/* アイコン画像 */}
+            <div className="space-y-3 bg-white rounded-2xl p-4 border border-blue-100 shadow-sm">
+              <Label className="text-sm font-semibold text-blue-900 flex items-center gap-2">
+                <div className="p-1 bg-blue-100 rounded-full">
+                  <Users className="h-4 w-4 text-blue-600" />
                 </div>
-              ) : (
-                <label className="flex items-center justify-center w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 transition-colors">
-                  <div className="text-center">
-                    <ImageIcon className="h-8 w-8 mx-auto text-gray-400" />
-                    <span className="text-xs text-gray-500 mt-1 block">
-                      画像を選択
-                    </span>
-                  </div>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleImageSelect}
+                グループアイコン
+              </Label>
+              <div className="flex items-center gap-4">
+                <div className="relative w-20 h-20 bg-gradient-to-br from-blue-100 to-sky-100 rounded-xl overflow-hidden border-2 border-blue-200 flex-shrink-0">
+                  {groupImagePreview ? (
+                    <img
+                      src={groupImagePreview}
+                      alt="アイコン画像"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-blue-400">
+                      <Users className="h-10 w-10" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => document.getElementById('create-group-icon-input')?.click()}
+                    className="text-sm"
+                  >
+                    アイコンを選択
+                  </Button>
+                  {groupImagePreview && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleImageRemove}
+                      className="text-sm text-red-600"
+                    >
+                      削除
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <input
+                id="create-group-icon-input"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageSelect}
+              />
+              <p className="text-xs text-gray-500">
+                推奨: 正方形の画像、最大5MB
+              </p>
+            </div>
+
+            {/* カバー画像 */}
+            <div className="space-y-3 bg-white rounded-2xl p-4 border border-blue-100 shadow-sm">
+              <Label className="text-sm font-semibold text-blue-900 flex items-center gap-2">
+                <div className="p-1 bg-blue-100 rounded-full">
+                  <ImageIcon className="h-4 w-4 text-blue-600" />
+                </div>
+                カバー画像
+              </Label>
+              <div className="relative w-full h-32 bg-gradient-to-r from-blue-100 to-sky-100 rounded-xl overflow-hidden border-2 border-blue-200">
+                {coverImagePreview ? (
+                  <img
+                    src={coverImagePreview}
+                    alt="カバー画像"
+                    className="w-full h-full object-cover"
                   />
-                </label>
-              )}
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-blue-400">
+                    <ImageIcon className="h-12 w-12" />
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById('create-group-cover-input')?.click()}
+                  className="text-sm"
+                >
+                  カバー画像を選択
+                </Button>
+                {coverImagePreview && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCoverImageRemove}
+                    className="text-sm text-red-600"
+                  >
+                    削除
+                  </Button>
+                )}
+              </div>
+              <input
+                id="create-group-cover-input"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleCoverImageSelect}
+              />
+              <p className="text-xs text-gray-500">
+                推奨: 横長の画像（16:9）、最大10MB
+              </p>
             </div>
 
             {/* グループ名 */}
@@ -361,7 +472,7 @@ export function AppHeader({ groupName, icon: Icon }: AppHeaderProps) {
                 id="group-name"
                 value={newGroupName}
                 onChange={(e) => setNewGroupName(e.target.value)}
-                placeholder="グループの名前を入力"
+                placeholder="グループの名前"
                 maxLength={100}
               />
             </div>
@@ -373,34 +484,24 @@ export function AppHeader({ groupName, icon: Icon }: AppHeaderProps) {
                 id="group-description"
                 value={groupDescription}
                 onChange={(e) => setGroupDescription(e.target.value)}
-                placeholder="グループの説明を入力"
+                placeholder="グループの説明"
                 rows={3}
               />
-            </div>
-
-            {/* 参加方法 */}
-            <div className="space-y-2">
-              <Label>参加方法</Label>
-              <Select value={joinType} onValueChange={(v) => setJoinType(v as 'free' | 'approval')}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="free">自由参加</SelectItem>
-                  <SelectItem value="approval">承認制</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-gray-500">
-                {joinType === 'free'
-                  ? '誰でも自由に参加できます'
-                  : '参加にはオーナーの承認が必要です'}
-              </p>
             </div>
 
             {/* 公開設定 */}
             <div className="space-y-2">
               <Label>公開設定</Label>
-              <Select value={visibilityType} onValueChange={(v) => setVisibilityType(v as 'public' | 'private')}>
+              <Select
+                value={visibilityType}
+                onValueChange={(value: 'public' | 'private') => {
+                  setVisibilityType(value)
+                  // プライベートの場合は自動的に招待制に
+                  if (value === 'private') {
+                    setJoinType('approval')
+                  }
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -415,19 +516,54 @@ export function AppHeader({ groupName, icon: Icon }: AppHeaderProps) {
                   : 'メンバーのみがグループを閲覧できます'}
               </p>
             </div>
+
+            {/* 参加方法 */}
+            <div className="space-y-2">
+              <Label>参加方法</Label>
+              <Select
+                value={joinType}
+                onValueChange={(v) => setJoinType(v as 'free' | 'approval')}
+                disabled={visibilityType === 'private'}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {visibilityType === 'private' ? (
+                    <SelectItem value="approval">承認制</SelectItem>
+                  ) : (
+                    <>
+                      <SelectItem value="free">自由参加</SelectItem>
+                      <SelectItem value="approval">承認制</SelectItem>
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">
+                {joinType === 'free'
+                  ? '誰でも自由に参加できます'
+                  : '参加には承認が必要です'}
+              </p>
+              {visibilityType === 'private' && (
+                <p className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                  📝 プライベートグループは承認制のみ可能です
+                </p>
+              )}
+            </div>
           </div>
 
-          <DialogFooter className="flex gap-2">
+          <DialogFooter className="flex gap-2 pt-4 border-t flex-shrink-0">
             <Button
               variant="outline"
               onClick={() => setIsCreateDialogOpen(false)}
+              className="flex-1"
             >
               キャンセル
             </Button>
             <Button
               onClick={handleCreateGroup}
               disabled={!newGroupName.trim() || createGroup.isPending}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
             >
               {createGroup.isPending ? '作成中...' : '作成'}
             </Button>

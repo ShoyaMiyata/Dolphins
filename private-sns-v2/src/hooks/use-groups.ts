@@ -20,6 +20,7 @@ export interface CreateGroupData {
   name: string
   description?: string
   image?: File
+  coverImage?: File
   joinType: 'free' | 'approval'
   visibilityType: 'public' | 'private'
 }
@@ -282,7 +283,7 @@ export function useCreateGroup() {
   const supabase = createClient()
 
   return useMutation({
-    mutationFn: async ({ name, description, image, joinType, visibilityType }: CreateGroupData) => {
+    mutationFn: async ({ name, description, image, coverImage, joinType, visibilityType }: CreateGroupData) => {
       // 認証チェック
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
@@ -291,10 +292,16 @@ export function useCreateGroup() {
 
       const userId = user.id
       let imageUrl: string | undefined
+      let coverImageUrl: string | undefined
 
-      // 画像がある場合はアップロード
+      // アイコン画像がある場合はアップロード
       if (image) {
         imageUrl = await uploadImage(image, userId)
+      }
+
+      // カバー画像がある場合はアップロード
+      if (coverImage) {
+        coverImageUrl = await uploadCoverImage(coverImage, userId)
       }
 
       // グループ作成
@@ -304,6 +311,7 @@ export function useCreateGroup() {
           name,
           description,
           image_url: imageUrl,
+          cover_image_url: coverImageUrl,
           owner_id: userId,
           join_type: joinType,
           visibility_type: visibilityType,
