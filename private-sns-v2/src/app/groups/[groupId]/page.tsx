@@ -31,6 +31,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -166,33 +167,61 @@ export default function GroupDetailPage() {
                       </div>
                     </div>
                     {isMember && (
-                      <div className="relative">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSettingsForm({
-                              name: group.name,
-                              description: group.description || '',
-                              visibility_type: group.visibility_type,
-                              join_type: group.join_type,
-                            })
-                            setCoverImagePreview(group.cover_image_url || null)
-                            setCoverImageFile(null)
-                            setCoverImageToDelete(false)
-                            setIconImagePreview(group.image_url || null)
-                            setIconImageFile(null)
-                            setIconImageToDelete(false)
-                            setSettingsDialogOpen(true)
-                          }}
-                          className="text-xs h-8 px-4 bg-gradient-to-r from-blue-50 to-sky-50 hover:from-blue-100 hover:to-sky-100 text-blue-700 border border-blue-200 hover:border-blue-300 rounded-full shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2"
-                        >
-                          <div className="p-1 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full">
-                            <Settings className="h-3 w-3 text-white" />
-                          </div>
-                          <span className="font-medium">設定</span>
-                        </Button>
-                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs h-8 px-4 bg-gradient-to-r from-blue-50 to-sky-50 hover:from-blue-100 hover:to-sky-100 text-blue-700 border border-blue-200 hover:border-blue-300 rounded-full shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2"
+                          >
+                            <div className="p-1 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full">
+                              <Settings className="h-3 w-3 text-white" />
+                            </div>
+                            <span className="font-medium">設定</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-white/95 backdrop-blur-lg border-blue-200/50 shadow-xl rounded-xl overflow-hidden">
+                          <DropdownMenuLabel className="text-center text-blue-900 font-semibold">グループ管理</DropdownMenuLabel>
+                          <DropdownMenuSeparator className="bg-blue-200/20" />
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSettingsForm({
+                                name: group.name,
+                                description: group.description || '',
+                                visibility_type: group.visibility_type,
+                                join_type: group.join_type,
+                              })
+                              setCoverImagePreview(group.cover_image_url || null)
+                              setCoverImageFile(null)
+                              setCoverImageToDelete(false)
+                              setIconImagePreview(group.image_url || null)
+                              setIconImageFile(null)
+                              setIconImageToDelete(false)
+                              setSettingsDialogOpen(true)
+                            }}
+                            className="hover:bg-gradient-to-r hover:from-[#4DA6FF]/10 hover:to-[#0055AA]/10 focus:from-[#4DA6FF]/10 focus:to-[#0055AA]/10 transition-all duration-200 rounded-lg mx-1 my-1"
+                          >
+                            <div className="p-1 bg-gradient-to-r from-[#4DA6FF] to-[#0055AA] rounded-md mr-3">
+                              <Settings className="h-4 w-4 text-white" />
+                            </div>
+                            <span className="font-medium text-gray-700">グループ設定</span>
+                          </DropdownMenuItem>
+                          {isOwner && (
+                            <>
+                              <DropdownMenuSeparator className="bg-red-200/20" />
+                              <DropdownMenuItem
+                                onClick={() => setDeleteGroupDialogOpen(true)}
+                                className="hover:bg-gradient-to-r hover:from-[#FF8800]/10 hover:to-red-50 focus:from-[#FF8800]/10 focus:to-red-50 transition-all duration-200 rounded-lg mx-1 my-1 text-red-600 hover:text-red-700"
+                              >
+                                <div className="p-1 bg-gradient-to-r from-[#FF8800] to-red-500 rounded-md mr-3">
+                                  <Trash2 className="h-4 w-4 text-white" />
+                                </div>
+                                <span className="font-medium">グループを削除</span>
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     )}
                   </div>
                 </div>
@@ -757,23 +786,7 @@ export default function GroupDetailPage() {
             </div>
           </div>
 
-          {/* Delete Group Button (Owner Only) */}
-          {isOwner && (
-            <div className="pt-4 border-t">
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() => setDeleteGroupDialogOpen(true)}
-                className="w-full bg-red-600 hover:bg-red-700 text-white flex items-center gap-2"
-              >
-                <Trash2 className="h-4 w-4" />
-                グループを削除
-              </Button>
-              <p className="text-xs text-red-500 mt-2 text-center">
-                この操作は取り消すことができません
-              </p>
-            </div>
-          )}
+
 
           <div className="flex gap-2 pt-4 border-t flex-shrink-0">
             <Button
