@@ -293,6 +293,26 @@ export function AppHeader({ groupName, icon: Icon }: AppHeaderProps) {
 
                 <Separator className="my-3" />
 
+                {/* External Services Section */}
+                <div className="space-y-1">
+                  <div className="px-2 py-1">
+                    <span className="text-sm font-semibold text-gray-500">外部サービス</span>
+                  </div>
+                  <a
+                    href="https://ramenapp.vercel.app/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setOpen(false)}
+                  >
+                    <Button variant="ghost" className="w-full justify-start gap-2 text-base">
+                      <ExternalLink className="h-5 w-5" />
+                      Nooodle
+                    </Button>
+                  </a>
+                </div>
+
+                <Separator className="my-3" />
+
                 {/* Logout */}
                 <Button
                   variant="ghost"
