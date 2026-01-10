@@ -46,7 +46,7 @@ interface AppHeaderProps {
 
 export function AppHeader({ groupName, icon: Icon }: AppHeaderProps) {
   const [open, setOpen] = useState(false)
-  const [groupsExpanded, setGroupsExpanded] = useState(false)
+  const [groupsExpanded, setGroupsExpanded] = useState(true)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [newGroupName, setNewGroupName] = useState('')
   const [groupDescription, setGroupDescription] = useState('')

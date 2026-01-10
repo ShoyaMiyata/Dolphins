@@ -34,7 +34,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Users, UserPlus, Settings, Crown, Shield, User, Check, X, MoreVertical, LogIn, LogOut, MessageSquare, Loader2, Trash2, AlertTriangle } from 'lucide-react'
+import { Users, UserPlus, Settings, Crown, Shield, User, Check, X, MoreVertical, LogIn, LogOut, MessageSquare, Loader2, Trash2, AlertTriangle, ChevronLeft } from 'lucide-react'
 import { InviteUserDialog } from '@/components/features/invite-user-dialog'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -112,121 +112,8 @@ export default function GroupDetailPage() {
 
   return (
     <div className="bg-gradient-to-br from-blue-50 via-white to-sky-50 min-h-screen">
-      {/* Custom Header for Group */}
-      <header className="sticky top-0 z-10 border-b border-blue-200/50 bg-white/90 backdrop-blur-md supports-[backdrop-filter]:bg-white/80 shadow-sm">
-        <div className="container max-w-md mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            {/* Back Button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-blue-600 hover:bg-blue-100 transition-colors rounded-full"
-              onClick={() => router.push('/home')}
-            >
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </Button>
-
-            {/* Group Name */}
-            <div className="flex items-center gap-3 flex-1 justify-center">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-100 to-sky-100 rounded-full flex items-center justify-center flex-shrink-0">
-                {group.image_url ? (
-                  <img
-                    src={group.image_url}
-                    alt={group.name}
-                    className="w-full h-full rounded-full object-cover"
-                  />
-                ) : (
-                  <Users className="h-5 w-5 text-blue-600" />
-                )}
-              </div>
-              <div className="text-center">
-                <h1 className="text-lg font-bold text-gray-900 truncate max-w-[200px]">{group.name}</h1>
-                {group.description && (
-                  <p className="text-xs text-gray-500 truncate max-w-[200px]">{group.description}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Settings Menu */}
-            {isMember && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="relative group overflow-hidden rounded-full p-2 hover:bg-gradient-to-r hover:from-blue-100 hover:to-sky-100 transition-all duration-300 shadow-sm hover:shadow-md"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-sky-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full" />
-                    <Settings className="h-5 w-5 relative z-10 text-blue-600 group-hover:text-blue-700 transition-colors duration-300 group-hover:rotate-90" />
-                    <div className="absolute inset-0 rounded-full ring-2 ring-blue-200/50 group-hover:ring-blue-300/70 transition-colors duration-300" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-white/95 backdrop-blur-lg border-blue-200/50 shadow-xl rounded-xl overflow-hidden">
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setSettingsForm({
-                        name: group.name,
-                        description: group.description || '',
-                        visibility_type: group.visibility_type,
-                        join_type: group.join_type,
-                      })
-                      setCoverImagePreview(group.cover_image_url || null)
-                      setCoverImageFile(null)
-                      setIconImagePreview(group.image_url || null)
-                      setIconImageFile(null)
-                      setSettingsDialogOpen(true)
-                    }}
-                    className="hover:bg-gradient-to-r hover:from-[#4DA6FF]/10 hover:to-[#0055AA]/10 focus:from-[#4DA6FF]/10 focus:to-[#0055AA]/10 transition-all duration-200 rounded-lg mx-1 my-1"
-                  >
-                    <div className="p-1 bg-gradient-to-r from-[#4DA6FF] to-[#0055AA] rounded-md mr-3">
-                      <Settings className="h-4 w-4 text-white" />
-                    </div>
-                    <span className="font-medium text-gray-700">グループ設定</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator className="bg-[#0055AA]/20" />
-                  <DropdownMenuItem
-                    onClick={() => leaveGroup.mutate(groupId)}
-                    disabled={leaveGroup.isPending}
-                    className="hover:bg-gradient-to-r hover:from-[#FF8800]/10 hover:to-red-50 focus:from-[#FF8800]/10 focus:to-red-50 transition-all duration-200 rounded-lg mx-1 my-1 text-red-600 hover:text-red-700"
-                  >
-                    <div className="p-1 bg-gradient-to-r from-[#FF8800] to-red-500 rounded-md mr-3">
-                      <LogOut className="h-4 w-4 text-white" />
-                    </div>
-                    <span className="font-medium">{leaveGroup.isPending ? '退会中...' : 'グループから退会'}</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-
-            {/* Join Button (Non-member) */}
-            {!isMember && currentUser && (
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => joinGroup.mutate({ groupId, joinType: group.join_type })}
-                disabled={joinGroup.isPending || hasPendingRequest}
-                className={`shadow-md rounded-full px-4 ${hasPendingRequest
-                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-blue-500 to-sky-500 hover:from-blue-600 hover:to-sky-600 text-white'
-                  }`}
-              >
-                {joinGroup.isPending ? (
-                  "参加中..."
-                ) : hasPendingRequest ? (
-                  "承認待ち"
-                ) : (
-                  <>
-                    <LogIn className="h-4 w-4 mr-1" />
-                    {group.join_type === 'free' ? '参加' : 'リクエスト'}
-                  </>
-                )}
-              </Button>
-            )}
-          </div>
-        </div>
-      </header>
+      {/* Use AppHeader with group name */}
+      <AppHeader groupName={group.name} icon={Users} />
 
       {/* Main Content */}
       <main className="container max-w-md mx-auto pb-32 px-0 sm:px-4">
