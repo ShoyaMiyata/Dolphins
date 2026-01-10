@@ -231,26 +231,88 @@ export default function GroupDetailPage() {
                     {/* Action Button */}
                     <div className="flex items-center gap-2">
                       {isMember ? (
-                        // メンバーの場合：退出ボタン
-                        <Button
-                          onClick={() => leaveGroup.mutate(groupId)}
-                          disabled={leaveGroup.isPending}
-                          variant="outline"
-                          size="sm"
-                          className="text-xs h-8 px-4 bg-red-50 border-red-200 text-red-600 hover:bg-red-100 hover:border-red-300 transition-all duration-200"
-                        >
-                          {leaveGroup.isPending ? (
-                            <div className="flex items-center gap-2">
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                              <span>退出中...</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <LogOut className="h-3 w-3" />
-                              <span>退出</span>
-                            </div>
-                          )}
-                        </Button>
+                        // メンバーの場合：設定ボタン（退出を含む）
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-xs h-8 px-4 bg-gradient-to-r from-blue-50 to-sky-50 hover:from-blue-100 hover:to-sky-100 text-blue-700 border border-blue-200 hover:border-blue-300 rounded-full shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2"
+                            >
+                              <div className="p-1 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full">
+                                <Settings className="h-3 w-3 text-white" />
+                              </div>
+                              <span className="font-medium">設定</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            className="bg-white/95 backdrop-blur-lg border-blue-200/50 shadow-xl rounded-xl overflow-hidden"
+                          >
+                            <DropdownMenuLabel className="text-center text-blue-900 font-semibold">
+                              グループ管理
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator className="bg-blue-200/20" />
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSettingsForm({
+                                  name: group.name,
+                                  description: group.description || "",
+                                  visibility_type: group.visibility_type,
+                                  join_type: group.join_type,
+                                });
+                                setCoverImagePreview(group.cover_image_url || null);
+                                setCoverImageFile(null);
+                                setCoverImageToDelete(false);
+                                setIconImagePreview(group.image_url || null);
+                                setIconImageFile(null);
+                                setIconImageToDelete(false);
+                                setSettingsDialogOpen(true);
+                              }}
+                              className="hover:bg-gradient-to-r hover:from-[#4DA6FF]/10 hover:to-[#0055AA]/10 focus:from-[#4DA6FF]/10 focus:to-[#0055AA]/10 transition-all duration-200 rounded-lg mx-1 my-1"
+                            >
+                              <div className="p-1 bg-gradient-to-r from-[#4DA6FF] to-[#0055AA] rounded-md mr-3">
+                                <Settings className="h-4 w-4 text-white" />
+                              </div>
+                              <span className="font-medium text-gray-700">
+                                グループ設定
+                              </span>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator className="bg-red-200/20" />
+                            <DropdownMenuItem
+                              onClick={() => leaveGroup.mutate(groupId, {
+                                onSuccess: () => {
+                                  router.push('/home')
+                                }
+                              })}
+                              disabled={leaveGroup.isPending}
+                              className="hover:bg-gradient-to-r hover:from-red-50 hover:to-red-100 focus:from-red-50 focus:to-red-100 transition-all duration-200 rounded-lg mx-1 my-1 text-red-600 hover:text-red-700"
+                            >
+                              <div className="p-1 bg-gradient-to-r from-red-500 to-red-600 rounded-md mr-3">
+                                <LogOut className="h-4 w-4 text-white" />
+                              </div>
+                              <span className="font-medium">
+                                グループから退出
+                              </span>
+                            </DropdownMenuItem>
+                            {isOwner && (
+                              <>
+                                <DropdownMenuSeparator className="bg-red-200/20" />
+                                <DropdownMenuItem
+                                  onClick={() => setDeleteGroupDialogOpen(true)}
+                                  className="hover:bg-gradient-to-r hover:from-[#FF8800]/10 hover:to-red-50 focus:from-[#FF8800]/10 focus:to-red-50 transition-all duration-200 rounded-lg mx-1 my-1 text-red-600 hover:text-red-700"
+                                >
+                                  <div className="p-1 bg-gradient-to-r from-[#FF8800] to-red-500 rounded-md mr-3">
+                                    <Trash2 className="h-4 w-4 text-white" />
+                                  </div>
+                                  <span className="font-medium">
+                                    グループを削除
+                                  </span>
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       ) : hasPendingRequest ? (
                         // 参加リクエスト中の場合：申請中表示
                         <Badge className="text-xs px-3 py-1 bg-yellow-100 text-yellow-800 border border-yellow-200">
@@ -698,7 +760,7 @@ export default function GroupDetailPage() {
                                         "Remove member clicked for:",
                                         member.user_id,
                                         member.profiles.display_name ||
-                                          member.profiles.username,
+                                        member.profiles.username,
                                       );
                                       setMemberToRemove({
                                         id: member.id,
