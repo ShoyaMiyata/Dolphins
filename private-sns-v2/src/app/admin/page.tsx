@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { format } from 'date-fns'
+import { format, formatDistanceToNow } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import {
   Users,
@@ -335,7 +335,7 @@ export default function AdminPage() {
                             </div>
                             {user.last_access_at && (
                               <div className="text-xs text-gray-500 mt-1">
-                                ({format(new Date(user.last_access_at), 'relative', { locale: ja })})
+                                ({formatDistanceToNow(new Date(user.last_access_at), { addSuffix: true, locale: ja })})
                               </div>
                             )}
                           </div>
@@ -429,7 +429,7 @@ export default function AdminPage() {
                                   </span>
                                   {user.last_access_at && (
                                     <span className="text-xs text-gray-500 ml-2">
-                                      ({format(new Date(user.last_access_at), 'relative', { locale: ja })})
+                                      ({formatDistanceToNow(new Date(user.last_access_at), { addSuffix: true, locale: ja })})
                                     </span>
                                   )}
                                 </div>
