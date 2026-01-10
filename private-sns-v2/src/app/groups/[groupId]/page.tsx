@@ -72,7 +72,7 @@ export default function GroupDetailPage() {
     name: '',
     description: '',
     visibility_type: 'public' as 'public' | 'private',
-    join_type: 'free' as 'free' | 'approval'
+    join_type: 'free' as 'free' | 'approval' | 'invite'
   })
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null)
   const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null)
@@ -766,23 +766,37 @@ export default function GroupDetailPage() {
               <Label>参加方法</Label>
               <Select
                 value={settingsForm.join_type}
-                onValueChange={(value: 'free' | 'approval') =>
+                onValueChange={(value: 'free' | 'approval' | 'invite') =>
                   setSettingsForm(prev => ({ ...prev, join_type: value }))
                 }
+                disabled={settingsForm.visibility_type === 'private'}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="free">自由参加</SelectItem>
-                  <SelectItem value="approval">承認制</SelectItem>
+                  {settingsForm.visibility_type === 'private' ? (
+                    <SelectItem value="invite">招待制</SelectItem>
+                  ) : (
+                    <>
+                      <SelectItem value="free">自由参加</SelectItem>
+                      <SelectItem value="approval">承認制</SelectItem>
+                    </>
+                  )}
                 </SelectContent>
               </Select>
               <p className="text-xs text-gray-500">
                 {settingsForm.join_type === 'free'
                   ? '誰でも自由に参加できます'
-                  : '参加には承認が必要です'}
+                  : settingsForm.join_type === 'approval'
+                    ? '参加には承認が必要です'
+                    : '招待されたユーザーのみが参加できます'}
               </p>
+              {settingsForm.visibility_type === 'private' && (
+                <p className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                  📝 プライベートグループは招待制のみ可能です
+                </p>
+              )}
             </div>
           </div>
 

@@ -2,7 +2,7 @@
 
 import { formatDistanceToNow } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { Heart, MessageCircle, Repeat2, Smile, UserPlus, Trash2 } from 'lucide-react'
+import { Heart, MessageCircle, Repeat2, Smile, UserPlus, Trash2, Users, Check, X } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -139,6 +139,39 @@ export function NotificationList() {
                     locale: ja,
                   })}
                 </p>
+
+                {/* Group invite actions */}
+                {notification.type === 'group_invite' && (
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        // Accept group invite and navigate to group
+                        router.push(`/groups/${notification.related_post_id}`)
+                      }}
+                      className="bg-green-600 hover:bg-green-700 text-white text-xs h-7 px-3"
+                    >
+                      <Check className="h-3 w-3 mr-1" />
+                      参加
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        // Decline group invite - just mark as read
+                        if (!notification.is_read) {
+                          markAsRead.mutate(notification.id)
+                        }
+                      }}
+                      className="text-xs h-7 px-3 border-red-200 text-red-600 hover:bg-red-50"
+                    >
+                      <X className="h-3 w-3 mr-1" />
+                      辞退
+                    </Button>
+                  </div>
+                )}
               </div>
 
               <Button
@@ -194,6 +227,12 @@ function NotificationIcon({ type }: { type: string }) {
       return (
         <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-950 flex items-center justify-center shrink-0">
           <UserPlus className={cn(iconClass, 'text-purple-500')} />
+        </div>
+      )
+    case 'group_invite':
+      return (
+        <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center shrink-0">
+          <Users className={cn(iconClass, 'text-indigo-500')} />
         </div>
       )
     default:

@@ -17,6 +17,11 @@ type Notification = Database['public']['Tables']['notifications']['Row'] & {
     id: string
     content: string | null
   } | null
+  related_group?: {
+    id: string
+    name: string
+  } | null
+  message?: string | null
 }
 
 export function useNotifications() {
@@ -41,6 +46,10 @@ export function useNotifications() {
           related_post:posts!related_post_id(
             id,
             content
+          ),
+          related_group:groups!related_post_id(
+            id,
+            name
           )
         `)
         .eq('user_id', user.id)
@@ -181,6 +190,8 @@ export function getNotificationText(notification: Notification): string {
       return `${displayName}さんがあなたの投稿にリアクションしました`
     case 'follow':
       return `${displayName}さんがあなたをフォローしました`
+    case 'group_invite':
+      return notification.message || `${displayName}さんからグループへの招待が届きました`
     default:
       return '新しい通知があります'
   }
