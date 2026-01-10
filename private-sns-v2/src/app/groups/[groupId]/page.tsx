@@ -556,7 +556,7 @@ export default function GroupDetailPage() {
 
       {/* Group Settings Dialog */}
       <Dialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen}>
-        <DialogContent className="max-w-[calc(100vw-2rem)] w-full sm:max-w-md max-h-[calc(100vh-8rem)] flex flex-col bg-gradient-to-br from-white via-blue-50 to-white border-0 shadow-2xl rounded-3xl overflow-hidden">
+        <DialogContent className="max-w-[calc(100vw-2rem)] w-full sm:max-w-md max-h-[calc(100vh-20rem)] flex flex-col bg-gradient-to-br from-white via-blue-50 to-white border-0 shadow-2xl rounded-3xl overflow-hidden">
           <DialogHeader className="flex-shrink-0 bg-gradient-to-r from-blue-600 to-sky-600 text-white p-6 pb-4 rounded-t-3xl">
             <DialogTitle className="text-xl font-bold text-center flex items-center justify-center gap-2">
               <div className="p-2 bg-white/20 rounded-full">
