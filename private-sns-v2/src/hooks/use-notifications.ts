@@ -55,15 +55,14 @@ export function useNotifications() {
 
       if (error) throw error
 
-      // group_inviteタイプの通知の場合、related_post_idにグループIDが格納されているので
-      // 別途グループ情報を取得
+      // group_inviteタイプの通知の場合、related_group_idからグループ情報を取得
       const notificationsWithGroups = await Promise.all(
         (data || []).map(async (notification: any) => {
-          if (notification.type === 'group_invite' && notification.related_post_id) {
+          if (notification.type === 'group_invite' && notification.related_group_id) {
             const { data: groupData } = await supabase
               .from('groups')
               .select('id, name')
-              .eq('id', notification.related_post_id)
+              .eq('id', notification.related_group_id)
               .single()
 
             return {

@@ -473,30 +473,7 @@ export function useInviteUserToGroup() {
       if (error) throw error
       if (!data) throw new Error('ユーザーの招待に失敗しました')
 
-      // 招待成功後に通知を作成
-      console.log('通知作成開始:', { userId, groupId, currentUserId: currentUser.id, groupIdType: typeof groupId })
-
-      const { data: notificationData, error: notificationError } = await (supabase as any)
-        .from('notifications')
-        .insert({
-          user_id: userId,
-          type: 'group_invite',
-          related_user_id: currentUser.id,
-          related_post_id: null, // グループ通知の場合はnull
-          related_group_id: groupId, // グループIDをrelated_group_idに保存
-          message: 'グループに招待されました'
-        })
-        .select()
-
-      console.log('通知作成結果:', { notificationData, notificationError })
-
-      if (notificationError) {
-        console.error('通知作成エラー:', notificationError)
-        // 通知作成失敗でも招待自体は成功として扱う
-      } else {
-        console.log('招待通知を作成しました:', notificationData)
-      }
-
+      // 通知はデータベーストリガーで自動作成される
       return userId
     },
     onSuccess: (_, variables) => {

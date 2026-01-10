@@ -31,8 +31,11 @@ export function NotificationList() {
 
     // Navigate based on notification type
     if (notification.type === 'group_invite') {
-      // Group invite notifications always go to group page
-      router.push(`/groups/${notification.related_post_id}`)
+      // Group invite notifications use related_group_id
+      const groupId = notification.related_group_id
+      if (groupId) {
+        router.push(`/groups/${groupId}`)
+      }
     } else if (notification.related_post_id) {
       router.push(`/home/${notification.related_post_id}`)
     } else if (notification.type === 'follow') {
@@ -150,9 +153,10 @@ export function NotificationList() {
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation()
-                        // Navigate to group using related_group_id (preferred) or related_post_id (fallback)
-                        const groupId = (notification as any).related_group_id || notification.related_post_id
-                        router.push(`/groups/${groupId}`)
+                        const groupId = (notification as any).related_group_id
+                        if (groupId) {
+                          router.push(`/groups/${groupId}`)
+                        }
                       }}
                       className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-7 px-3"
                     >
