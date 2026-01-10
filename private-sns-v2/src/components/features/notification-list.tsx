@@ -147,8 +147,9 @@ export function NotificationList() {
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation()
-                        // Navigate to group
-                        router.push(`/groups/${notification.related_post_id}`)
+                        // Navigate to group using related_group_id
+                        const groupId = (notification as any).related_group_id || notification.related_post_id
+                        router.push(`/groups/${groupId}`)
                       }}
                       className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-7 px-3"
                     >
