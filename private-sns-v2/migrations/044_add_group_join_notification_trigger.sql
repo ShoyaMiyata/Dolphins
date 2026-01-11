@@ -33,6 +33,7 @@ BEGIN
     WHERE id = NEW.user_id;
 
     -- Insert notifications for all OTHER active members of the group
+    -- Exclude the person who performed the action (auth.uid()) to avoid notifying the inviter/approver
     INSERT INTO public.notifications (user_id, type, related_user_id, related_group_id, message)
     SELECT 
       user_id, 
@@ -43,6 +44,7 @@ BEGIN
     FROM group_members
     WHERE group_id = NEW.group_id 
       AND user_id != NEW.user_id 
+      AND user_id != auth.uid() -- Exclude the requester
       AND is_active = true;
   END IF;
 
