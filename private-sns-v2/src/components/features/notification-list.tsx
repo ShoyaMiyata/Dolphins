@@ -181,6 +181,9 @@ export function NotificationList() {
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation()
+                        if (!notification.is_read) {
+                          markAsRead.mutate(notification.id)
+                        }
                         const groupId = (notification as any).related_group_id
                         if (groupId) {
                           router.push(`/groups/${groupId}`)
