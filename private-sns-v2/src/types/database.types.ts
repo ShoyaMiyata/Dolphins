@@ -46,6 +46,7 @@ export interface Database {
           content: string | null
           type: string | null
           original_post_id: string | null
+          original_group_post_id: string | null
           created_at: string
           updated_at: string
         }
@@ -55,6 +56,7 @@ export interface Database {
           content?: string | null
           type?: string | null
           original_post_id?: string | null
+          original_group_post_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -64,6 +66,7 @@ export interface Database {
           content?: string | null
           type?: string | null
           original_post_id?: string | null
+          original_group_post_id?: string | null
           created_at?: string
           updated_at?: string
         }

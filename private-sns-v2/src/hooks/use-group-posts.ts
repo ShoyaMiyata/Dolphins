@@ -13,7 +13,9 @@ export type GroupPostWithProfile = GroupPost & {
   group_post_images: GroupPostImage[]
   comments_count?: number
   likes_count?: number
+  reposts_count?: number
   is_liked?: boolean
+  is_reposted?: boolean
 }
 
 export interface CreateGroupPostData {
@@ -113,6 +115,13 @@ export function useGroupPosts(groupId: string | null) {
             .select('*', { count: 'exact', head: true })
             .eq('group_post_id', post.id)
 
+          // リポスト数を取得
+          const { count: repostsCount } = await supabase
+            .from('posts')
+            .select('*', { count: 'exact', head: true })
+            .eq('type', 'repost')
+            .eq('original_group_post_id', post.id)
+
           // 自分のいいね状態を取得
           let isLiked = false
           if (user) {
@@ -125,6 +134,19 @@ export function useGroupPosts(groupId: string | null) {
             isLiked = !!likeData
           }
 
+          // 自分のリポスト状態を取得
+          let isReposted = false
+          if (user) {
+            const { data: repostData } = await supabase
+              .from('posts')
+              .select('id')
+              .eq('user_id', user.id)
+              .eq('type', 'repost')
+              .eq('original_group_post_id', post.id)
+              .maybeSingle()
+            isReposted = !!repostData
+          }
+
           return {
             ...post,
             profiles: profile,
@@ -133,7 +155,9 @@ export function useGroupPosts(groupId: string | null) {
               : [],
             comments_count: commentsCount || 0,
             likes_count: likesCount || 0,
+            reposts_count: repostsCount || 0,
             is_liked: isLiked,
+            is_reposted: isReposted,
           }
         })
       )
@@ -152,6 +176,7 @@ export function useGroupPost(groupId: string | null, postId: string | null) {
     queryKey: ['group-post', groupId, postId],
     queryFn: async () => {
       if (!groupId || !postId) return null
+      const { data: { user } } = await supabase.auth.getUser()
 
       const { data, error } = await supabase
         .from('group_posts')
@@ -180,13 +205,55 @@ export function useGroupPost(groupId: string | null, postId: string | null) {
         .select('*', { count: 'exact', head: true })
         .eq('group_post_id', postId)
 
-      const postWithProfile: GroupPostWithProfile & { comments_count: number } = {
+      // いいね数を取得
+      const { count: likesCount } = await supabase
+        .from('group_post_likes')
+        .select('*', { count: 'exact', head: true })
+        .eq('group_post_id', postId)
+
+      // リポスト数を取得
+      const { count: repostsCount } = await supabase
+        .from('posts')
+        .select('*', { count: 'exact', head: true })
+        .eq('type', 'repost')
+        .eq('original_group_post_id', postId)
+
+      // 自分のいいね状態を取得
+      let isLiked = false
+      if (user) {
+        const { data: likeData } = await supabase
+          .from('group_post_likes')
+          .select('id')
+          .eq('group_post_id', postId)
+          .eq('user_id', user.id)
+          .maybeSingle()
+        isLiked = !!likeData
+      }
+
+      // 自分のリポスト状態を取得
+      let isReposted = false
+      if (user) {
+        const { data: repostData } = await supabase
+          .from('posts')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('type', 'repost')
+          .eq('original_group_post_id', postId)
+          .maybeSingle()
+        isReposted = !!repostData
+      }
+
+      const postWithProfile: GroupPostWithProfile & { comments_count: number; likes_count: number; reposts_count: number; is_liked: boolean; is_reposted: boolean } = {
         ...postData,
         profiles: profile,
         group_post_images: Array.isArray(postData.group_post_images)
           ? postData.group_post_images.sort((a: any, b: any) => a.order_index - b.order_index)
           : [],
         comments_count: commentsCount || 0,
+        likes_count: likesCount || 0,
+        reposts_count: repostsCount || 0,
+        is_liked: isLiked,
+        is_reposted: isReposted,
       }
 
       return postWithProfile

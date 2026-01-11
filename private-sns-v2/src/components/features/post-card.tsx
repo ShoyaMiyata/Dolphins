@@ -99,8 +99,11 @@ function PostCard({ post, groupId, isDetail = false, onPostDeleted }: PostCardPr
   const [isReactionUsersOpen, setIsReactionUsersOpen] = useState(false)
 
   // リポストの場合、表示するデータを元の投稿に切り替え
-  const displayPost = post.type === 'repost' && post.original_post ? post.original_post : post
+  const displayPost = post.type === 'repost'
+    ? (post.original_post || post.original_group_post || post)
+    : post
   const isRepost = post.type === 'repost'
+  const isGroupRepost = isRepost && !!post.original_group_post_id
 
   const { ref, inView } = useInView({
     triggerOnce: true,
@@ -190,7 +193,8 @@ function PostCard({ post, groupId, isDetail = false, onPostDeleted }: PostCardPr
   // リポスト実行
   const handleRepostConfirm = async () => {
     await repost.mutateAsync({
-      postId: post.id,
+      postId: !isGroupPost ? post.id : undefined,
+      groupPostId: isGroupPost ? post.id : undefined,
       comment: repostComment.trim() || undefined,
     })
     setIsRepostDialogOpen(false)
@@ -347,11 +351,11 @@ function PostCard({ post, groupId, isDetail = false, onPostDeleted }: PostCardPr
           }`}>
           <CardContent className={`p-4 ${isDetail ? '' : 'cursor-pointer'}`} onClick={handlePostClick}>
             {/* リポストの場合のリポスト情報 */}
-            {post.type === 'repost' && post.original_post && (
+            {isRepost && (post.original_post || post.original_group_post) && (
               <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
                 <Repeat2 className="h-4 w-4 text-green-500" />
                 <span className="text-sm text-gray-600">
-                  {post.profiles.display_name || post.profiles.username} がリポストしました
+                  {post.profiles.display_name || post.profiles.username} が{isGroupRepost ? 'グループ投稿を' : ''}リポストしました
                 </span>
               </div>
             )}
@@ -435,78 +439,109 @@ function PostCard({ post, groupId, isDetail = false, onPostDeleted }: PostCardPr
                 )}
 
                 {/* 投稿内容 */}
-                {displayPost.content && (
-                  <div className={isRepost ? "p-3 bg-gray-50 rounded-lg" : ""}>
-                    <TextWithUrlPreview
-                      content={displayPost.content}
-                      className={`text-sm leading-relaxed ${isRepost ? "text-gray-700" : ""}`}
-                    />
+                {(displayPost.content || (displayPost as any).group_post_images?.length > 0) && (
+                  <div
+                    className={isRepost ? "p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-gray-100 transition-colors" : ""}
+                    onClick={(e) => {
+                      if (isRepost) {
+                        e.stopPropagation()
+                        if (post.original_group_post_id) {
+                          router.push(`/groups/${post.original_group_post.group_id}/posts/${post.original_group_post_id}`)
+                        } else if (post.original_post_id) {
+                          router.push(`/home/${post.original_post_id}`)
+                        }
+                      }
+                    }}
+                  >
+                    {isRepost && (
+                      <div className="flex items-center gap-2 mb-2">
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={displayPost.profiles.avatar_url || undefined} />
+                          <AvatarFallback className="text-[10px]">
+                            {displayPost.profiles.display_name?.[0] || displayPost.profiles.username[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs font-semibold text-gray-700">
+                          {displayPost.profiles.display_name || displayPost.profiles.username}
+                        </span>
+                        <span className="text-[10px] text-gray-500">
+                          @{displayPost.profiles.username}
+                        </span>
+                      </div>
+                    )}
+                    {displayPost.content && (
+                      <TextWithUrlPreview
+                        content={displayPost.content}
+                        className={`text-sm leading-relaxed ${isRepost ? "text-gray-700" : ""}`}
+                      />
+                    )}
                   </div>
                 )}
 
                 {/* 画像ギャラリー */}
-                {displayPost.post_images.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.3, delay: 0.1 }}
-                    className={`grid gap-2 mt-3 ${displayPost.post_images.length === 1
-                      ? 'grid-cols-1'
-                      : displayPost.post_images.length === 2
-                        ? 'grid-cols-2'
-                        : displayPost.post_images.length === 3
-                          ? 'grid-cols-3'
-                          : 'grid-cols-2'
-                      }`}
-                  >
-                    {displayPost.post_images.slice(0, 4).map((image, index) => (
-                      <motion.div
-                        key={image.id}
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.3, delay: index * 0.05 }}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className={`relative overflow-hidden rounded-lg border cursor-pointer ${displayPost.post_images.length === 3 && index === 0
-                          ? 'col-span-3'
-                          : displayPost.post_images.length > 3 && index === 3
-                            ? 'relative'
-                            : ''
-                          }`}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setSelectedImage(image.image_url)
-                        }}
-                      >
-                        {/* Image Loading Blur */}
-                        {!imageLoaded[image.id] && (
-                          <div className="absolute inset-0 bg-gray-200 animate-pulse" />
-                        )}
-                        <img
-                          src={image.image_url}
-                          alt={`投稿画像 ${index + 1}`}
-                          className={`w-full object-cover transition-opacity duration-300 ${displayPost.post_images.length === 1
-                            ? 'max-h-[400px]'
-                            : 'aspect-square'
-                            } ${imageLoaded[image.id] ? 'opacity-100' : 'opacity-0'}`}
-                          onLoad={() =>
-                            setImageLoaded((prev) => ({ ...prev, [image.id]: true }))
-                          }
-                          loading="lazy"
-                        />
-                        {displayPost.post_images.length > 4 && index === 3 && (
-                          <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="absolute inset-0 flex items-center justify-center bg-black/50 text-white text-2xl font-bold"
-                          >
-                            +{displayPost.post_images.length - 4}
-                          </motion.div>
-                        )}
-                      </motion.div>
-                    ))}
-                  </motion.div>
-                )}
+                {((displayPost.post_images && displayPost.post_images.length > 0) ||
+                  ((displayPost as any).group_post_images && (displayPost as any).group_post_images.length > 0)) && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.3, delay: 0.1 }}
+                      className={`grid gap-2 mt-3 ${((displayPost.post_images?.length || 0) + ((displayPost as any).group_post_images?.length || 0)) === 1
+                        ? 'grid-cols-1'
+                        : ((displayPost.post_images?.length || 0) + ((displayPost as any).group_post_images?.length || 0)) === 2
+                          ? 'grid-cols-2'
+                          : ((displayPost.post_images?.length || 0) + ((displayPost as any).group_post_images?.length || 0)) === 3
+                            ? 'grid-cols-3'
+                            : 'grid-cols-2'
+                        }`}
+                    >
+                      {[...(displayPost.post_images || []), ...((displayPost as any).group_post_images || [])].slice(0, 4).map((image: any, index: number) => (
+                        <motion.div
+                          key={image.id}
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.3, delay: index * 0.05 }}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className={`relative overflow-hidden rounded-lg border cursor-pointer ${displayPost.post_images.length === 3 && index === 0
+                            ? 'col-span-3'
+                            : displayPost.post_images.length > 3 && index === 3
+                              ? 'relative'
+                              : ''
+                            }`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSelectedImage(image.image_url)
+                          }}
+                        >
+                          {/* Image Loading Blur */}
+                          {!imageLoaded[image.id] && (
+                            <div className="absolute inset-0 bg-gray-200 animate-pulse" />
+                          )}
+                          <img
+                            src={image.image_url}
+                            alt={`投稿画像 ${index + 1}`}
+                            className={`w-full object-cover transition-opacity duration-300 ${displayPost.post_images.length === 1
+                              ? 'max-h-[400px]'
+                              : 'aspect-square'
+                              } ${imageLoaded[image.id] ? 'opacity-100' : 'opacity-0'}`}
+                            onLoad={() =>
+                              setImageLoaded((prev) => ({ ...prev, [image.id]: true }))
+                            }
+                            loading="lazy"
+                          />
+                          {displayPost.post_images.length > 4 && index === 3 && (
+                            <motion.div
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              className="absolute inset-0 flex items-center justify-center bg-black/50 text-white text-2xl font-bold"
+                            >
+                              +{displayPost.post_images.length - 4}
+                            </motion.div>
+                          )}
+                        </motion.div>
+                      ))}
+                    </motion.div>
+                  )}
 
                 {/* アクションボタン */}
                 <motion.div
@@ -554,16 +589,14 @@ function PostCard({ post, groupId, isDetail = false, onPostDeleted }: PostCardPr
                         e.stopPropagation()
                         handleRepost()
                       }}
-                      disabled={repost.isPending || unrepost.isPending || isGroupPost}
+                      disabled={repost.isPending || unrepost.isPending}
                       className={`h-8 gap-1.5 px-2 py-1 rounded-full transition-colors ${post.is_reposted
                         ? 'text-green-500 hover:text-green-600 hover:bg-green-50'
-                        : isGroupPost
-                          ? 'text-gray-300 cursor-not-allowed'
-                          : 'text-gray-500 hover:text-green-500 hover:bg-green-50'
+                        : 'text-gray-500 hover:text-green-500 hover:bg-green-50'
                         }`}
                     >
                       <Repeat2 className="h-4 w-4" />
-                      {!isGroupPost && post.reposts_count > 0 && (
+                      {post.reposts_count > 0 && (
                         <span className="text-xs font-medium">{post.reposts_count}</span>
                       )}
                     </Button>
