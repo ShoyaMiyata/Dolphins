@@ -464,10 +464,10 @@ export default function GroupDetailPage() {
                           post_id: post.id,
                           created_at: img.created_at,
                         })),
-                        likes_count: 0,
-                        comments_count: 0,
+                        comments_count: post.comments_count || 0,
+                        likes_count: post.likes_count || 0,
                         reposts_count: 0,
-                        is_liked: false,
+                        is_liked: post.is_liked || false,
                         is_reposted: false,
                       }}
                       groupId={groupId}

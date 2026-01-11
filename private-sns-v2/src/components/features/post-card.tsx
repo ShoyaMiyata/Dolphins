@@ -546,14 +546,16 @@ function PostCard({ post, groupId }: PostCardProps) {
                         e.stopPropagation()
                         handleRepost()
                       }}
-                      disabled={repost.isPending || unrepost.isPending}
+                      disabled={repost.isPending || unrepost.isPending || isGroupPost}
                       className={`h-8 gap-1.5 px-2 py-1 rounded-full transition-colors ${post.is_reposted
                         ? 'text-green-500 hover:text-green-600 hover:bg-green-50'
-                        : 'text-gray-500 hover:text-green-500 hover:bg-green-50'
+                        : isGroupPost
+                          ? 'text-gray-300 cursor-not-allowed'
+                          : 'text-gray-500 hover:text-green-500 hover:bg-green-50'
                         }`}
                     >
                       <Repeat2 className="h-4 w-4" />
-                      {post.reposts_count > 0 && (
+                      {!isGroupPost && post.reposts_count > 0 && (
                         <span className="text-xs font-medium">{post.reposts_count}</span>
                       )}
                     </Button>
