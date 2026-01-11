@@ -10,10 +10,9 @@ import {
     MoreHorizontal,
     Trash2,
     Edit,
-    Image as ImageIcon,
-    X,
     Heart,
 } from 'lucide-react'
+import { CommentInputForm } from '@/components/features'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -57,9 +56,6 @@ export default function GroupPostDetailPage() {
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
     const [isEditCommentDialogOpen, setIsEditCommentDialogOpen] = useState(false)
     const [editContent, setEditContent] = useState('')
-    const [commentContent, setCommentContent] = useState('')
-    const [commentImages, setCommentImages] = useState<File[]>([])
-    const [commentImagePreviews, setCommentImagePreviews] = useState<string[]>([])
     const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
     const [editingCommentContent, setEditingCommentContent] = useState('')
     const [selectedImage, setSelectedImage] = useState<string | null>(null)
@@ -114,39 +110,14 @@ export default function GroupPostDetailPage() {
         setIsEditDialogOpen(false)
     }
 
-    // 画像選択処理
-    const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files
-        if (!files) return
-
-        const newFiles = Array.from(files).slice(0, 4 - commentImages.length)
-
-        // プレビュー作成
-        const newPreviews = newFiles.map((file) => URL.createObjectURL(file))
-
-        setCommentImages([...commentImages, ...newFiles])
-        setCommentImagePreviews([...commentImagePreviews, ...newPreviews])
-    }
-
-    // 画像削除処理
-    const handleImageRemove = (index: number) => {
-        URL.revokeObjectURL(commentImagePreviews[index])
-        setCommentImages(commentImages.filter((_, i) => i !== index))
-        setCommentImagePreviews(commentImagePreviews.filter((_, i) => i !== index))
-    }
-
     // コメント投稿処理
-    const handleCreateComment = async () => {
-        if (!post || (!commentContent.trim() && commentImages.length === 0)) return
+    const handleCreateComment = async (content: string, images?: File[]) => {
+        if (!post) return
         await createComment.mutateAsync({
             groupPostId: post.id,
-            content: commentContent,
-            images: commentImages.length > 0 ? commentImages : undefined,
+            content,
+            images,
         })
-        setCommentContent('')
-        setCommentImages([])
-        commentImagePreviews.forEach(URL.revokeObjectURL)
-        setCommentImagePreviews([])
     }
 
     // コメント編集開始
@@ -449,65 +420,11 @@ export default function GroupPostDetailPage() {
                         </div>
                     )}
 
-                    {/* コメント入力フォーム - 固定表示 */}
-                    <Card className="fixed bottom-0 left-0 right-0 bg-white rounded-t-xl shadow-lg border-t border-blue-100 p-4 z-50">
-                        <div className="container max-w-2xl mx-auto">
-                            <div className="flex gap-3">
-                                <Textarea
-                                    value={commentContent}
-                                    onChange={(e) => setCommentContent(e.target.value)}
-                                    placeholder="コメントを入力..."
-                                    className="min-h-[60px] max-h-[120px] resize-none rounded-lg border-blue-100"
-                                />
-                                <div className="flex flex-col gap-2">
-                                    <label className="cursor-pointer">
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            multiple
-                                            onChange={handleImageSelect}
-                                            className="hidden"
-                                            disabled={commentImages.length >= 4}
-                                        />
-                                        <div className="h-9 w-9 flex items-center justify-center rounded-lg border border-blue-100 hover:bg-blue-50 transition-colors">
-                                            <ImageIcon className="h-4 w-4 text-blue-500" />
-                                        </div>
-                                    </label>
-                                    <Button
-                                        onClick={handleCreateComment}
-                                        disabled={createComment.isPending || (!commentContent.trim() && commentImages.length === 0)}
-                                        size="sm"
-                                        className="bg-blue-500 hover:bg-blue-600"
-                                    >
-                                        {createComment.isPending ? '送信中...' : '送信'}
-                                    </Button>
-                                </div>
-                            </div>
-
-                            {/* 画像プレビュー */}
-                            {commentImagePreviews.length > 0 && (
-                                <div className="flex gap-2 mt-2">
-                                    {commentImagePreviews.map((preview, index) => (
-                                        <div key={index} className="relative">
-                                            <img
-                                                src={preview}
-                                                alt={`プレビュー ${index + 1}`}
-                                                className="h-16 w-16 object-cover rounded-lg border"
-                                            />
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => handleImageRemove(index)}
-                                                className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 hover:bg-red-600 text-white"
-                                            >
-                                                <X className="h-3 w-3" />
-                                            </Button>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </Card>
+                    {/* コメント入力フォーム - 固定表示（ナビゲーションバーの上に配置） */}
+                    <CommentInputForm
+                        onSubmit={handleCreateComment}
+                        isLoading={createComment.isPending}
+                    />
                 </div>
 
                 {/* 画像ビューアー */}

@@ -21,6 +21,7 @@ import {
   Image as ImageIcon,
   X,
 } from 'lucide-react'
+import { CommentInputForm } from '@/components/features'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -85,9 +86,6 @@ export default function PostDetailPage() {
   const [isEditCommentDialogOpen, setIsEditCommentDialogOpen] = useState(false)
   const [isReactionPickerOpen, setIsReactionPickerOpen] = useState(false)
   const [editContent, setEditContent] = useState('')
-  const [commentContent, setCommentContent] = useState('')
-  const [commentImages, setCommentImages] = useState<File[]>([])
-  const [commentImagePreviews, setCommentImagePreviews] = useState<string[]>([])
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
   const [editingCommentContent, setEditingCommentContent] = useState('')
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
@@ -172,39 +170,14 @@ export default function PostDetailPage() {
     setIsEditDialogOpen(false)
   }
 
-  // 画像選択処理
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files) return
-
-    const newFiles = Array.from(files).slice(0, 4 - commentImages.length)
-
-    // プレビュー作成
-    const newPreviews = newFiles.map((file) => URL.createObjectURL(file))
-
-    setCommentImages([...commentImages, ...newFiles])
-    setCommentImagePreviews([...commentImagePreviews, ...newPreviews])
-  }
-
-  // 画像削除処理
-  const handleImageRemove = (index: number) => {
-    URL.revokeObjectURL(commentImagePreviews[index])
-    setCommentImages(commentImages.filter((_, i) => i !== index))
-    setCommentImagePreviews(commentImagePreviews.filter((_, i) => i !== index))
-  }
-
   // コメント投稿処理
-  const handleCreateComment = async () => {
-    if (!post || (!commentContent.trim() && commentImages.length === 0)) return
+  const handleCreateComment = async (content: string, images?: File[]) => {
+    if (!post) return
     await createComment.mutateAsync({
       postId: post.id,
-      content: commentContent,
-      images: commentImages.length > 0 ? commentImages : undefined,
+      content,
+      images,
     })
-    setCommentContent('')
-    setCommentImages([])
-    commentImagePreviews.forEach(URL.revokeObjectURL)
-    setCommentImagePreviews([])
   }
 
   // コメント編集開始
@@ -799,66 +772,10 @@ export default function PostDetailPage() {
           )}
 
           {/* コメント入力フォーム */}
-          <Card className="bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-dolphin-blue/20 transition-all duration-300 transform hover:-translate-y-1 sticky bottom-16">
-            <CardContent className="p-6">
-              <Textarea
-                value={commentContent}
-                onChange={(e) => setCommentContent(e.target.value)}
-                placeholder="コメントを入力..."
-                className="min-h-[100px] rounded-xl border-dolphin-blue/20 focus:border-dolphin-blue focus:ring-dolphin-blue/20 resize-none mb-4 text-base"
-              />
-
-              {/* 画像プレビュー */}
-              {commentImagePreviews.length > 0 && (
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  {commentImagePreviews.map((preview, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={preview}
-                        alt={`プレビュー ${index + 1}`}
-                        className="w-full h-32 object-cover rounded-xl border border-dolphin-blue/10"
-                      />
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        onClick={() => handleImageRemove(index)}
-                        className="absolute top-2 right-2 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex gap-3">
-                <input
-                  type="file"
-                  id="comment-image-input"
-                  accept="image/*"
-                  multiple
-                  onChange={handleImageSelect}
-                  className="hidden"
-                />
-                <Button
-                  variant="outline"
-                  onClick={() => document.getElementById('comment-image-input')?.click()}
-                  disabled={commentImages.length >= 4}
-                  className="flex-shrink-0 rounded-full border-dolphin-blue text-dolphin-blue hover:bg-dolphin-blue/10 hover:border-dolphin-light transition-all duration-200 px-4 py-2"
-                >
-                  <ImageIcon className="h-4 w-4 mr-2" />
-                  画像 ({commentImages.length}/4)
-                </Button>
-                <Button
-                  onClick={handleCreateComment}
-                  disabled={createComment.isPending || (!commentContent.trim() && commentImages.length === 0)}
-                  className="flex-1 bg-dolphin-orange hover:bg-orange-600 text-white rounded-full px-6 py-3 font-bold text-base transition-all duration-300 transform hover:-translate-y-0.5 shadow-lg hover:shadow-orange-500/50"
-                >
-                  {createComment.isPending ? '投稿中...' : 'コメントする'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <CommentInputForm
+            onSubmit={handleCreateComment}
+            isLoading={createComment.isPending}
+          />
         </div>
       </div>
 
