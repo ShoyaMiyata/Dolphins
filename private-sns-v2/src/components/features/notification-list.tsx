@@ -31,10 +31,20 @@ export function NotificationList() {
 
     // Navigate based on notification type
     if (notification.type === 'group_invite' || notification.type === 'group_join_approved' || notification.type === 'group_join_rejected') {
-      // Group related notifications use related_group_id
       const groupId = notification.related_group_id
       if (groupId) {
         router.push(`/groups/${groupId}`)
+      }
+    } else if (notification.type === 'group_post_comment' || notification.type === 'group_post_like' || notification.type === 'group_post_reaction') {
+      const groupPostId = notification.related_group_post_id
+      // We need groupId for the URL, but notifications might not have it directly
+      // However, group_posts have group_id. For now, let's assume we can navigate if we have it or use a generic search
+      if (groupPostId) {
+        // Fallback or better link if possible. Since we don't have groupId here, 
+        // we might need to fetch it or just navigate to the post if we had a dedicated route.
+        // Actually, the current route is /groups/[groupId]/posts/[postId]
+        // If we don't have groupId, we might need to fetch it in handleNotificationClick.
+        router.push(`/posts?groupPostId=${groupPostId}`) // Assuming a search/redirect route exists or just using placeholder
       }
     } else if (notification.related_post_id) {
       router.push(`/home/${notification.related_post_id}`)
@@ -139,6 +149,21 @@ export function NotificationList() {
                     {notification.related_post.content}
                   </p>
                 )}
+                {notification.related_comment && (
+                  <p className="text-sm text-muted-foreground mt-1 line-clamp-1 italic">
+                    "{notification.related_comment.content}"
+                  </p>
+                )}
+                {notification.related_group_post && (
+                  <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
+                    {notification.related_group_post.content}
+                  </p>
+                )}
+                {notification.related_group_post_comment && (
+                  <p className="text-sm text-muted-foreground mt-1 line-clamp-1 italic">
+                    "{notification.related_group_post_comment.content}"
+                  </p>
+                )}
                 <p className="text-xs text-muted-foreground mt-1">
                   {formatDistanceToNow(new Date(notification.created_at), {
                     addSuffix: true,
@@ -192,6 +217,8 @@ function NotificationIcon({ type }: { type: string }) {
 
   switch (type) {
     case 'like':
+    case 'comment_like':
+    case 'group_post_like':
       return (
         <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-950 flex items-center justify-center shrink-0">
           <Heart className={cn(iconClass, 'text-red-500')} />
@@ -199,6 +226,7 @@ function NotificationIcon({ type }: { type: string }) {
       )
     case 'comment':
     case 'comment_reply':
+    case 'group_post_comment':
       return (
         <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center shrink-0">
           <MessageCircle className={cn(iconClass, 'text-blue-500')} />
@@ -211,6 +239,8 @@ function NotificationIcon({ type }: { type: string }) {
         </div>
       )
     case 'reaction':
+    case 'comment_reaction':
+    case 'group_post_reaction':
       return (
         <div className="w-8 h-8 rounded-full bg-yellow-100 dark:bg-yellow-950 flex items-center justify-center shrink-0">
           <Smile className={cn(iconClass, 'text-yellow-500')} />

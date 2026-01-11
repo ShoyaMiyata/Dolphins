@@ -17,6 +17,18 @@ type Notification = Database['public']['Tables']['notifications']['Row'] & {
     id: string
     content: string | null
   } | null
+  related_comment?: {
+    id: string
+    content: string
+  } | null
+  related_group_post?: {
+    id: string
+    content: string | null
+  } | null
+  related_group_post_comment?: {
+    id: string
+    content: string
+  } | null
   related_group?: {
     id: string
     name: string
@@ -45,6 +57,18 @@ export function useNotifications() {
             avatar_url
           ),
           related_post:posts!related_post_id(
+            id,
+            content
+          ),
+          related_comment:comments!related_comment_id(
+            id,
+            content
+          ),
+          related_group_post:group_posts!related_group_post_id(
+            id,
+            content
+          ),
+          related_group_post_comment:group_post_comments!related_group_post_comment_id(
             id,
             content
           )
@@ -204,6 +228,16 @@ export function getNotificationText(notification: Notification): string {
       return `${displayName}さんがあなたの投稿をリポストしました`
     case 'reaction':
       return `${displayName}さんがあなたの投稿にリアクションしました`
+    case 'comment_like':
+      return `${displayName}さんがあなたのコメントにいいねしました`
+    case 'comment_reaction':
+      return `${displayName}さんがあなたのコメントにリアクションしました`
+    case 'group_post_comment':
+      return `${displayName}さんがあなたのグループ投稿にコメントしました`
+    case 'group_post_like':
+      return `${displayName}さんがあなたのグループ投稿にいいねしました`
+    case 'group_post_reaction':
+      return `${displayName}さんがあなたのグループ投稿にリアクションしました`
     case 'follow':
       return `${displayName}さんがあなたをフォローしました`
     case 'group_invite':
