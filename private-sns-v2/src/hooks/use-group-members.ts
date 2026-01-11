@@ -284,16 +284,16 @@ export function useApproveJoinRequest() {
 
       if (updateError) throw updateError
 
-      // メンバーとして追加
-      const { error: insertError } = await supabase
-        .from('group_members')
-        .insert({
-          group_id: groupId,
-          user_id: userId,
-          role: 'member',
-        } as any)
+      // メンバーとして追加 または 再有効化
+      const { data, error: reactivateError } = await (supabase as any)
+        .rpc('reactivate_member', {
+          p_group_id: groupId,
+          p_user_id: userId,
+          p_inviter_id: currentUser.id // 承認した人を便宜上招待者として登録（通知用）
+        })
 
-      if (insertError) throw insertError
+      if (reactivateError) throw reactivateError
+      if (!data) throw new Error('メンバーの追加に失敗しました')
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['group-join-requests', variables.groupId] })
@@ -346,16 +346,16 @@ export function useJoinGroup() {
       const userId = user.id
 
       if (joinType === 'free') {
-        // 自由参加の場合は直接メンバーとして追加
-        const { error } = await supabase
-          .from('group_members')
-          .insert({
-            group_id: groupId,
-            user_id: userId,
-            role: 'member',
-          } as any)
+        // 自由参加の場合は直接メンバーとして追加（再有効化も考慮）
+        const { data, error } = await (supabase as any)
+          .rpc('reactivate_member', {
+            p_group_id: groupId,
+            p_user_id: userId,
+            p_inviter_id: null // 招待ではないのでnull
+          })
 
         if (error) throw error
+        if (!data) throw new Error('グループ参加に失敗しました')
       } else {
         // 承認制の場合は参加リクエストを作成
         const { error } = await supabase
