@@ -55,11 +55,20 @@ import {
   useUpdateGroupPost,
 } from '@/hooks/use-group-posts'
 import {
+  useLikeGroupPost,
+  useUnlikeGroupPost,
+} from '@/hooks/use-group-post-likes'
+import {
   useReactions,
   useAddReaction,
   useRemoveReaction,
   type ReactionGroup,
 } from '@/hooks/use-reactions'
+import {
+  useGroupPostReactions,
+  useAddGroupPostReaction,
+  useRemoveGroupPostReaction,
+} from '@/hooks/use-group-post-reactions'
 import {
   useCustomStamps,
   useCreateCustomStamp,
@@ -105,13 +114,30 @@ function PostCard({ post, groupId }: PostCardProps) {
   const deleteGroupPost = useDeleteGroupPost()
   const updatePost = useUpdatePost()
   const updateGroupPost = useUpdateGroupPost()
+
+  // いいねフック
   const likePost = useLikePost()
   const unlikePost = useUnlikePost()
+  const likeGroupPost = useLikeGroupPost()
+  const unlikeGroupPost = useUnlikeGroupPost()
+
   const repost = useRepost()
   const unrepost = useUnrepost()
-  const { data: reactions = [] } = useReactions(post.id)
+
+  // リアクションフック
+  // 通常投稿用
+  const { data: standardReactions = [] } = useReactions(isGroupPost ? null : post.id)
   const addReaction = useAddReaction()
   const removeReaction = useRemoveReaction()
+
+  // グループ投稿用
+  const { data: groupReactions = [] } = useGroupPostReactions(isGroupPost ? post.id : '')
+  const addGroupPostReaction = useAddGroupPostReaction()
+  const removeGroupPostReaction = useRemoveGroupPostReaction()
+
+  // 表示するリアクション
+  const reactions = isGroupPost ? groupReactions : standardReactions
+
   const { data: customStamps = [] } = useCustomStamps()
   const createCustomStamp = useCreateCustomStamp()
 
@@ -137,10 +163,18 @@ function PostCard({ post, groupId }: PostCardProps) {
 
   // いいね処理
   const handleLike = async () => {
-    if (post.is_liked) {
-      await unlikePost.mutateAsync(post.id)
+    if (isGroupPost) {
+      if (post.is_liked) {
+        await unlikeGroupPost.mutateAsync(post.id)
+      } else {
+        await likeGroupPost.mutateAsync(post.id)
+      }
     } else {
-      await likePost.mutateAsync(post.id)
+      if (post.is_liked) {
+        await unlikePost.mutateAsync(post.id)
+      } else {
+        await likePost.mutateAsync(post.id)
+      }
     }
   }
 
@@ -253,18 +287,34 @@ function PostCard({ post, groupId }: PostCardProps) {
     const existingReaction = reactions.find((r) => r.emoji === emoji)
 
     try {
-      if (existingReaction?.hasReacted) {
-        // 既にリアクションしている場合は削除
-        await removeReaction.mutateAsync({
-          postId: post.id,
-          emoji,
-        })
+      if (isGroupPost) {
+        if (existingReaction?.hasReacted) {
+          // 既にリアクションしている場合は削除
+          await removeGroupPostReaction.mutateAsync({
+            postId: post.id,
+            emoji,
+          })
+        } else {
+          // リアクションを追加
+          await addGroupPostReaction.mutateAsync({
+            postId: post.id,
+            emoji,
+          })
+        }
       } else {
-        // リアクションを追加
-        await addReaction.mutateAsync({
-          postId: post.id,
-          emoji,
-        })
+        if (existingReaction?.hasReacted) {
+          // 既にリアクションしている場合は削除
+          await removeReaction.mutateAsync({
+            postId: post.id,
+            emoji,
+          })
+        } else {
+          // リアクションを追加
+          await addReaction.mutateAsync({
+            postId: post.id,
+            emoji,
+          })
+        }
       }
     } catch (error) {
       console.error('リアクション処理エラー:', error)

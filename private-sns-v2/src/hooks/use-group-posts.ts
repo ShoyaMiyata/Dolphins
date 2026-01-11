@@ -11,6 +11,9 @@ type Profile = Database['public']['Tables']['profiles']['Row']
 export type GroupPostWithProfile = GroupPost & {
   profiles: Profile
   group_post_images: GroupPostImage[]
+  comments_count?: number
+  likes_count?: number
+  is_liked?: boolean
 }
 
 export interface CreateGroupPostData {
@@ -76,6 +79,7 @@ export function useGroupPosts(groupId: string | null) {
     queryKey: ['group-posts', groupId],
     queryFn: async () => {
       if (!groupId) return []
+      const { data: { user } } = await supabase.auth.getUser()
 
       const { data, error } = await supabase
         .from('group_posts')
@@ -97,12 +101,39 @@ export function useGroupPosts(groupId: string | null) {
             .eq('id', post.user_id)
             .single()
 
+          // コメント数を取得
+          const { count: commentsCount } = await supabase
+            .from('group_post_comments')
+            .select('*', { count: 'exact', head: true })
+            .eq('group_post_id', post.id)
+
+          // いいね数を取得
+          const { count: likesCount } = await supabase
+            .from('group_post_likes')
+            .select('*', { count: 'exact', head: true })
+            .eq('group_post_id', post.id)
+
+          // 自分のいいね状態を取得
+          let isLiked = false
+          if (user) {
+            const { data: likeData } = await supabase
+              .from('group_post_likes')
+              .select('id')
+              .eq('group_post_id', post.id)
+              .eq('user_id', user.id)
+              .maybeSingle()
+            isLiked = !!likeData
+          }
+
           return {
             ...post,
             profiles: profile,
             group_post_images: Array.isArray(post.group_post_images)
               ? post.group_post_images.sort((a: any, b: any) => a.order_index - b.order_index)
               : [],
+            comments_count: commentsCount || 0,
+            likes_count: likesCount || 0,
+            is_liked: isLiked,
           }
         })
       )
