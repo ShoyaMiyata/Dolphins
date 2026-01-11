@@ -246,6 +246,8 @@ export function getNotificationText(notification: Notification): string {
       return notification.message || `${displayName}さんがあなたの参加リクエストを承認しました`
     case 'group_join_rejected':
       return notification.message || `${displayName}さんがあなたの参加リクエストを拒否しました`
+    case 'group_member_joined':
+      return notification.message || `${displayName}さんがグループに参加しました`
     default:
       return '新しい通知があります'
   }
