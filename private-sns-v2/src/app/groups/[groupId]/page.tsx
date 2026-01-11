@@ -452,8 +452,9 @@ export default function GroupDetailPage() {
                         id: post.id,
                         user_id: post.user_id,
                         content: post.content,
-                        type: null,
+                        type: 'post',
                         original_post_id: null,
+                        original_group_post_id: null,
                         created_at: post.created_at,
                         updated_at: post.updated_at,
                         profiles: post.profiles,
@@ -466,9 +467,9 @@ export default function GroupDetailPage() {
                         })),
                         comments_count: post.comments_count || 0,
                         likes_count: post.likes_count || 0,
-                        reposts_count: 0,
+                        reposts_count: post.reposts_count || 0,
                         is_liked: post.is_liked || false,
-                        is_reposted: false,
+                        is_reposted: post.is_reposted || false,
                       }}
                       groupId={groupId}
                     />
