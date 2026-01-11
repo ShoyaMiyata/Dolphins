@@ -79,9 +79,10 @@ export interface PostCardProps {
   post: PostWithDetails
   groupId?: string // グループIDを追加（グループ投稿の場合に使用）
   isDetail?: boolean // 投稿詳細ページでの表示かどうか
+  onPostDeleted?: () => void // 削除完了時のコールバック
 }
 
-function PostCard({ post, groupId, isDetail = false }: PostCardProps) {
+function PostCard({ post, groupId, isDetail = false, onPostDeleted }: PostCardProps) {
   const router = useRouter()
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -209,6 +210,9 @@ function PostCard({ post, groupId, isDetail = false }: PostCardProps) {
       await deletePost.mutateAsync(post.id)
     }
     setIsDeleteDialogOpen(false)
+    if (onPostDeleted) {
+      onPostDeleted()
+    }
   }
 
   // 画像選択処理
@@ -530,7 +534,9 @@ function PostCard({ post, groupId, isDetail = false }: PostCardProps) {
                       className="h-8 gap-1.5 text-gray-500 hover:text-blue-500 hover:bg-blue-50 px-2 py-1 rounded-full transition-colors"
                     >
                       <MessageCircle className="h-4 w-4" />
-                      <span className="text-xs font-medium">{post.comments_count}</span>
+                      {post.comments_count > 0 && (
+                        <span className="text-xs font-medium">{post.comments_count}</span>
+                      )}
                     </Button>
                   </motion.div>
 
