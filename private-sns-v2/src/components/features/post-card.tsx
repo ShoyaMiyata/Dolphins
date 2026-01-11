@@ -530,9 +530,7 @@ function PostCard({ post, groupId, isDetail = false }: PostCardProps) {
                       className="h-8 gap-1.5 text-gray-500 hover:text-blue-500 hover:bg-blue-50 px-2 py-1 rounded-full transition-colors"
                     >
                       <MessageCircle className="h-4 w-4" />
-                      {post.comments_count > 0 && (
-                        <span className="text-xs font-medium">{post.comments_count}</span>
-                      )}
+                      <span className="text-xs font-medium">{post.comments_count}</span>
                     </Button>
                   </motion.div>
 
