@@ -2,31 +2,19 @@
 
 import { useParams, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { formatDistanceToNow } from 'date-fns'
-import { ja } from 'date-fns/locale'
-import { motion } from 'framer-motion'
 import {
     ArrowLeft,
-    MoreHorizontal,
     Trash2,
     Edit,
-    Heart,
 } from 'lucide-react'
 import { CommentInputForm } from '@/components/features'
-import { TextWithUrlPreview } from '@/components/ui/text-with-url-preview'
+import PostCard from '@/components/features/post-card' // Import PostCard
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
     Dialog,
     DialogContent,
-    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
@@ -35,8 +23,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import {
     useGroupPost,
-    useDeleteGroupPost,
-    useUpdateGroupPost,
 } from '@/hooks/use-group-posts'
 import {
     useGroupPostComments,
@@ -45,6 +31,9 @@ import {
     useDeleteGroupPostComment,
 } from '@/hooks/use-group-post-comments'
 import { createClient } from '@/lib/supabase/client'
+import { formatDistanceToNow } from 'date-fns'
+import { ja } from 'date-fns/locale'
+import { TextWithUrlPreview } from '@/components/ui/text-with-url-preview'
 
 export default function GroupPostDetailPage() {
     const params = useParams()
@@ -53,10 +42,8 @@ export default function GroupPostDetailPage() {
     const postId = params.postId as string
 
     const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+    // Post-related state handling is now delegated to PostCard
     const [isEditCommentDialogOpen, setIsEditCommentDialogOpen] = useState(false)
-    const [editContent, setEditContent] = useState('')
     const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
     const [editingCommentContent, setEditingCommentContent] = useState('')
     const [selectedImage, setSelectedImage] = useState<string | null>(null)
@@ -65,8 +52,6 @@ export default function GroupPostDetailPage() {
     const { data: post, isLoading: isPostLoading, error: postError } = useGroupPost(groupId, postId)
     const { data: comments = [], isLoading: isCommentsLoading } = useGroupPostComments(postId)
 
-    const deletePost = useDeleteGroupPost()
-    const updatePost = useUpdateGroupPost()
     const createComment = useCreateGroupPostComment()
     const updateComment = useUpdateGroupPostComment()
     const deleteComment = useDeleteGroupPostComment()
@@ -82,34 +67,6 @@ export default function GroupPostDetailPage() {
         }
         fetchUserId()
     }, [])
-
-    // 投稿内容を編集フォームに反映
-    useEffect(() => {
-        if (post) {
-            setEditContent(post.content || '')
-        }
-    }, [post])
-
-    const isOwner = currentUserId === post?.user_id
-
-    // 削除処理
-    const handleDelete = async () => {
-        if (!post) return
-        await deletePost.mutateAsync({ postId: post.id, groupId })
-        setIsDeleteDialogOpen(false)
-        router.push(`/groups/${groupId}`)
-    }
-
-    // 更新処理
-    const handleUpdate = async () => {
-        if (!post || !editContent.trim()) return
-        await updatePost.mutateAsync({
-            postId: post.id,
-            groupId,
-            content: editContent,
-        })
-        setIsEditDialogOpen(false)
-    }
 
     // コメント投稿処理
     const handleCreateComment = async (content: string, images?: File[]) => {
@@ -184,122 +141,33 @@ export default function GroupPostDetailPage() {
                     グループに戻る
                 </Button>
 
-                {/* 投稿詳細 */}
-                <Card className="bg-white rounded-xl shadow-sm border border-blue-100 mb-4">
-                    <CardContent className="p-6">
-                        <div className="flex gap-3">
-                            {/* アバター */}
-                            <div
-                                onClick={() => router.push(`/profile/${post.profiles.username}`)}
-                                className="cursor-pointer"
-                            >
-                                <Avatar className="h-12 w-12 flex-shrink-0 hover:ring-2 hover:ring-blue-300 transition-all">
-                                    <AvatarImage src={post.profiles.avatar_url || undefined} />
-                                    <AvatarFallback>
-                                        {post.profiles.display_name?.[0] || post.profiles.username[0]}
-                                    </AvatarFallback>
-                                </Avatar>
-                            </div>
-
-                            <div className="flex-1 space-y-3">
-                                {/* ヘッダー */}
-                                <div className="flex items-start justify-between">
-                                    <div className="flex flex-col">
-                                        <span className="font-semibold text-base">
-                                            {post.profiles.display_name || post.profiles.username}
-                                        </span>
-                                        <span className="text-sm text-gray-500">
-                                            @{post.profiles.username} ·{' '}
-                                            {formatDistanceToNow(new Date(post.created_at), {
-                                                addSuffix: true,
-                                                locale: ja,
-                                            })}
-                                        </span>
-                                    </div>
-
-                                    {/* オプションメニュー（投稿者のみ） */}
-                                    {isOwner && (
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50"
-                                                >
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem
-                                                    onClick={() => setIsEditDialogOpen(true)}
-                                                    className="cursor-pointer"
-                                                >
-                                                    <Edit className="mr-2 h-4 w-4" />
-                                                    編集
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={() => setIsDeleteDialogOpen(true)}
-                                                    className="text-red-600 cursor-pointer"
-                                                >
-                                                    <Trash2 className="mr-2 h-4 w-4" />
-                                                    削除
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    )}
-                                </div>
-
-                                {/* 投稿内容 */}
-                                {post.content && (
-                                    <TextWithUrlPreview
-                                        content={post.content}
-                                        className="text-base leading-relaxed mb-4"
-                                    />
-                                )}
-
-                                {/* 画像ギャラリー */}
-                                {post.group_post_images.length > 0 && (
-                                    <div
-                                        className={`grid gap-2 ${post.group_post_images.length === 1
-                                            ? 'grid-cols-1'
-                                            : post.group_post_images.length === 2
-                                                ? 'grid-cols-2'
-                                                : post.group_post_images.length === 3
-                                                    ? 'grid-cols-3'
-                                                    : 'grid-cols-2'
-                                            }`}
-                                    >
-                                        {post.group_post_images.slice(0, 4).map((image: any, index: number) => (
-                                            <div
-                                                key={image.id}
-                                                className={`relative overflow-hidden rounded-lg border cursor-pointer ${post.group_post_images.length === 3 && index === 0
-                                                    ? 'col-span-3'
-                                                    : ''
-                                                    }`}
-                                                onClick={() => setSelectedImage(image.image_url)}
-                                            >
-                                                {!imageLoaded[image.id] && (
-                                                    <div className="absolute inset-0 bg-gray-200 animate-pulse" />
-                                                )}
-                                                <img
-                                                    src={image.image_url}
-                                                    alt={`投稿画像 ${index + 1}`}
-                                                    className={`w-full object-cover transition-opacity duration-300 ${post.group_post_images.length === 1
-                                                        ? 'max-h-[500px]'
-                                                        : 'aspect-square'
-                                                        } ${imageLoaded[image.id] ? 'opacity-100' : 'opacity-0'}`}
-                                                    onLoad={() =>
-                                                        setImageLoaded((prev) => ({ ...prev, [image.id]: true }))
-                                                    }
-                                                />
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                {/* 投稿詳細 (PostCardを利用) */}
+                <PostCard
+                    post={{
+                        id: post.id,
+                        user_id: post.user_id,
+                        content: post.content,
+                        type: null,
+                        original_post_id: null,
+                        created_at: post.created_at,
+                        updated_at: post.updated_at,
+                        profiles: post.profiles,
+                        post_images: post.group_post_images.map((img: any) => ({
+                            id: img.id,
+                            image_url: img.image_url,
+                            order_index: img.order_index,
+                            post_id: post.id,
+                            created_at: img.created_at,
+                        })),
+                        comments_count: post.comments_count || 0,
+                        likes_count: post.likes_count || 0,
+                        reposts_count: 0,
+                        is_liked: post.is_liked || false,
+                        is_reposted: false,
+                    }}
+                    groupId={groupId}
+                    isDetail={true}
+                />
 
                 <Separator className="my-4" />
 
@@ -440,71 +308,6 @@ export default function GroupPostDetailPage() {
                                 className="w-full h-auto max-h-[90vh] object-contain"
                             />
                         )}
-                    </DialogContent>
-                </Dialog>
-
-                {/* 削除確認ダイアログ */}
-                <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                    <DialogContent className="max-w-[calc(100vw-2rem)] w-full sm:max-w-md rounded-2xl border border-blue-100 bg-white p-5">
-                        <DialogHeader className="space-y-2">
-                            <DialogTitle className="text-lg font-semibold text-blue-900">投稿を削除しますか？</DialogTitle>
-                            <DialogDescription className="text-sm text-blue-700">
-                                この操作は取り消せません。投稿と関連する画像が完全に削除されます。
-                            </DialogDescription>
-                        </DialogHeader>
-                        <DialogFooter className="flex gap-2 mt-4">
-                            <Button
-                                variant="outline"
-                                onClick={() => setIsDeleteDialogOpen(false)}
-                                className="flex-1 rounded-lg border-blue-100"
-                            >
-                                キャンセル
-                            </Button>
-                            <Button
-                                variant="destructive"
-                                onClick={handleDelete}
-                                disabled={deletePost.isPending}
-                                className="flex-1 rounded-lg"
-                            >
-                                {deletePost.isPending ? '削除中...' : '削除'}
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-
-                {/* 編集ダイアログ */}
-                <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                    <DialogContent className="max-w-[calc(100vw-2rem)] w-full sm:max-w-md rounded-2xl border border-blue-100 bg-white p-5">
-                        <DialogHeader className="space-y-2">
-                            <DialogTitle className="text-lg font-semibold text-blue-900">投稿を編集</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-3 mt-4">
-                            <Textarea
-                                value={editContent}
-                                onChange={(e) => setEditContent(e.target.value)}
-                                placeholder="投稿内容を入力"
-                                className="min-h-[150px] rounded-lg border-blue-100 resize-none text-blue-900"
-                            />
-                            <div className="text-sm text-blue-600">
-                                {editContent.length} / 500
-                            </div>
-                        </div>
-                        <DialogFooter className="flex gap-2 mt-4">
-                            <Button
-                                variant="outline"
-                                onClick={() => setIsEditDialogOpen(false)}
-                                className="flex-1 rounded-lg border-blue-100"
-                            >
-                                キャンセル
-                            </Button>
-                            <Button
-                                onClick={handleUpdate}
-                                disabled={updatePost.isPending || !editContent.trim() || editContent.length > 500}
-                                className="flex-1 rounded-lg bg-blue-500 hover:bg-blue-600"
-                            >
-                                {updatePost.isPending ? '更新中...' : '更新'}
-                            </Button>
-                        </DialogFooter>
                     </DialogContent>
                 </Dialog>
 

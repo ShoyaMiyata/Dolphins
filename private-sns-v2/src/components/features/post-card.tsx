@@ -78,9 +78,10 @@ import { createClient } from '@/lib/supabase/client'
 export interface PostCardProps {
   post: PostWithDetails
   groupId?: string // グループIDを追加（グループ投稿の場合に使用）
+  isDetail?: boolean // 投稿詳細ページでの表示かどうか
 }
 
-function PostCard({ post, groupId }: PostCardProps) {
+function PostCard({ post, groupId, isDetail = false }: PostCardProps) {
   const router = useRouter()
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -99,8 +100,6 @@ function PostCard({ post, groupId }: PostCardProps) {
   // リポストの場合、表示するデータを元の投稿に切り替え
   const displayPost = post.type === 'repost' && post.original_post ? post.original_post : post
   const isRepost = post.type === 'repost'
-
-
 
   const { ref, inView } = useInView({
     triggerOnce: true,
@@ -265,6 +264,8 @@ function PostCard({ post, groupId }: PostCardProps) {
 
   // 投稿詳細ページへ遷移
   const handlePostClick = (e: React.MouseEvent) => {
+    if (isDetail) return // 詳細ページの場合は遷移しない
+
     // ボタンやリンクなどのクリックは除外
     const target = e.target as HTMLElement
     if (
@@ -338,8 +339,9 @@ function PostCard({ post, groupId }: PostCardProps) {
           ease: 'easeOut',
         }}
       >
-        <Card className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-200 mb-3 border border-blue-100 hover:border-blue-200">
-          <CardContent className="p-4 cursor-pointer" onClick={handlePostClick}>
+        <Card className={`bg-white rounded-xl shadow-sm border border-blue-100 mb-3 ${isDetail ? '' : 'hover:shadow-lg hover:border-blue-200 transition-all duration-200'
+          }`}>
+          <CardContent className={`p-4 ${isDetail ? '' : 'cursor-pointer'}`} onClick={handlePostClick}>
             {/* リポストの場合のリポスト情報 */}
             {post.type === 'repost' && post.original_post && (
               <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
@@ -516,6 +518,8 @@ function PostCard({ post, groupId }: PostCardProps) {
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation()
+                        if (isDetail) return // 詳細ページの場合は遷移しない
+
                         // グループ投稿の場合はグループ投稿詳細ページに遷移
                         if (groupId) {
                           router.push(`/groups/${groupId}/posts/${post.id}`)

@@ -56,7 +56,7 @@ export function CommentInputForm({
     }
 
     return (
-        <Card className="fixed bottom-20 left-0 right-0 bg-white rounded-t-xl shadow-lg border-t border-blue-100 p-4 z-40">
+        <Card className="fixed bottom-16 left-0 right-0 bg-white rounded-t-xl shadow-lg border-t border-blue-100 p-4 z-40">
             <div className="container max-w-2xl mx-auto">
                 <div className="flex gap-3">
                     <Textarea
