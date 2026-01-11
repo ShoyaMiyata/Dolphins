@@ -15,7 +15,7 @@ export function LinkifiedText({ content, className = '' }: LinkifiedTextProps) {
     const parts = content.split(urlRegex)
 
     return (
-        <p className={`whitespace-pre-wrap break-words ${className}`}>
+        <p className={`whitespace-pre-wrap break-all ${className}`}>
             {parts.map((part, index) => {
                 if (part.match(urlRegex)) {
                     return (

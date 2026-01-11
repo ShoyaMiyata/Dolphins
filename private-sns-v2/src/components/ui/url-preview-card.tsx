@@ -53,7 +53,7 @@ export function UrlPreviewCard({ url }: UrlPreviewCardProps) {
             className="block mt-2 group no-underline"
             onClick={(e) => e.stopPropagation()}
         >
-            <Card className="overflow-hidden border border-gray-200 hover:border-blue-300 transition-colors group-hover:shadow-sm">
+            <Card className="overflow-hidden border border-gray-200 hover:border-blue-300 transition-colors group-hover:shadow-sm max-w-full">
                 {data.image && (
                     <div className="relative h-48 w-full overflow-hidden bg-gray-100">
                         <img
