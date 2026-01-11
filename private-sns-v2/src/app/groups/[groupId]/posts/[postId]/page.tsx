@@ -13,6 +13,7 @@ import {
     Heart,
 } from 'lucide-react'
 import { CommentInputForm } from '@/components/features'
+import { TextWithUrlPreview } from '@/components/ui/text-with-url-preview'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -250,9 +251,10 @@ export default function GroupPostDetailPage() {
 
                                 {/* 投稿内容 */}
                                 {post.content && (
-                                    <p className="text-base leading-relaxed whitespace-pre-wrap break-words">
-                                        {post.content}
-                                    </p>
+                                    <TextWithUrlPreview
+                                        content={post.content}
+                                        className="text-base leading-relaxed mb-4"
+                                    />
                                 )}
 
                                 {/* 画像ギャラリー */}
@@ -302,7 +304,7 @@ export default function GroupPostDetailPage() {
                 <Separator className="my-4" />
 
                 {/* コメントセクション */}
-                <div className="space-y-4 pb-20">
+                <div className="space-y-4 pb-60">
                     <h2 className="text-lg font-semibold text-gray-900">
                         コメント {comments.length > 0 && `(${comments.length})`}
                     </h2>
@@ -369,9 +371,10 @@ export default function GroupPostDetailPage() {
                                                         </div>
                                                     )}
                                                 </div>
-                                                <p className="text-sm text-gray-800 whitespace-pre-wrap break-words">
-                                                    {comment.content}
-                                                </p>
+                                                <TextWithUrlPreview
+                                                    content={comment.content}
+                                                    className="text-sm text-gray-800"
+                                                />
 
                                                 {/* コメント画像ギャラリー */}
                                                 {comment.group_post_comment_images.length > 0 && (

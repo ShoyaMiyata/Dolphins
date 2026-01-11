@@ -1,8 +1,8 @@
-
 'use client'
 
 import { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import { useRouter } from 'next/navigation'
+import { TextWithUrlPreview } from '@/components/ui/text-with-url-preview'
 import Image from 'next/image'
 import { formatDistanceToNow } from 'date-fns'
 import { ja } from 'date-fns/locale'
@@ -371,18 +371,20 @@ function PostCard({ post, groupId }: PostCardProps) {
                 {/* リポストコメント（リポストの場合のみ） */}
                 {isRepost && post.content && (
                   <div className="mb-3">
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-                      {post.content}
-                    </p>
+                    <TextWithUrlPreview
+                      content={post.content}
+                      className="text-sm leading-relaxed"
+                    />
                   </div>
                 )}
 
                 {/* 投稿内容 */}
                 {displayPost.content && (
                   <div className={isRepost ? "p-3 bg-gray-50 rounded-lg" : ""}>
-                    <p className={`text-sm leading-relaxed whitespace-pre-wrap break-words ${isRepost ? "text-gray-700" : ""}`}>
-                      {displayPost.content}
-                    </p>
+                    <TextWithUrlPreview
+                      content={displayPost.content}
+                      className={`text-sm leading-relaxed ${isRepost ? "text-gray-700" : ""}`}
+                    />
                   </div>
                 )}
 
