@@ -8,7 +8,7 @@ export function useLikeGroupPost() {
     const supabase = createClient()
 
     return useMutation({
-        mutationFn: async (postId: string) => {
+        mutationFn: async ({ postId, commentId }: { postId?: string; commentId?: string }) => {
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) {
                 throw new Error('ログインが必要です')
@@ -17,12 +17,20 @@ export function useLikeGroupPost() {
             const userId = user.id
 
             // 既にいいねされているか確認
-            const { data: existingLike } = await supabase
+            const query = supabase
                 .from('group_post_likes')
                 .select('id')
-                .eq('group_post_id', postId)
                 .eq('user_id', userId)
-                .maybeSingle()
+
+            if (postId) {
+                query.eq('group_post_id', postId)
+            } else if (commentId) {
+                query.eq('group_post_comment_id', commentId)
+            } else {
+                throw new Error('postId or commentId is required')
+            }
+
+            const { data: existingLike } = await query.maybeSingle()
 
             if (existingLike) {
                 // 既にいいねされている場合は何もしない
@@ -32,7 +40,8 @@ export function useLikeGroupPost() {
             const { data, error } = await supabase
                 .from('group_post_likes')
                 .insert({
-                    group_post_id: postId,
+                    group_post_id: postId || null,
+                    group_post_comment_id: commentId || null,
                     user_id: userId,
                 } as any)
                 .select()
@@ -45,22 +54,15 @@ export function useLikeGroupPost() {
 
             return data
         },
-        onSuccess: (data, postId) => {
-            // 特定のグループ投稿のクエリを無効化する代わりに、
-            // 楽観的更新を行うか、広範囲のクエリを無効化する
-            // ここではグループ投稿一覧のクエリキーが分からない（groupIdが必要）ため、
-            // 呼び出し元でinvalidate Queriesを行うか、
-            // useGroupPostsのキャッシュキー構造を考慮する必要がある。
-            // 一旦、全グループ投稿キャッシュを対象にするのは少し乱暴だが、
-            // useGroupPost(単一)ではgroupIdもキーに含まれる。
-
-            // 理想は、mutationの引数にgroupIdを含めることだが、
-            // PostCardのインターフェース上、postIdしか渡されない可能性がある。
-
-            // ここでは queryClient.invalidateQueries({ queryKey: ['group-posts'] }) と
-            // queryClient.invalidateQueries({ queryKey: ['group-post'] }) を実行して更新を促す。
-            queryClient.invalidateQueries({ queryKey: ['group-posts'] })
-            queryClient.invalidateQueries({ queryKey: ['group-post'] })
+        onSuccess: (data, { postId, commentId }) => {
+            // クエリを無効化して更新を促す
+            if (postId) {
+                queryClient.invalidateQueries({ queryKey: ['group-posts'] })
+                queryClient.invalidateQueries({ queryKey: ['group-post', postId] })
+            }
+            if (commentId) {
+                queryClient.invalidateQueries({ queryKey: ['group-post-comments'] })
+            }
         },
         onError: (error: any) => {
             console.error('グループ投稿いいねエラー:', error)
@@ -75,7 +77,7 @@ export function useUnlikeGroupPost() {
     const supabase = createClient()
 
     return useMutation({
-        mutationFn: async (postId: string) => {
+        mutationFn: async ({ postId, commentId }: { postId?: string; commentId?: string }) => {
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) {
                 throw new Error('ログインが必要です')
@@ -83,17 +85,29 @@ export function useUnlikeGroupPost() {
 
             const userId = user.id
 
-            const { error } = await supabase
+            const query = supabase
                 .from('group_post_likes')
                 .delete()
-                .eq('group_post_id', postId)
                 .eq('user_id', userId)
+
+            if (postId) {
+                query.eq('group_post_id', postId)
+            } else if (commentId) {
+                query.eq('group_post_comment_id', commentId)
+            }
+
+            const { error } = await query
 
             if (error) throw error
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['group-posts'] })
-            queryClient.invalidateQueries({ queryKey: ['group-post'] })
+        onSuccess: (_, { postId, commentId }) => {
+            if (postId) {
+                queryClient.invalidateQueries({ queryKey: ['group-posts'] })
+                queryClient.invalidateQueries({ queryKey: ['group-post', postId] })
+            }
+            if (commentId) {
+                queryClient.invalidateQueries({ queryKey: ['group-post-comments'] })
+            }
         },
         onError: (error: any) => {
             console.error('グループ投稿いいね解除エラー:', error)

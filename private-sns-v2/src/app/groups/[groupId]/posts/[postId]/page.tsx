@@ -30,10 +30,26 @@ import {
     useUpdateGroupPostComment,
     useDeleteGroupPostComment,
 } from '@/hooks/use-group-post-comments'
+import {
+    useLikeGroupPost,
+    useUnlikeGroupPost,
+} from '@/hooks/use-group-post-likes'
+import {
+    useAddGroupPostReaction,
+    useRemoveGroupPostReaction,
+    useGroupPostCommentReactions,
+} from '@/hooks/use-group-post-reactions'
 import { createClient } from '@/lib/supabase/client'
 import { formatDistanceToNow } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { TextWithUrlPreview } from '@/components/ui/text-with-url-preview'
+import { Heart, Smile, Plus } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover'
 
 export default function GroupPostDetailPage() {
     const params = useParams()
@@ -55,6 +71,13 @@ export default function GroupPostDetailPage() {
     const createComment = useCreateGroupPostComment()
     const updateComment = useUpdateGroupPostComment()
     const deleteComment = useDeleteGroupPostComment()
+
+    const likeGroupPost = useLikeGroupPost()
+    const unlikeGroupPost = useUnlikeGroupPost()
+    const addGroupPostReaction = useAddGroupPostReaction()
+    const removeGroupPostReaction = useRemoveGroupPostReaction()
+
+    const EMOJI_LIST = ['👍', '❤️', '🔥', '👏', '😊', '😮', '😢', '🙏']
 
     // ユーザーIDを取得
     useEffect(() => {
@@ -105,6 +128,24 @@ export default function GroupPostDetailPage() {
             commentId,
             groupPostId: post.id,
         })
+    }
+
+    // コメントいいね処理
+    const handleToggleCommentLike = async (commentId: string, isLiked: boolean) => {
+        if (isLiked) {
+            await unlikeGroupPost.mutateAsync({ commentId })
+        } else {
+            await likeGroupPost.mutateAsync({ commentId })
+        }
+    }
+
+    // コメントリアクション処理
+    const handleToggleCommentReaction = async (commentId: string, emoji: string, hasReacted: boolean) => {
+        if (hasReacted) {
+            await removeGroupPostReaction.mutateAsync({ commentId, emoji })
+        } else {
+            await addGroupPostReaction.mutateAsync({ commentId, emoji })
+        }
     }
 
     if (isPostLoading) {
@@ -284,6 +325,43 @@ export default function GroupPostDetailPage() {
                                                         ))}
                                                     </div>
                                                 )}
+
+                                                {/* コメントリアクション表示 */}
+                                                <CommentReactions commentId={comment.id} onToggleReaction={(emoji, hasReacted) => handleToggleCommentReaction(comment.id, emoji, hasReacted)} />
+
+                                                {/* コメントアクション */}
+                                                <div className="flex items-center gap-4 mt-3">
+                                                    <button
+                                                        onClick={() => handleToggleCommentLike(comment.id, comment.is_liked)}
+                                                        className={cn(
+                                                            "flex items-center gap-1.5 text-xs transition-colors p-1.5 rounded-full hover:bg-red-50",
+                                                            comment.is_liked ? "text-red-500" : "text-gray-500 hover:text-red-500"
+                                                        )}
+                                                    >
+                                                        <Heart className={cn("h-4 w-4", comment.is_liked && "fill-current")} />
+                                                        {comment.likes_count > 0 && <span>{comment.likes_count}</span>}
+                                                    </button>
+
+                                                    <Popover>
+                                                        <PopoverTrigger asChild>
+                                                            <button className="flex items-center gap-1.5 text-xs text-gray-500 transition-colors p-1.5 rounded-full hover:bg-blue-50 hover:text-blue-500">
+                                                                <Smile className="h-4 w-4" />
+                                                                <Plus className="h-3 w-3 -ml-0.5" />
+                                                            </button>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent className="w-fit p-2 flex gap-1 rounded-full border-blue-100 shadow-lg bg-white/90 backdrop-blur-sm" align="start">
+                                                            {EMOJI_LIST.map((emoji) => (
+                                                                <button
+                                                                    key={emoji}
+                                                                    onClick={() => handleToggleCommentReaction(comment.id, emoji, false)}
+                                                                    className="w-10 h-10 flex items-center justify-center text-xl hover:bg-blue-50 rounded-full transition-colors active:scale-90"
+                                                                >
+                                                                    {emoji}
+                                                                </button>
+                                                            ))}
+                                                        </PopoverContent>
+                                                    </Popover>
+                                                </div>
                                             </div>
                                         </div>
                                     </CardContent>
@@ -352,6 +430,42 @@ export default function GroupPostDetailPage() {
                     </DialogContent>
                 </Dialog>
             </div>
+        </div>
+    )
+}
+
+// 別コンポーネントとしてリアクション表示を定義（再レンダリング最適化のため）
+function CommentReactions({
+    commentId,
+    onToggleReaction
+}: {
+    commentId: string;
+    onToggleReaction: (emoji: string, hasReacted: boolean) => void
+}) {
+    const { data: reactions = [] } = useGroupPostCommentReactions(commentId)
+
+    if (reactions.length === 0) return null
+
+    return (
+        <div className="flex flex-wrap gap-1.5 mt-3">
+            {reactions.map((group) => (
+                <button
+                    key={group.emoji}
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        onToggleReaction(group.emoji, group.hasReacted)
+                    }}
+                    className={cn(
+                        "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-colors border",
+                        group.hasReacted
+                            ? "bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100"
+                            : "bg-white border-gray-100 text-gray-500 hover:bg-gray-50 hover:border-gray-200"
+                    )}
+                >
+                    <span>{group.emoji}</span>
+                    <span>{group.count}</span>
+                </button>
+            ))}
         </div>
     )
 }

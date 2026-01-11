@@ -168,9 +168,9 @@ function PostCard({ post, groupId, isDetail = false, onPostDeleted }: PostCardPr
   const handleLike = async () => {
     if (isGroupPost) {
       if (post.is_liked) {
-        await unlikeGroupPost.mutateAsync(post.id)
+        unlikeGroupPost.mutate({ postId: post.id })
       } else {
-        await likeGroupPost.mutateAsync(post.id)
+        likeGroupPost.mutate({ postId: post.id })
       }
     } else {
       if (post.is_liked) {

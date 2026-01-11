@@ -11,6 +11,8 @@ type Profile = Database['public']['Tables']['profiles']['Row']
 export type GroupPostCommentWithProfile = GroupPostComment & {
     profiles: Profile
     group_post_comment_images: GroupPostCommentImage[]
+    likes_count: number
+    is_liked: boolean
 }
 
 export interface CreateGroupPostCommentData {
@@ -88,6 +90,9 @@ export function useGroupPostComments(groupPostId: string | null) {
             }
 
             // 各コメントのプロフィールと画像を個別に取得
+            const { data: { user } } = await supabase.auth.getUser()
+            const currentUserId = user?.id
+
             const commentsWithProfile: GroupPostCommentWithProfile[] = await Promise.all(
                 (data || []).map(async (comment: any) => {
                     const { data: profile } = await supabase
@@ -102,10 +107,29 @@ export function useGroupPostComments(groupPostId: string | null) {
                         .eq('group_post_comment_id', comment.id)
                         .order('order_index', { ascending: true })
 
+                    // いいね情報を取得
+                    const { count: likesCount } = await supabase
+                        .from('group_post_likes')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('group_post_comment_id', comment.id)
+
+                    let isLiked = false
+                    if (currentUserId) {
+                        const { data: likeData } = await supabase
+                            .from('group_post_likes')
+                            .select('id')
+                            .eq('group_post_comment_id', comment.id)
+                            .eq('user_id', currentUserId)
+                            .maybeSingle()
+                        isLiked = !!likeData
+                    }
+
                     return {
                         ...comment,
                         profiles: profile,
                         group_post_comment_images: images || [],
+                        likes_count: likesCount || 0,
+                        is_liked: isLiked,
                     }
                 })
             )
