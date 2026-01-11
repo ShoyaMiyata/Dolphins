@@ -240,7 +240,12 @@ function PostCard({ post, groupId }: PostCardProps) {
     ) {
       return
     }
-    router.push(`/home/${post.id}`)
+    // グループ投稿の場合はグループ投稿詳細ページに遷移
+    if (groupId) {
+      router.push(`/groups/${groupId}/posts/${post.id}`)
+    } else {
+      router.push(`/home/${post.id}`)
+    }
   }
 
   // リアクション処理
@@ -459,7 +464,12 @@ function PostCard({ post, groupId }: PostCardProps) {
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation()
-                        router.push(`/home/${post.id}`)
+                        // グループ投稿の場合はグループ投稿詳細ページに遷移
+                        if (groupId) {
+                          router.push(`/groups/${groupId}/posts/${post.id}`)
+                        } else {
+                          router.push(`/home/${post.id}`)
+                        }
                       }}
                       className="h-8 gap-1.5 text-gray-500 hover:text-blue-500 hover:bg-blue-50 px-2 py-1 rounded-full transition-colors"
                     >

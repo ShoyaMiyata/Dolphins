@@ -515,6 +515,55 @@ export interface Database {
           created_at?: string
         }
       }
+      group_post_comments: {
+        Row: {
+          id: string
+          group_post_id: string
+          user_id: string
+          content: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          group_post_id: string
+          user_id: string
+          content: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          group_post_id?: string
+          user_id?: string
+          content?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      group_post_comment_images: {
+        Row: {
+          id: string
+          group_post_comment_id: string
+          image_url: string
+          order_index: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          group_post_comment_id: string
+          image_url: string
+          order_index: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          group_post_comment_id?: string
+          image_url?: string
+          order_index?: number
+          created_at?: string
+        }
+      }
       feedbacks: {
         Row: {
           id: string

@@ -113,6 +113,57 @@ export function useGroupPosts(groupId: string | null) {
   })
 }
 
+// 特定のグループ投稿を取得
+export function useGroupPost(groupId: string | null, postId: string | null) {
+  const supabase = createClient()
+
+  return useQuery({
+    queryKey: ['group-post', groupId, postId],
+    queryFn: async () => {
+      if (!groupId || !postId) return null
+
+      const { data, error } = await supabase
+        .from('group_posts')
+        .select('*, group_post_images(*)')
+        .eq('id', postId)
+        .eq('group_id', groupId)
+        .single()
+
+      if (error) {
+        console.error('グループ投稿取得エラー:', error)
+        throw error
+      }
+
+      const postData = data as any
+
+      // プロフィールを取得
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', postData.user_id)
+        .single()
+
+      // コメント数を取得
+      const { count: commentsCount } = await supabase
+        .from('group_post_comments')
+        .select('*', { count: 'exact', head: true })
+        .eq('group_post_id', postId)
+
+      const postWithProfile: GroupPostWithProfile & { comments_count: number } = {
+        ...postData,
+        profiles: profile,
+        group_post_images: Array.isArray(postData.group_post_images)
+          ? postData.group_post_images.sort((a: any, b: any) => a.order_index - b.order_index)
+          : [],
+        comments_count: commentsCount || 0,
+      }
+
+      return postWithProfile
+    },
+    enabled: !!groupId && !!postId,
+  })
+}
+
 // グループ投稿作成
 export function useCreateGroupPost() {
   const queryClient = useQueryClient()
@@ -217,8 +268,8 @@ export function useUpdateGroupPost() {
           .order('order_index', { ascending: false })
           .limit(1)
 
-        const maxOrderIndex = existingImages && existingImages.length > 0 
-          ? (existingImages[0] as any).order_index 
+        const maxOrderIndex = existingImages && existingImages.length > 0
+          ? (existingImages[0] as any).order_index
           : -1
 
         // group_post_imagesに保存
