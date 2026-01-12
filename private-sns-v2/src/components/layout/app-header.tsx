@@ -36,7 +36,7 @@ import {
 } from '@/components/ui/select'
 import { useGroups, useCreateGroup } from '@/hooks/use-groups'
 import { useAdmin } from '@/hooks/use-admin'
-import { useTrackLastAccess } from '@/hooks/use-user'
+
 import { Image as ImageIcon } from 'lucide-react'
 
 interface AppHeaderProps {
@@ -66,9 +66,6 @@ export function AppHeader({ groupName, icon: Icon }: AppHeaderProps) {
   const { data: groups, isLoading: groupsLoading } = useGroups()
   const createGroup = useCreateGroup()
   const { isAdmin } = useAdmin()
-
-  // 自動アクセス時刻更新
-  useTrackLastAccess()
 
   // アイコン画像選択処理
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {

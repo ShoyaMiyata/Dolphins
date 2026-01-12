@@ -42,6 +42,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
 
           setUser(userData)
+
+          // 最終アクセス時刻を更新
+          try {
+            await supabase
+              .from('profiles')
+              // @ts-expect-error - Supabase type inference issue
+              .update({
+                last_access_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', session.user.id)
+          } catch (err) {
+            console.error('Failed to update last access time:', err)
+          }
         } else {
           setUser(null)
         }
