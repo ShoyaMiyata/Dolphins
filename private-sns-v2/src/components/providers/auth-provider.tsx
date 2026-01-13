@@ -16,6 +16,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const supabase = createClient()
 
+    // 最終アクセス時刻を更新する共通関数
+    const updateLastAccess = async (userId: string) => {
+      try {
+        await supabase
+          .from('profiles')
+          // @ts-expect-error - Supabase type inference issue
+          .update({
+            last_access_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', userId)
+      } catch (err) {
+        console.error('Failed to update last access time:', err)
+      }
+    }
+
     // 初回セッション取得
     const initializeAuth = async () => {
       try {
@@ -44,18 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(userData)
 
           // 最終アクセス時刻を更新
-          try {
-            await supabase
-              .from('profiles')
-              // @ts-expect-error - Supabase type inference issue
-              .update({
-                last_access_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', session.user.id)
-          } catch (err) {
-            console.error('Failed to update last access time:', err)
-          }
+          await updateLastAccess(session.user.id)
         } else {
           setUser(null)
         }
@@ -88,6 +93,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
 
           setUser(userData)
+
+          // 認証状態が変更された際（ログイン時など）も最終アクセス時刻を更新
+          await updateLastAccess(session.user.id)
         } else {
           setUser(null)
         }
