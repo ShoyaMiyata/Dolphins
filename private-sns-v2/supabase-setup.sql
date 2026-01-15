@@ -58,6 +58,16 @@ CREATE TABLE IF NOT EXISTS comments (
   CONSTRAINT comment_length CHECK (char_length(content) >= 1 AND char_length(content) <= 500)
 );
 
+-- 6a. Create comment_images table
+CREATE TABLE IF NOT EXISTS comment_images (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  comment_id UUID NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
+  image_url TEXT NOT NULL,
+  order_index INTEGER NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+
 -- 7. Create reposts table
 CREATE TABLE IF NOT EXISTS reposts (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -110,6 +120,8 @@ CREATE INDEX IF NOT EXISTS idx_likes_post_id ON likes(post_id);
 CREATE INDEX IF NOT EXISTS idx_likes_user_id ON likes(user_id);
 CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id);
 CREATE INDEX IF NOT EXISTS idx_comments_user_id ON comments(user_id);
+CREATE INDEX IF NOT EXISTS idx_comment_images_comment_id ON comment_images(comment_id);
+
 CREATE INDEX IF NOT EXISTS idx_reposts_post_id ON reposts(post_id);
 CREATE INDEX IF NOT EXISTS idx_reposts_user_id ON reposts(user_id);
 CREATE INDEX IF NOT EXISTS idx_reactions_post_id ON reactions(post_id);
@@ -132,6 +144,8 @@ ALTER TABLE reposts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE follows ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE comment_images ENABLE ROW LEVEL SECURITY;
+
 
 -- Profiles policies
 CREATE POLICY "Public profiles are viewable by everyone" ON profiles
@@ -200,6 +214,29 @@ CREATE POLICY "Users can update their own comments" ON comments
 
 CREATE POLICY "Users can delete their own comments" ON comments
   FOR DELETE USING (auth.uid() = user_id);
+
+-- Comment images policies
+CREATE POLICY "Comment images are viewable by everyone" ON comment_images
+  FOR SELECT USING (true);
+
+CREATE POLICY "Users can add images to their own comments" ON comment_images
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM comments
+      WHERE comments.id = comment_images.comment_id
+      AND comments.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can delete images from their own comments" ON comment_images
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM comments
+      WHERE comments.id = comment_images.comment_id
+      AND comments.user_id = auth.uid()
+    )
+  );
+
 
 -- Reposts policies
 CREATE POLICY "Reposts are viewable by everyone" ON reposts

@@ -52,7 +52,7 @@ cat .env.local
 5. **Run** ボタンをクリックして実行
 
 これにより以下が作成されます：
-- 9つのテーブル（profiles, posts, post_images, likes, comments, reposts, reactions, follows, notifications）
+- 10のテーブル（profiles, posts, post_images, likes, comments, comment_images, reposts, reactions, follows, notifications）
 - インデックス（パフォーマンス最適化）
 - Row Level Security (RLS) ポリシー（セキュリティ）
 - 自動プロフィール作成トリガー
