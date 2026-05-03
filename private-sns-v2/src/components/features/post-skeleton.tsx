@@ -3,31 +3,24 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 export function PostSkeleton() {
   return (
-    <Card className="bg-white rounded-xl shadow-sm mb-3 border border-gray-100">
+    <Card className="bg-white rounded-xl shadow-sm mb-3 border border-blue-100">
       <CardContent className="p-4">
         <div className="flex gap-3">
-          {/* Avatar */}
-          <Skeleton className="h-10 w-10 rounded-full flex-shrink-0" />
-
+          <Skeleton className="h-11 w-11 rounded-full flex-shrink-0" />
           <div className="flex-1 space-y-3">
-            {/* User info */}
             <div className="space-y-2">
               <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-3 w-20" />
             </div>
-
-            {/* Content */}
             <div className="space-y-2">
               <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-5/6" />
             </div>
-
-            {/* Action buttons */}
-            <div className="flex gap-6 pt-2">
-              <Skeleton className="h-8 w-16 rounded-full" />
-              <Skeleton className="h-8 w-16 rounded-full" />
-              <Skeleton className="h-8 w-16 rounded-full" />
+            <Skeleton className="h-48 w-full rounded-lg" />
+            <div className="flex gap-2 pt-1">
+              <Skeleton className="h-8 w-12 rounded-full" />
+              <Skeleton className="h-8 w-12 rounded-full" />
+              <Skeleton className="h-8 w-12 rounded-full" />
             </div>
           </div>
         </div>
