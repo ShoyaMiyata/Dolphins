@@ -1,7 +1,12 @@
 import { createBrowserClient } from '@supabase/ssr'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 
+let cachedClient: SupabaseClient<Database> | null = null
+
 export function createClient() {
+  if (cachedClient) return cachedClient
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dummy.supabase.co'
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy-key'
 
@@ -20,7 +25,7 @@ export function createClient() {
     return `${currentUrl.protocol}//${currentUrl.host}/auth/callback`
   }
 
-  return createBrowserClient<Database>(
+  cachedClient = createBrowserClient<Database>(
     url,
     key,
     {
@@ -38,4 +43,6 @@ export function createClient() {
       },
     }
   )
+
+  return cachedClient
 }

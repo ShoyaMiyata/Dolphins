@@ -42,29 +42,49 @@ const compressionOptions = {
 async function uploadImage(file: File, userId: string): Promise<string> {
   const supabase = createClient()
 
-  // 画像を圧縮
-  const compressedFile = await imageCompression(file, compressionOptions)
+  let toUpload: File = file
+  try {
+    const compressed = await imageCompression(file, compressionOptions)
+    toUpload = compressed
+  } catch (err) {
+    console.warn('image compression failed, using original file:', err)
+    toUpload = file
+  }
 
-  // ファイル名を生成
-  const fileExt = compressedFile.name.split('.').pop()
-  const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+  const fileExt = toUpload.name.split('.').pop() || 'jpg'
+  const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${fileExt}`
 
-  // Storageにアップロード
   const { data, error } = await supabase.storage
     .from('comment-images')
-    .upload(fileName, compressedFile, {
+    .upload(fileName, toUpload, {
       cacheControl: '3600',
       upsert: false,
     })
 
   if (error) throw error
 
-  // 公開URLを取得
   const { data: { publicUrl } } = supabase.storage
     .from('comment-images')
     .getPublicUrl(data.path)
 
   return publicUrl
+}
+
+async function uploadCommentImagesWithLimit(
+  files: File[],
+  userId: string,
+  concurrency = 2
+): Promise<string[]> {
+  const results: string[] = new Array(files.length)
+  let cursor = 0
+  const workers = Array.from({ length: Math.min(concurrency, files.length) }, async () => {
+    while (cursor < files.length) {
+      const i = cursor++
+      results[i] = await uploadImage(files[i], userId)
+    }
+  })
+  await Promise.all(workers)
+  return results
 }
 
 // 特定の投稿のコメント一覧を取得
@@ -112,77 +132,96 @@ export function useCreateComment() {
 
   return useMutation({
     mutationFn: async ({ postId, content, images }: CreateCommentData) => {
-      console.log('コメント作成開始:', { postId, content, hasImages: !!images?.length })
+      const timeoutMs = 30_000
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('コメント処理がタイムアウトしました')), timeoutMs)
+      )
 
-      // 認証チェック
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        throw new Error('ログインが必要です')
-      }
+      const work = (async () => {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+          throw new Error('ログインが必要です')
+        }
 
-      const userId = user.id
+        const userId = user.id
 
-      // コメント作成
-      const { data: comment, error: commentError } = await supabase
-        .from('comments')
-        .insert({
-          post_id: postId,
-          user_id: userId,
-          content,
-        } as any)
-        .select()
-        .single()
+        const { data: comment, error: commentError } = await supabase
+          .from('comments')
+          .insert({
+            post_id: postId,
+            user_id: userId,
+            content,
+          } as any)
+          .select()
+          .single()
 
-      if (commentError) {
-        console.error('コメントINSERTエラー:', commentError)
-        throw new Error(`コメントの作成に失敗しました: ${commentError.message}`)
-      }
+        if (commentError) {
+          throw new Error(`コメントの作成に失敗しました: ${commentError.message}`)
+        }
 
-      console.log('コメント作成成功:', comment)
+        if (images && images.length > 0) {
+          try {
+            const imageUrls = await uploadCommentImagesWithLimit(images, userId)
 
-      // 画像がある場合はアップロード
-      if (images && images.length > 0) {
-        try {
-          const imageUrls = await Promise.all(
-            images.map(async (image) => uploadImage(image, userId))
-          )
+            const commentImages = imageUrls.map((url, index) => ({
+              comment_id: (comment as any).id,
+              image_url: url,
+              order_index: index,
+            }))
 
-          // comment_imagesに保存
-          const commentImages = imageUrls.map((url, index) => ({
-            comment_id: (comment as any).id,
-            image_url: url,
-            order_index: index,
-          }))
+            const { error: imagesError } = await supabase
+              .from('comment_images')
+              .insert(commentImages as any)
 
-          const { error: imagesError } = await supabase
-            .from('comment_images')
-            .insert(commentImages as any)
-
-          if (imagesError) {
-            console.error('コメント画像INSERTエラー:', imagesError)
-            // 画像アップロード失敗でもコメントは成功として扱う
-            console.warn('画像アップロードに失敗しましたが、コメントは作成されました')
+            if (imagesError) {
+              console.warn('画像アップロードに失敗しましたが、コメントは作成されました')
+            }
+          } catch (imageError) {
+            console.warn('画像アップロードに失敗しましたが、コメントは作成されました', imageError)
           }
-        } catch (imageError) {
-          console.error('画像アップロードエラー:', imageError)
-          // 画像アップロード失敗でもコメントは成功として扱う
-          console.warn('画像アップロードに失敗しましたが、コメントは作成されました')
+        }
+
+        return comment
+      })()
+
+      return Promise.race([work, timeout])
+    },
+    onMutate: async ({ postId }) => {
+      await queryClient.cancelQueries({ queryKey: ['posts'] })
+      await queryClient.cancelQueries({ queryKey: ['userPosts'] })
+      const snapshot = [
+        ...queryClient.getQueriesData({ queryKey: ['posts'] }),
+        ...queryClient.getQueriesData({ queryKey: ['userPosts'] }),
+      ]
+      const apply = (old: any) => {
+        if (!old?.pages) return old
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            posts: Array.isArray(page.posts)
+              ? page.posts.map((p: any) => (p.id === postId ? { ...p, comments_count: (p.comments_count || 0) + 1 } : p))
+              : page.posts,
+          })),
         }
       }
-
-      return comment
+      queryClient.setQueriesData({ queryKey: ['posts'] }, apply)
+      queryClient.setQueriesData({ queryKey: ['userPosts'] }, apply)
+      return { snapshot }
     },
-    onSuccess: (_, variables) => {
-      // コメント一覧を更新
-      queryClient.invalidateQueries({ queryKey: ['comments', variables.postId] })
-      // 投稿一覧も更新（コメント数が変わるため）
-      queryClient.invalidateQueries({ queryKey: ['posts'] })
-      toast.success('コメントを投稿しました')
-    },
-    onError: (error) => {
+    onError: (error, _vars, context) => {
+      if (context?.snapshot) {
+        for (const [key, data] of context.snapshot) {
+          queryClient.setQueryData(key, data)
+        }
+      }
       console.error('コメント投稿エラー:', error)
       const errorMessage = error instanceof Error ? error.message : 'コメントの投稿に失敗しました'
       toast.error(errorMessage)
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['comments', variables.postId] })
+      toast.success('コメントを投稿しました')
     },
   })
 }
@@ -252,16 +291,41 @@ export function useDeleteComment() {
 
       if (error) throw error
     },
-    onSuccess: (_, variables) => {
-      // コメント一覧を更新
-      queryClient.invalidateQueries({ queryKey: ['comments', variables.postId] })
-      // 投稿一覧も更新（コメント数が変わるため）
-      queryClient.invalidateQueries({ queryKey: ['posts'] })
-      toast.success('コメントを削除しました')
+    onMutate: async ({ postId }) => {
+      await queryClient.cancelQueries({ queryKey: ['posts'] })
+      await queryClient.cancelQueries({ queryKey: ['userPosts'] })
+      const snapshot = [
+        ...queryClient.getQueriesData({ queryKey: ['posts'] }),
+        ...queryClient.getQueriesData({ queryKey: ['userPosts'] }),
+      ]
+      const apply = (old: any) => {
+        if (!old?.pages) return old
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            posts: Array.isArray(page.posts)
+              ? page.posts.map((p: any) => (p.id === postId ? { ...p, comments_count: Math.max(0, (p.comments_count || 0) - 1) } : p))
+              : page.posts,
+          })),
+        }
+      }
+      queryClient.setQueriesData({ queryKey: ['posts'] }, apply)
+      queryClient.setQueriesData({ queryKey: ['userPosts'] }, apply)
+      return { snapshot }
     },
-    onError: (error) => {
+    onError: (error, _vars, context) => {
+      if (context?.snapshot) {
+        for (const [key, data] of context.snapshot) {
+          queryClient.setQueryData(key, data)
+        }
+      }
       console.error('コメント削除エラー:', error)
       toast.error('コメントの削除に失敗しました')
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['comments', variables.postId] })
+      toast.success('コメントを削除しました')
     },
   })
 }
