@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ImageIcon, X, Loader2, Crop } from 'lucide-react'
 import Cropper, { Area } from 'react-easy-crop'
-import { createClient } from '@/lib/supabase/client'
+import { selectProfile, useAuthStore } from '@/stores/auth-store'
 
 interface PostFormProps {
   onSuccess?: () => void
@@ -25,11 +25,7 @@ interface PostFormProps {
 export function PostForm({ onSuccess, groupId }: PostFormProps) {
   const [selectedImages, setSelectedImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
-  const [currentUser, setCurrentUser] = useState<{
-    display_name?: string | null
-    avatar_url?: string | null
-    username?: string
-  } | null>(null)
+  const currentUser = useAuthStore(selectProfile)
   const [cropImageIndex, setCropImageIndex] = useState<number | null>(null)
   const [crop, setCrop] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
@@ -51,28 +47,6 @@ export function PostForm({ onSuccess, groupId }: PostFormProps) {
 
   const content = watch('content')
   const contentLength = content?.length || 0
-
-  // ユーザー情報を取得
-  useEffect(() => {
-    const fetchUser = async () => {
-      const supabase = createClient()
-      const { data: session } = await supabase.auth.getSession()
-
-      if (session?.session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('display_name, avatar_url, username')
-          .eq('id', session.session.user.id)
-          .single()
-
-        if (profile) {
-          setCurrentUser(profile)
-        }
-      }
-    }
-
-    fetchUser()
-  }, [])
 
   // 画像選択処理
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -6,11 +6,13 @@ import imageCompression from 'browser-image-compression'
 
 type Post = Database['public']['Tables']['posts']['Row']
 type PostImage = Database['public']['Tables']['post_images']['Row']
+type GroupPostImage = Database['public']['Tables']['group_post_images']['Row']
 type Profile = Database['public']['Tables']['profiles']['Row']
 
 export type PostWithDetails = Post & {
   profiles: Profile
   post_images: PostImage[]
+  group_post_images?: GroupPostImage[]
   likes_count: number
   comments_count: number
   reposts_count: number
