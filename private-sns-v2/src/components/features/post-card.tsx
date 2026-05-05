@@ -238,7 +238,7 @@ function PostCard({ post, groupId, isDetail = false, onPostDeleted }: PostCardPr
 
   const allImages = useMemo(() => {
     const post1 = displayPost.post_images || []
-    const post2 = ((displayPost as unknown as { group_post_images?: Array<{ id: string; image_url: string }> }).group_post_images) || []
+    const post2 = displayPost.group_post_images || []
     return [...post1, ...post2]
   }, [displayPost])
 
@@ -311,7 +311,7 @@ function PostCard({ post, groupId, isDetail = false, onPostDeleted }: PostCardPr
               )}
 
               {(displayPost.content ||
-                ((displayPost as unknown as { group_post_images?: unknown[] }).group_post_images?.length ?? 0) > 0) && (
+                (displayPost.group_post_images?.length ?? 0) > 0) && (
                 <div
                   className={
                     isRepost
@@ -609,6 +609,12 @@ export default memo(PostCard, (prev, next) => {
     prev.post.comments_count === next.post.comments_count &&
     prev.post.reposts_count === next.post.reposts_count &&
     prev.post.content === next.post.content &&
+    prev.post.original_post?.likes_count === next.post.original_post?.likes_count &&
+    prev.post.original_post?.is_liked === next.post.original_post?.is_liked &&
+    prev.post.original_post?.comments_count === next.post.original_post?.comments_count &&
+    prev.post.original_post?.reposts_count === next.post.original_post?.reposts_count &&
+    prev.post.original_group_post?.likes_count === next.post.original_group_post?.likes_count &&
+    prev.post.original_group_post?.comments_count === next.post.original_group_post?.comments_count &&
     prev.groupId === next.groupId &&
     prev.isDetail === next.isDetail
   )

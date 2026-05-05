@@ -30,18 +30,20 @@ export function PostImages({ images, onImageClick }: Props) {
           className="block w-full"
           aria-label="画像を拡大"
         >
-          {!loaded[img.id] && (
-            <div className="aspect-[16/9] bg-gray-100 animate-pulse" />
-          )}
-          <img
-            src={img.image_url}
-            alt="投稿画像"
-            loading="lazy"
-            onLoad={() => setLoaded((p) => ({ ...p, [img.id]: true }))}
-            className={`w-full max-h-[420px] object-cover transition-opacity ${
-              loaded[img.id] ? 'opacity-100' : 'opacity-0 absolute inset-0'
-            }`}
-          />
+          <div className="relative aspect-[16/9] max-h-[420px]">
+            {!loaded[img.id] && (
+              <div className="absolute inset-0 bg-gray-100 animate-pulse" />
+            )}
+            <img
+              src={img.image_url}
+              alt="投稿画像"
+              loading="lazy"
+              onLoad={() => setLoaded((p) => ({ ...p, [img.id]: true }))}
+              className={`absolute inset-0 h-full w-full object-cover transition-opacity ${
+                loaded[img.id] ? 'opacity-100' : 'opacity-0'
+              }`}
+            />
+          </div>
         </button>
       </div>
     )

@@ -75,9 +75,21 @@ interface ActionButtonProps {
 }
 
 const colorMap = {
-  blue: { active: 'text-blue-500', hover: 'hover:text-blue-500 hover:bg-blue-50' },
-  green: { active: 'text-green-500', hover: 'hover:text-green-500 hover:bg-green-50' },
-  red: { active: 'text-red-500', hover: 'hover:text-red-500 hover:bg-red-50' },
+  blue: {
+    active: 'text-blue-500',
+    activeHover: 'hover:text-blue-600 hover:bg-blue-50',
+    inactiveHover: 'hover:text-blue-500 hover:bg-blue-50',
+  },
+  green: {
+    active: 'text-green-500',
+    activeHover: 'hover:text-green-600 hover:bg-green-50',
+    inactiveHover: 'hover:text-green-500 hover:bg-green-50',
+  },
+  red: {
+    active: 'text-red-500',
+    activeHover: 'hover:text-red-600 hover:bg-red-50',
+    inactiveHover: 'hover:text-red-500 hover:bg-red-50',
+  },
 }
 
 function ActionButton({
@@ -104,8 +116,8 @@ function ActionButton({
         }}
         disabled={disabled}
         className={`h-8 gap-1.5 px-2.5 py-1 rounded-full transition-colors ${
-          active ? c.active : 'text-gray-500'
-        } ${c.hover}`}
+          active ? `${c.active} ${c.activeHover}` : `text-gray-500 ${c.inactiveHover}`
+        }`}
       >
         <motion.span
           animate={animateActive && active ? { scale: [1, 1.25, 1] } : {}}

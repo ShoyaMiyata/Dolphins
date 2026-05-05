@@ -49,10 +49,7 @@ export function RepostDialog({
         <DialogFooter className="flex gap-2 mt-4">
           <Button
             variant="outline"
-            onClick={() => {
-              onOpenChange(false)
-              setComment('')
-            }}
+            onClick={() => onOpenChange(false)}
             className="flex-1 rounded-lg border-blue-100"
           >
             キャンセル
