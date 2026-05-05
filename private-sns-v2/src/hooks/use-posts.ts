@@ -94,15 +94,12 @@ const compressionOptions = {
   fileType: 'image/jpeg' as const,
 }
 
-async function uploadImage(file: File, userId: string, signal?: AbortSignal): Promise<string> {
+async function uploadImage(file: File, userId: string): Promise<string> {
   const supabase = createClient()
 
   let toUpload: File = file
   try {
-    const compressed = await imageCompression(file, {
-      ...compressionOptions,
-      signal,
-    } as Parameters<typeof imageCompression>[1])
+    const compressed = await imageCompression(file, compressionOptions)
     toUpload = compressed
   } catch (err) {
     console.warn('image compression failed, using original file:', err)
