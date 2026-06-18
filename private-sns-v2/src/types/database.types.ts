@@ -570,19 +570,22 @@ export interface Database {
       group_post_likes: {
         Row: {
           id: string
-          group_post_id: string
+          group_post_id: string | null
+          group_post_comment_id: string | null
           user_id: string
           created_at: string
         }
         Insert: {
           id?: string
-          group_post_id: string
+          group_post_id?: string | null
+          group_post_comment_id?: string | null
           user_id: string
           created_at?: string
         }
         Update: {
           id?: string
-          group_post_id?: string
+          group_post_id?: string | null
+          group_post_comment_id?: string | null
           user_id?: string
           created_at?: string
         }
@@ -590,21 +593,24 @@ export interface Database {
       group_post_reactions: {
         Row: {
           id: string
-          group_post_id: string
+          group_post_id: string | null
+          group_post_comment_id: string | null
           user_id: string
           emoji: string
           created_at: string
         }
         Insert: {
           id?: string
-          group_post_id: string
+          group_post_id?: string | null
+          group_post_comment_id?: string | null
           user_id: string
           emoji: string
           created_at?: string
         }
         Update: {
           id?: string
-          group_post_id?: string
+          group_post_id?: string | null
+          group_post_comment_id?: string | null
           user_id?: string
           emoji?: string
           created_at?: string
