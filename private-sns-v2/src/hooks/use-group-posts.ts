@@ -87,6 +87,8 @@ export function useGroupPosts(groupId: string | null) {
         .from('group_posts')
         .select('*, group_post_images(*)')
         .eq('group_id', groupId)
+        .order('is_pinned', { ascending: false })
+        .order('pinned_at', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false })
 
       if (error) {
@@ -439,6 +441,68 @@ export function useDeleteGroupPost() {
     onError: (error) => {
       console.error('グループ投稿削除エラー:', error)
       toast.error('投稿の削除に失敗しました')
+    },
+  })
+}
+
+export interface ToggleGroupPostPinData {
+  postId: string
+  groupId: string
+  pinned: boolean
+}
+
+// グループ投稿のピン留め切り替え
+export function useToggleGroupPostPin() {
+  const queryClient = useQueryClient()
+  const supabase = createClient()
+
+  return useMutation({
+    mutationFn: async ({ postId, pinned }: ToggleGroupPostPinData) => {
+      const { error } = await (supabase as any).rpc('toggle_group_post_pin', {
+        p_post_id: postId,
+        p_pinned: pinned,
+      })
+
+      if (error) throw error
+    },
+    onMutate: async ({ postId, groupId, pinned }) => {
+      const queryKey = ['group-posts', groupId]
+      await queryClient.cancelQueries({ queryKey })
+
+      const previous = queryClient.getQueryData<GroupPostWithProfile[]>(queryKey)
+
+      queryClient.setQueryData<GroupPostWithProfile[]>(queryKey, (old) => {
+        if (!old) return old
+        const updated = old.map((post) =>
+          post.id === postId
+            ? { ...post, is_pinned: pinned, pinned_at: pinned ? new Date().toISOString() : null }
+            : post
+        )
+        // ピン留め投稿を上部に、その中は pinned_at 降順、それ以外は created_at 降順
+        return [...updated].sort((a, b) => {
+          if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1
+          if (a.is_pinned && b.is_pinned) {
+            return (b.pinned_at ?? '').localeCompare(a.pinned_at ?? '')
+          }
+          return b.created_at.localeCompare(a.created_at)
+        })
+      })
+
+      return { previous, queryKey }
+    },
+    onError: (error, _variables, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(context.queryKey, context.previous)
+      }
+      console.error('ピン留め切り替えエラー:', error)
+      toast.error('ピン留めの操作に失敗しました')
+    },
+    onSuccess: (_data, { pinned }) => {
+      toast.success(pinned ? '投稿をピン留めしました' : 'ピン留めを解除しました')
+    },
+    onSettled: (_data, _error, { groupId }) => {
+      queryClient.invalidateQueries({ queryKey: ['group-posts', groupId] })
+      queryClient.invalidateQueries({ queryKey: ['group-post'] })
     },
   })
 }

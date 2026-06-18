@@ -17,6 +17,8 @@ import {
   MoreHorizontal,
   Trash2,
   Edit,
+  Pin,
+  PinOff,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -53,6 +55,7 @@ import {
 import {
   useDeleteGroupPost,
   useUpdateGroupPost,
+  useToggleGroupPostPin,
 } from '@/hooks/use-group-posts'
 import {
   useLikeGroupPost,
@@ -117,6 +120,7 @@ function PostCard({ post, groupId, isDetail = false, onPostDeleted }: PostCardPr
   const deleteGroupPost = useDeleteGroupPost()
   const updatePost = useUpdatePost()
   const updateGroupPost = useUpdateGroupPost()
+  const toggleGroupPostPin = useToggleGroupPostPin()
 
   // いいねフック
   const likePost = useLikePost()
@@ -217,6 +221,16 @@ function PostCard({ post, groupId, isDetail = false, onPostDeleted }: PostCardPr
     if (onPostDeleted) {
       onPostDeleted()
     }
+  }
+
+  // ピン留め切り替え処理
+  const handleTogglePin = async () => {
+    if (!isGroupPost || !groupId) return
+    await toggleGroupPostPin.mutateAsync({
+      postId: post.id,
+      groupId: groupId,
+      pinned: !post.is_pinned,
+    })
   }
 
   // 画像選択処理
@@ -350,6 +364,14 @@ function PostCard({ post, groupId, isDetail = false, onPostDeleted }: PostCardPr
         <Card className={`bg-white rounded-xl shadow-sm border border-blue-100 mb-3 ${isDetail ? '' : 'hover:shadow-lg hover:border-blue-200 transition-all duration-200'
           }`}>
           <CardContent className={`p-4 ${isDetail ? '' : 'cursor-pointer'}`} onClick={handlePostClick}>
+            {/* ピン留めバッジ（グループ投稿のみ） */}
+            {isGroupPost && post.is_pinned && (
+              <div className="flex items-center gap-1.5 mb-2 text-xs font-medium text-blue-600">
+                <Pin className="h-3.5 w-3.5 fill-blue-600" />
+                <span>固定された投稿</span>
+              </div>
+            )}
+
             {/* リポストの場合のリポスト情報 */}
             {isRepost && (post.original_post || post.original_group_post) && (
               <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
@@ -389,8 +411,8 @@ function PostCard({ post, groupId, isDetail = false, onPostDeleted }: PostCardPr
                     </span>
                   </div>
 
-                  {/* オプションメニュー（投稿者のみ） */}
-                  {isOwner && (
+                  {/* オプションメニュー（投稿者: 編集/削除、グループメンバー: ピン留め） */}
+                  {(isOwner || (isGroupPost && groupId)) && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -403,26 +425,51 @@ function PostCard({ post, groupId, isDetail = false, onPostDeleted }: PostCardPr
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" sideOffset={8} className="border-blue-100 shadow-lg" onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setIsEditDialogOpen(true)
-                          }}
-                          className="text-blue-900 focus:bg-blue-50 focus:text-blue-900 cursor-pointer"
-                        >
-                          <Edit className="mr-2 h-4 w-4 text-blue-500" />
-                          編集
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setIsDeleteDialogOpen(true)
-                          }}
-                          className="text-red-600 focus:bg-red-50 focus:text-red-600 cursor-pointer"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          削除
-                        </DropdownMenuItem>
+                        {isGroupPost && groupId && (
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleTogglePin()
+                            }}
+                            className="text-blue-900 focus:bg-blue-50 focus:text-blue-900 cursor-pointer"
+                          >
+                            {post.is_pinned ? (
+                              <>
+                                <PinOff className="mr-2 h-4 w-4 text-blue-500" />
+                                ピン留めを解除
+                              </>
+                            ) : (
+                              <>
+                                <Pin className="mr-2 h-4 w-4 text-blue-500" />
+                                ピン留め
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                        )}
+                        {isOwner && (
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setIsEditDialogOpen(true)
+                            }}
+                            className="text-blue-900 focus:bg-blue-50 focus:text-blue-900 cursor-pointer"
+                          >
+                            <Edit className="mr-2 h-4 w-4 text-blue-500" />
+                            編集
+                          </DropdownMenuItem>
+                        )}
+                        {isOwner && (
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setIsDeleteDialogOpen(true)
+                            }}
+                            className="text-red-600 focus:bg-red-50 focus:text-red-600 cursor-pointer"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            削除
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   )}

@@ -206,6 +206,8 @@ export default function GroupPostDetailPage() {
                         reposts_count: post.reposts_count || 0,
                         is_liked: post.is_liked || false,
                         is_reposted: post.is_reposted || false,
+                        is_pinned: post.is_pinned || false,
+                        pinned_at: post.pinned_at,
                     }}
                     groupId={groupId}
                     isDetail={true}

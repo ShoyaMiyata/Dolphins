@@ -475,6 +475,8 @@ export interface Database {
           group_id: string
           user_id: string
           content: string | null
+          is_pinned: boolean
+          pinned_at: string | null
           created_at: string
           updated_at: string
         }
@@ -483,6 +485,8 @@ export interface Database {
           group_id: string
           user_id: string
           content?: string | null
+          is_pinned?: boolean
+          pinned_at?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -491,6 +495,8 @@ export interface Database {
           group_id?: string
           user_id?: string
           content?: string | null
+          is_pinned?: boolean
+          pinned_at?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -570,19 +576,22 @@ export interface Database {
       group_post_likes: {
         Row: {
           id: string
-          group_post_id: string
+          group_post_id: string | null
+          group_post_comment_id: string | null
           user_id: string
           created_at: string
         }
         Insert: {
           id?: string
-          group_post_id: string
+          group_post_id?: string | null
+          group_post_comment_id?: string | null
           user_id: string
           created_at?: string
         }
         Update: {
           id?: string
-          group_post_id?: string
+          group_post_id?: string | null
+          group_post_comment_id?: string | null
           user_id?: string
           created_at?: string
         }
@@ -590,21 +599,24 @@ export interface Database {
       group_post_reactions: {
         Row: {
           id: string
-          group_post_id: string
+          group_post_id: string | null
+          group_post_comment_id: string | null
           user_id: string
           emoji: string
           created_at: string
         }
         Insert: {
           id?: string
-          group_post_id: string
+          group_post_id?: string | null
+          group_post_comment_id?: string | null
           user_id: string
           emoji: string
           created_at?: string
         }
         Update: {
           id?: string
-          group_post_id?: string
+          group_post_id?: string | null
+          group_post_comment_id?: string | null
           user_id?: string
           emoji?: string
           created_at?: string
