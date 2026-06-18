@@ -48,29 +48,49 @@ const compressionOptions = {
 async function uploadImage(file: File, userId: string): Promise<string> {
   const supabase = createClient()
 
-  // 画像を圧縮
-  const compressedFile = await imageCompression(file, compressionOptions)
+  let toUpload: File = file
+  try {
+    const compressed = await imageCompression(file, compressionOptions)
+    toUpload = compressed
+  } catch (err) {
+    console.warn('image compression failed, using original file:', err)
+    toUpload = file
+  }
 
-  // ファイル名を生成
-  const fileExt = compressedFile.name.split('.').pop()
-  const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+  const fileExt = toUpload.name.split('.').pop() || 'jpg'
+  const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${fileExt}`
 
-  // Storageにアップロード
   const { data, error } = await supabase.storage
     .from('group-post-images')
-    .upload(fileName, compressedFile, {
+    .upload(fileName, toUpload, {
       cacheControl: '3600',
       upsert: false,
     })
 
   if (error) throw error
 
-  // 公開URLを取得
   const { data: { publicUrl } } = supabase.storage
     .from('group-post-images')
     .getPublicUrl(data.path)
 
   return publicUrl
+}
+
+async function uploadGroupPostImagesWithLimit(
+  files: File[],
+  userId: string,
+  concurrency = 2
+): Promise<string[]> {
+  const results: string[] = new Array(files.length)
+  let cursor = 0
+  const workers = Array.from({ length: Math.min(concurrency, files.length) }, async () => {
+    while (cursor < files.length) {
+      const i = cursor++
+      results[i] = await uploadImage(files[i], userId)
+    }
+  })
+  await Promise.all(workers)
+  return results
 }
 
 // グループ投稿一覧を取得
@@ -271,57 +291,59 @@ export function useCreateGroupPost() {
 
   return useMutation({
     mutationFn: async ({ groupId, content, images }: CreateGroupPostData) => {
-      // 認証チェック
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        throw new Error('ログインが必要です')
-      }
+      const timeoutMs = 30_000
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('投稿処理がタイムアウトしました')), timeoutMs)
+      )
 
-      const userId = user.id
+      const work = (async () => {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+          throw new Error('ログインが必要です')
+        }
 
-      // 投稿作成
-      const { data: post, error: postError } = await (supabase as any)
-        .from('group_posts')
-        .insert({
-          group_id: groupId,
-          user_id: userId,
-          content,
-        })
-        .select()
-        .single()
+        const userId = user.id
 
-      if (postError) throw postError
+        const { data: post, error: postError } = await (supabase as any)
+          .from('group_posts')
+          .insert({
+            group_id: groupId,
+            user_id: userId,
+            content,
+          })
+          .select()
+          .single()
 
-      // 画像がある場合はアップロード
-      if (images && images.length > 0) {
-        const imageUrls = await Promise.all(
-          images.map(async (image) => uploadImage(image, userId))
-        )
+        if (postError) throw postError
 
-        // group_post_imagesに保存
-        const postImages = imageUrls.map((url, index) => ({
-          group_post_id: (post as any).id,
-          image_url: url,
-          order_index: index,
-        }))
+        if (images && images.length > 0) {
+          const imageUrls = await uploadGroupPostImagesWithLimit(images, userId)
 
-        const { error: imagesError } = await supabase
-          .from('group_post_images')
-          .insert(postImages as any)
+          const postImages = imageUrls.map((url, index) => ({
+            group_post_id: (post as any).id,
+            image_url: url,
+            order_index: index,
+          }))
 
-        if (imagesError) throw imagesError
-      }
+          const { error: imagesError } = await supabase
+            .from('group_post_images')
+            .insert(postImages as any)
 
-      return post
+          if (imagesError) throw imagesError
+        }
+
+        return post
+      })()
+
+      return Promise.race([work, timeout])
     },
     onSuccess: (_, variables) => {
-      // グループ投稿一覧を更新
-      queryClient.invalidateQueries({ queryKey: ['group-posts', variables.groupId] })
+      queryClient.invalidateQueries({ queryKey: ['group-posts', variables.groupId], refetchType: 'active' })
       toast.success('投稿しました')
     },
     onError: (error) => {
       console.error('グループ投稿エラー:', error)
-      toast.error('投稿に失敗しました')
+      toast.error(error instanceof Error ? error.message : '投稿に失敗しました')
     },
   })
 }
@@ -356,9 +378,7 @@ export function useUpdateGroupPost() {
 
       // 画像がある場合はアップロード
       if (images && images.length > 0) {
-        const imageUrls = await Promise.all(
-          images.map(async (image) => uploadImage(image, userId))
-        )
+        const imageUrls = await uploadGroupPostImagesWithLimit(images, userId)
 
         // 既存の画像の最大order_indexを取得
         const { data: existingImages } = await supabase

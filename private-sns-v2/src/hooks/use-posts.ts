@@ -1,8 +1,60 @@
-import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, useInfiniteQuery, type QueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/types/database.types'
 import { toast } from 'sonner'
 import imageCompression from 'browser-image-compression'
+
+type PostsSnapshot = ReadonlyArray<readonly [unknown, unknown]>
+
+async function snapshotPostsQueries(queryClient: QueryClient): Promise<PostsSnapshot> {
+  await queryClient.cancelQueries({ queryKey: ['posts'] })
+  await queryClient.cancelQueries({ queryKey: ['userPosts'] })
+  const a = queryClient.getQueriesData({ queryKey: ['posts'] })
+  const b = queryClient.getQueriesData({ queryKey: ['userPosts'] })
+  return [...a, ...b]
+}
+
+function rollbackPostsQueries(queryClient: QueryClient, snapshot: PostsSnapshot | undefined) {
+  if (!snapshot) return
+  for (const [key, data] of snapshot) {
+    queryClient.setQueryData(key as readonly unknown[], data)
+  }
+}
+
+function patchPostInQueries(
+  queryClient: QueryClient,
+  postId: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  patch: (post: any) => any
+) {
+  const apply = (old: any) => {
+    if (!old?.pages) return old
+    return {
+      ...old,
+      pages: old.pages.map((page: any) => ({
+        ...page,
+        posts: Array.isArray(page.posts) ? page.posts.map((p: any) => (p.id === postId ? patch(p) : p)) : page.posts,
+      })),
+    }
+  }
+  queryClient.setQueriesData({ queryKey: ['posts'] }, apply)
+  queryClient.setQueriesData({ queryKey: ['userPosts'] }, apply)
+}
+
+function removePostFromQueries(queryClient: QueryClient, postId: string) {
+  const apply = (old: any) => {
+    if (!old?.pages) return old
+    return {
+      ...old,
+      pages: old.pages.map((page: any) => ({
+        ...page,
+        posts: Array.isArray(page.posts) ? page.posts.filter((p: any) => p.id !== postId) : page.posts,
+      })),
+    }
+  }
+  queryClient.setQueriesData({ queryKey: ['posts'] }, apply)
+  queryClient.setQueriesData({ queryKey: ['userPosts'] }, apply)
+}
 
 type Post = Database['public']['Tables']['posts']['Row']
 type PostImage = Database['public']['Tables']['post_images']['Row']
@@ -46,13 +98,22 @@ const compressionOptions = {
 
 async function uploadImage(file: File, userId: string): Promise<string> {
   const supabase = createClient()
-  const compressedFile = await imageCompression(file, compressionOptions)
-  const fileExt = compressedFile.name.split('.').pop()
-  const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+
+  let toUpload: File = file
+  try {
+    const compressed = await imageCompression(file, compressionOptions)
+    toUpload = compressed
+  } catch (err) {
+    console.warn('image compression failed, using original file:', err)
+    toUpload = file
+  }
+
+  const fileExt = toUpload.name.split('.').pop() || 'jpg'
+  const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${fileExt}`
 
   const { data, error } = await supabase.storage
     .from('post-images')
-    .upload(fileName, compressedFile, {
+    .upload(fileName, toUpload, {
       cacheControl: '3600',
       upsert: false,
     })
@@ -61,6 +122,59 @@ async function uploadImage(file: File, userId: string): Promise<string> {
 
   const { data: { publicUrl } } = supabase.storage
     .from('post-images')
+    .getPublicUrl(data.path)
+
+  return publicUrl
+}
+
+async function uploadImagesWithLimit(
+  files: File[],
+  userId: string,
+  bucket: 'post-images' | 'comment-images' | 'group-post-images' = 'post-images',
+  concurrency = 2
+): Promise<string[]> {
+  const results: string[] = new Array(files.length)
+  let cursor = 0
+  const workers = Array.from({ length: Math.min(concurrency, files.length) }, async () => {
+    while (cursor < files.length) {
+      const i = cursor++
+      results[i] = await uploadToBucket(files[i], userId, bucket)
+    }
+  })
+  await Promise.all(workers)
+  return results
+}
+
+async function uploadToBucket(
+  file: File,
+  userId: string,
+  bucket: 'post-images' | 'comment-images' | 'group-post-images'
+): Promise<string> {
+  if (bucket === 'post-images') {
+    return uploadImage(file, userId)
+  }
+
+  const supabase = createClient()
+  let toUpload: File = file
+  try {
+    const compressed = await imageCompression(file, compressionOptions)
+    toUpload = compressed
+  } catch (err) {
+    console.warn('image compression failed, using original file:', err)
+    toUpload = file
+  }
+
+  const fileExt = toUpload.name.split('.').pop() || 'jpg'
+  const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${fileExt}`
+
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .upload(fileName, toUpload, { cacheControl: '3600', upsert: false })
+
+  if (error) throw error
+
+  const { data: { publicUrl } } = supabase.storage
+    .from(bucket)
     .getPublicUrl(data.path)
 
   return publicUrl
@@ -78,7 +192,7 @@ export function usePosts() {
       const { data: { user } } = await supabase.auth.getUser()
       const currentUserId = user?.id
 
-      const { data, error, count } = await supabase
+      const { data, error } = await supabase
         .from('posts')
         .select(`
           *,
@@ -87,7 +201,7 @@ export function usePosts() {
           likes(count),
           comments(count),
           reposts:posts!original_post_id(count)
-        `, { count: 'exact' })
+        `)
         .order('created_at', { ascending: false })
         .range(start, end)
 
@@ -209,7 +323,6 @@ export function usePosts() {
       return {
         posts: postsWithDetails,
         nextPage: posts.length === POSTS_PER_PAGE ? (pageParam as number) + 1 : undefined,
-        totalCount: count || 0,
       }
     },
     getNextPageParam: (lastPage) => lastPage.nextPage,
@@ -223,49 +336,56 @@ export function useCreatePost() {
 
   return useMutation({
     mutationFn: async (data: CreatePostData) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('ログインが必要です')
+      const timeoutMs = 30_000
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('投稿処理がタイムアウトしました')), timeoutMs)
+      )
 
-      const userId = user.id
+      const work = (async () => {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) throw new Error('ログインが必要です')
 
-      const { data: post, error: postError } = await supabase
-        .from('posts')
-        .insert({
-          user_id: userId,
-          content: data.content || null,
-        } as any)
-        .select()
-        .single()
+        const userId = user.id
 
-      if (postError) throw postError
+        const { data: post, error: postError } = await supabase
+          .from('posts')
+          .insert({
+            user_id: userId,
+            content: data.content || null,
+          } as any)
+          .select()
+          .single()
 
-      if (data.images && data.images.length > 0) {
-        const imageUrls = await Promise.all(
-          data.images.map(async (image) => uploadImage(image, userId))
-        )
+        if (postError) throw postError
 
-        const postImages = imageUrls.map((url, index) => ({
-          post_id: (post as any).id,
-          image_url: url,
-          order_index: index,
-        }))
+        if (data.images && data.images.length > 0) {
+          const imageUrls = await uploadImagesWithLimit(data.images, userId, 'post-images')
 
-        const { error: imagesError } = await supabase
-          .from('post_images')
-          .insert(postImages as any)
+          const postImages = imageUrls.map((url, index) => ({
+            post_id: (post as any).id,
+            image_url: url,
+            order_index: index,
+          }))
 
-        if (imagesError) throw imagesError
-      }
+          const { error: imagesError } = await supabase
+            .from('post_images')
+            .insert(postImages as any)
 
-      return post
+          if (imagesError) throw imagesError
+        }
+
+        return post
+      })()
+
+      return Promise.race([work, timeout])
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['posts'] })
+      queryClient.invalidateQueries({ queryKey: ['posts'], refetchType: 'active' })
       toast.success('投稿しました')
     },
     onError: (error) => {
       console.error('投稿エラー:', error)
-      toast.error('投稿に失敗しました')
+      toast.error(error instanceof Error ? error.message : '投稿に失敗しました')
     },
   })
 }
@@ -286,13 +406,25 @@ export function useUpdatePost() {
       if (error) throw error
       return data
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['posts'] })
-      toast.success('投稿を更新しました')
+    onMutate: async ({ postId, content }) => {
+      const snapshot = await snapshotPostsQueries(queryClient)
+      patchPostInQueries(queryClient, postId, (post) => ({
+        ...post,
+        content,
+        updated_at: new Date().toISOString(),
+      }))
+      return { snapshot }
     },
-    onError: (error) => {
+    onError: (error, _vars, context) => {
+      rollbackPostsQueries(queryClient, context?.snapshot)
       console.error('更新エラー:', error)
       toast.error('更新に失敗しました')
+    },
+    onSuccess: () => {
+      toast.success('投稿を更新しました')
+    },
+    onSettled: (_data, _err, { postId }) => {
+      queryClient.invalidateQueries({ queryKey: ['post', postId] })
     },
   })
 }
@@ -326,13 +458,18 @@ export function useDeletePost() {
 
       if (error) throw error
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['posts'] })
-      toast.success('投稿を削除しました')
+    onMutate: async (postId) => {
+      const snapshot = await snapshotPostsQueries(queryClient)
+      removePostFromQueries(queryClient, postId)
+      return { snapshot }
     },
-    onError: (error) => {
+    onError: (error, _postId, context) => {
+      rollbackPostsQueries(queryClient, context?.snapshot)
       console.error('削除エラー:', error)
       toast.error('削除に失敗しました')
+    },
+    onSuccess: () => {
+      toast.success('投稿を削除しました')
     },
   })
 }
@@ -366,10 +503,15 @@ export function useLikePost() {
       if (error) throw error
       return data
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['posts'] })
+    onMutate: async (postId) => {
+      const snapshot = await snapshotPostsQueries(queryClient)
+      patchPostInQueries(queryClient, postId, (post) =>
+        post.is_liked ? post : { ...post, is_liked: true, likes_count: (post.likes_count || 0) + 1 }
+      )
+      return { snapshot }
     },
-    onError: (error: any) => {
+    onError: (error: any, _postId, context) => {
+      rollbackPostsQueries(queryClient, context?.snapshot)
       toast.error(error?.message || 'いいねに失敗しました')
     },
   })
@@ -394,10 +536,15 @@ export function useUnlikePost() {
 
       if (error) throw error
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['posts'] })
+    onMutate: async (postId) => {
+      const snapshot = await snapshotPostsQueries(queryClient)
+      patchPostInQueries(queryClient, postId, (post) =>
+        !post.is_liked ? post : { ...post, is_liked: false, likes_count: Math.max(0, (post.likes_count || 0) - 1) }
+      )
+      return { snapshot }
     },
-    onError: (error) => {
+    onError: (error, _postId, context) => {
+      rollbackPostsQueries(queryClient, context?.snapshot)
       console.error('いいね解除エラー:', error)
       toast.error('いいね解除に失敗しました')
     },
@@ -442,13 +589,25 @@ export function useRepost() {
 
       if (error) throw error
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['posts'] })
-      toast.success('リポストしました')
+    onMutate: async ({ postId, groupPostId }) => {
+      const target = postId || groupPostId
+      if (!target) return { snapshot: undefined }
+      const snapshot = await snapshotPostsQueries(queryClient)
+      patchPostInQueries(queryClient, target, (post) =>
+        post.is_reposted ? post : { ...post, is_reposted: true, reposts_count: (post.reposts_count || 0) + 1 }
+      )
+      return { snapshot }
     },
-    onError: (error) => {
+    onError: (error, _vars, context) => {
+      rollbackPostsQueries(queryClient, context?.snapshot)
       console.error('リポストエラー:', error)
       toast.error(error.message || 'リポストに失敗しました')
+    },
+    onSuccess: () => {
+      toast.success('リポストしました')
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['posts'], refetchType: 'active' })
     },
   })
 }
@@ -473,13 +632,23 @@ export function useUnrepost() {
 
       if (error) throw error
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['posts'] })
-      toast.success('リポストを解除しました')
+    onMutate: async (postId) => {
+      const snapshot = await snapshotPostsQueries(queryClient)
+      patchPostInQueries(queryClient, postId, (post) =>
+        !post.is_reposted ? post : { ...post, is_reposted: false, reposts_count: Math.max(0, (post.reposts_count || 0) - 1) }
+      )
+      return { snapshot }
     },
-    onError: (error) => {
+    onError: (error, _postId, context) => {
+      rollbackPostsQueries(queryClient, context?.snapshot)
       console.error('リポスト解除エラー:', error)
       toast.error('リポスト解除に失敗しました')
+    },
+    onSuccess: () => {
+      toast.success('リポストを解除しました')
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['posts'], refetchType: 'active' })
     },
   })
 }
@@ -620,7 +789,6 @@ export function useUserPosts(params: { userId?: string | null; username?: string
         return {
           posts: [],
           nextPage: undefined,
-          totalCount: 0,
         }
       }
 
@@ -639,7 +807,7 @@ export function useUserPosts(params: { userId?: string | null; username?: string
           likes(count),
           comments(count),
           reposts:posts!original_post_id(count)
-        `, { count: 'exact' })
+        `)
 
       if (userId) {
         query = query.eq('user_id', userId)
@@ -647,7 +815,7 @@ export function useUserPosts(params: { userId?: string | null; username?: string
         query = query.eq('profiles.username', username)
       }
 
-      const { data, error, count } = await query
+      const { data, error } = await query
         .order('created_at', { ascending: false })
         .range(start, end)
 
@@ -767,7 +935,6 @@ export function useUserPosts(params: { userId?: string | null; username?: string
       return {
         posts: postsWithDetails,
         nextPage: posts.length === POSTS_PER_PAGE ? (pageParam as number) + 1 : undefined,
-        totalCount: count || 0,
       }
     },
     getNextPageParam: (lastPage) => lastPage.nextPage,
