@@ -21,6 +21,8 @@ export type PostWithDetails = Post & {
   original_post?: PostWithDetails
   original_group_post?: any
   repost_user?: Profile
+  is_pinned?: boolean
+  pinned_at?: string | null
 }
 
 export interface CreatePostData {
